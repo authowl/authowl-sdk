@@ -19,7 +19,8 @@ import {
 } from './artifact-contract.mjs';
 import { supportsTrustedPublishing } from './npm-publisher.mjs';
 import { parseArguments } from './release.mjs';
-import { assertScaffoldPinCoupling } from './sdk-manifest.mjs';
+import { assertScaffoldPinCoupling, isReleaseVersion } from './sdk-manifest.mjs';
+import { stripDelimitedSections } from '../notice-text.mjs';
 
 const fixtureRoot = mkdtempSync(join(tmpdir(), 'authowl-release-contract.'));
 const commit = '1'.repeat(40);
@@ -144,6 +145,16 @@ try {
     assert.equal(supportsTrustedPublishing(version), false, version);
   }
   assert.throws(() => supportsTrustedPublishing('not-a-version'), /unreadable version/);
+
+  for (const version of ['1.2.3', '1.2.3-alpha.1', '1.2.3+build.4', '1.2.3-alpha.1+build.4']) {
+    assert.equal(isReleaseVersion(version), true, version);
+  }
+  for (const version of ['1.2', '1.2.3-alpha+build+extra', '1.2.3/../../tag']) {
+    assert.equal(isReleaseVersion(version), false, version);
+  }
+  assert.equal(stripDelimitedSections('Devcoat <<script>>', '<', '>'), 'Devcoat ');
+  assert.equal(stripDelimitedSections('Devcoat ((website))', '(', ')'), 'Devcoat ');
+  assert.equal(stripDelimitedSections('Devcoat <unfinished', '<', '>'), 'Devcoat ');
 
   // The CLI embeds @authowl/react and @authowl/next versions at build time, so
   // releasing either without releasing the CLI leaves `authowl init` pinning the

@@ -27,10 +27,14 @@ const USER_AGENT = 'authowl-sdk release (https://github.com/authowl/authowl-sdk)
 const GO_MODULE = 'github.com/mstfash/authowl-sdk/sdks/go';
 // Accepts the semver these ecosystems agree on, including the `+build` suffix
 // Dart allows. Everything here becomes a Git tag, so it is validated once.
-const VERSION = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/;
+const VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
 export function releaseUnits({ goVersion } = {}) {
   return [...npmUnits(), ...sdkUnits(goVersion)];
+}
+
+export function isReleaseVersion(value) {
+  return typeof value === 'string' && VERSION.test(value);
 }
 
 function npmUnits() {
@@ -228,7 +232,7 @@ function describeState(unit) {
 }
 
 function requireVersion(value, label) {
-  if (typeof value !== 'string' || !VERSION.test(value)) {
+  if (!isReleaseVersion(value)) {
     throw new Error(`sdk manifest: ${label} has an unusable version: ${value}`);
   }
   return value;
