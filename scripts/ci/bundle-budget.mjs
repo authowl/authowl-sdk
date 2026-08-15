@@ -107,6 +107,13 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // every prior entry above reserved. A size sweep is queued separately: this
 // raise buys the release, it does not license drift.
 //
+// Required-MFA phone entry-point policy (2026-08-15) raises React 75->76. The
+// sign-in resolver now hides phone OTP when every account must enter through
+// password + TOTP, while optional MFA handles the typed TWO_FACTOR_REQUIRED
+// response by returning enrolled users to password sign-in. The reviewed React
+// payload measures 75.1kb; Core remains 20.8kb. The new ceiling preserves about
+// 0.9kb of regression headroom.
+//
 // The provider package `@akedly/shield` is a direct dependency so consumer
 // bundlers always resolve it. The measurement uses code splitting and follows
 // static imports only, matching the initial browser payload: Shield remains in
@@ -114,7 +121,7 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 75,
+    maxGzipKb: 76,
     label: '@authowl/react (provider + hooks + components)',
   },
   {
