@@ -14,6 +14,7 @@
 import { build } from 'esbuild';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { stripDelimitedSections } from './notice-text.mjs';
 
 const pkgDir = process.cwd();
 const pkg = JSON.parse(readFileSync(join(pkgDir, 'package.json'), 'utf8'));
@@ -139,7 +140,8 @@ function inferSpdx(texts) {
 function authorHolder(meta) {
   const a = meta.author;
   if (typeof a === 'string') {
-    const name = a.replace(/<[^>]*>/g, '').replace(/\([^)]*\)/g, '').trim();
+    const withoutEmail = stripDelimitedSections(a, '<', '>');
+    const name = stripDelimitedSections(withoutEmail, '(', ')').trim();
     return name || null;
   }
   if (a && typeof a === 'object' && typeof a.name === 'string') return a.name.trim() || null;
@@ -323,12 +325,12 @@ function copyrightLines(texts) {
 
 // "Copyright (c) 2024 - present, Bereket Engida" -> "Bereket Engida".
 function holderFromCopyright(line) {
-  return line
+  const withoutEmail = stripDelimitedSections(line, '<', '>');
+  return withoutEmail
     .replace(/^copyright\b/i, '')
     .replace(/\(c\)|©/gi, '')
     .replace(/\b\d{4}\b(\s*[-–]\s*(present|\d{4}))?/gi, '') // year or year-range
     .replace(/\bpresent\b/gi, '')
-    .replace(/<[^>]*>/g, '') // drop emails from the heading (kept in the verbatim text)
     .replace(/^[\s,.-]+|[\s,.-]+$/g, '')
     .replace(/\s+/g, ' ')
     .trim();
