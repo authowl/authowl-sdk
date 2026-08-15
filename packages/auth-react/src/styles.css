@@ -1,0 +1,383 @@
+/* Minimal default styles for SignIn / SignUp / UserButton.
+   Override with your own classes - the components are unstyled by default
+   beyond these light defaults.
+
+   Theming: <AuthOwlProvider> sets `--ba-primary` (from the `appearance` prop or
+   the project's branding) inline, and a `data-authowl-theme` attribute
+   (light | dark | system) on a wrapper. The color palette below is expressed as
+   CSS variables so light/dark is a single palette swap; `system` follows the OS
+   via a media query (no JS, so no hydration mismatch or theme flash). */
+.authowl-root {
+  --ba-surface: #fff;
+  --ba-fg: #18181b;
+  --ba-muted: #66666d;
+  --ba-border: #d4d4d8;
+  --ba-divider: #e4e4e7;
+  --ba-hover: #f4f4f5;
+  --ba-skeleton-a: #f4f4f5;
+  --ba-skeleton-b: #e4e4e7;
+  --ba-success: #15803d;
+  /* Brand accent ramp (P1-5). The operator picks ONE brand color; the provider
+     derives the ramp from it in JS (brand.ts) - hue+chroma-preserving OKLCH
+     lightness steps for hover/active and a WCAG-solved foreground - and emits it
+     as inline --ba-rt-* bridge vars. The color-mix fallbacks here cover the
+     pre-hydration / no-provider / host-`--ba-primary`-override path and stay
+     hue-true (OKLab, replacing the old chroma-collapsing `in srgb` mix that
+     turned gold #F5B84C into mud). The default brand is the AuthOwl gold, kept in
+     sync with brand.ts DEFAULT_BRAND_COLOR. */
+  --ba-accent-solid: var(--ba-primary, #F5B84C);
+  --ba-accent-solid-hover: var(--ba-rt-solid-hover-l, color-mix(in oklab, var(--ba-primary, #F5B84C) 90%, black));
+  --ba-accent-solid-active: var(--ba-rt-solid-active-l, color-mix(in oklab, var(--ba-primary, #F5B84C) 84%, black));
+  --ba-accent-fg: var(--ba-rt-accent-fg, #18181b);
+  --ba-accent: var(--ba-rt-accent-l, color-mix(in oklab, var(--ba-primary, #F5B84C) 65%, black));
+  --ba-danger-text: #b91c1c;
+  --ba-overlay: rgba(9, 9, 11, 0.58);
+}
+[data-authowl-theme='dark'] {
+  --ba-surface: #18181b;
+  --ba-fg: #fafafa;
+  --ba-muted: #a1a1aa;
+  --ba-border: #3f3f46;
+  --ba-divider: #3f3f46;
+  --ba-hover: #27272a;
+  --ba-skeleton-a: #27272a;
+  --ba-skeleton-b: #3f3f46;
+  --ba-success: #4ade80;
+  --ba-accent-solid: var(--ba-primary, #F5B84C);
+  --ba-accent-solid-hover: var(--ba-rt-solid-hover-d, color-mix(in oklab, var(--ba-primary, #F5B84C) 80%, white));
+  --ba-accent-solid-active: var(--ba-rt-solid-active-d, color-mix(in oklab, var(--ba-primary, #F5B84C) 65%, white));
+  --ba-accent-fg: var(--ba-rt-accent-fg, #18181b);
+  --ba-accent: var(--ba-rt-accent-d, color-mix(in oklab, var(--ba-primary, #F5B84C) 80%, white));
+  --ba-danger-text: #f87171;
+  --ba-overlay: rgba(0, 0, 0, 0.72);
+}
+@media (prefers-color-scheme: dark) {
+  [data-authowl-theme='system'] {
+    --ba-surface: #18181b;
+    --ba-fg: #fafafa;
+    --ba-muted: #a1a1aa;
+    --ba-border: #3f3f46;
+    --ba-divider: #3f3f46;
+    --ba-hover: #27272a;
+    --ba-skeleton-a: #27272a;
+    --ba-skeleton-b: #3f3f46;
+    --ba-success: #4ade80;
+    --ba-accent-solid: var(--ba-primary, #F5B84C);
+    --ba-accent-solid-hover: var(--ba-rt-solid-hover-d, color-mix(in oklab, var(--ba-primary, #F5B84C) 80%, white));
+    --ba-accent-solid-active: var(--ba-rt-solid-active-d, color-mix(in oklab, var(--ba-primary, #F5B84C) 65%, white));
+    --ba-accent-fg: var(--ba-rt-accent-fg, #18181b);
+    --ba-accent: var(--ba-rt-accent-d, color-mix(in oklab, var(--ba-primary, #F5B84C) 80%, white));
+    --ba-danger-text: #f87171;
+    --ba-overlay: rgba(0, 0, 0, 0.72);
+  }
+}
+
+.ba-form { display: flex; flex-direction: column; gap: 12px; max-width: 360px; color: var(--ba-fg); }
+.ba-fields { display: flex; flex-direction: column; gap: 12px; }
+.ba-title { font-size: 18px; font-weight: 600; margin: 0 0 4px; color: var(--ba-fg); }
+.ba-label { display: flex; flex-direction: column; font-size: 12px; gap: 4px; color: var(--ba-fg); }
+.ba-input { padding: 8px 10px; border: 1px solid var(--ba-border); border-radius: 6px; font-size: 14px; background: var(--ba-surface); color: var(--ba-fg); }
+.ba-input:focus { outline: 2px solid var(--ba-accent); outline-offset: 1px; }
+/* Primary filled button IS the brand color (--ba-accent-solid), with a
+   contrast-computed label (--ba-accent-fg). The hairline guard keeps a near-white
+   (light) or near-black (dark) brand button visible against the surface - the
+   promise the old muddy color-mix was a crude stand-in for. box-sizing keeps the
+   40px height stable now that the fill carries a border, matching the outlined
+   secondary/social buttons. */
+.ba-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; line-height: 1.2; min-height: 40px; box-sizing: border-box; background: var(--ba-accent-solid); color: var(--ba-accent-fg); padding: 9px 14px; border: 1px solid color-mix(in oklab, var(--ba-accent-solid) 85%, var(--ba-border)); border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; }
+/* Hover/active darken (light) or lighten (dark) perceptually, staying on-brand.
+   Scoped away from the outlined secondary/danger variants so their own fills win
+   in every state (they don't define :active, which would otherwise leak here). */
+.ba-button:not(.ba-button-secondary):not(.ba-danger-button):hover:not(:disabled) { background: var(--ba-accent-solid-hover); }
+.ba-button:not(.ba-button-secondary):not(.ba-danger-button):active:not(:disabled) { background: var(--ba-accent-solid-active); }
+.ba-button:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Secondary action (e.g. the passwordless alternates under a password form):
+   outlined so a single filled button stays the clear primary. */
+.ba-button-secondary { background: transparent; color: var(--ba-fg); border: 1px solid var(--ba-border); font-weight: 500; }
+.ba-button-secondary:hover:not(:disabled) { border-color: var(--ba-accent); background: var(--ba-hover); }
+.ba-error { color: #ef4444; font-size: 13px; margin: 0; }
+.ba-success { color: var(--ba-success); font-size: 13px; margin: 0; }
+.ba-muted { color: var(--ba-muted); font-size: 13px; margin: 0; }
+.ba-turnstile { min-height: 65px; max-width: 100%; overflow: hidden; }
+.ba-auth-challenge .ba-turnstile { min-height: 0; }
+.ba-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Legal-consent checkbox row (shown on <SignUp/> when the project requires it) */
+.ba-consent { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.4; color: var(--ba-fg); }
+.ba-consent a { color: var(--ba-accent); }
+.ba-consent-centered { align-items: center; min-height: 20px; }
+.ba-checkbox-control { position: relative; display: inline-grid; width: 16px; height: 16px; flex: 0 0 16px; margin-block-start: 1px; place-items: center; }
+.ba-checkbox { position: absolute; inset: 0; z-index: 1; width: 16px; height: 16px; margin: 0; opacity: 0; cursor: pointer; }
+.ba-checkbox-visual { display: grid; width: 16px; height: 16px; box-sizing: border-box; place-items: center; border: 1px solid var(--ba-border); border-radius: 3px; background: var(--ba-surface); transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
+.ba-checkbox-check { width: 5px; height: 9px; margin-top: -2px; border-right: 2px solid var(--ba-accent-fg); border-bottom: 2px solid var(--ba-accent-fg); opacity: 0; transform: rotate(45deg); }
+.ba-checkbox:checked + .ba-checkbox-visual { border-color: var(--ba-accent-solid); background: var(--ba-accent-solid); }
+.ba-checkbox:checked + .ba-checkbox-visual .ba-checkbox-check { opacity: 1; }
+.ba-checkbox:focus-visible + .ba-checkbox-visual { outline: 2px solid var(--ba-accent); outline-offset: 2px; }
+.ba-checkbox:disabled + .ba-checkbox-visual { opacity: 0.55; }
+
+/* Project logo, optional wordmark, and environment identity shared by the
+   managed sign-in and sign-up components. */
+.ba-branding { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.ba-branding-identity, .ba-branding-link { display: inline-flex; min-width: 0; align-items: center; gap: 10px; }
+.ba-branding-link { color: inherit; text-decoration: none; }
+.ba-branding-link:hover .ba-branding-name { text-decoration: underline; text-underline-offset: 3px; }
+.ba-branding-logo { display: block; width: auto; max-width: 148px; height: 40px; max-height: 40px; flex: 0 0 auto; object-fit: contain; }
+.ba-branding-fallback { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border-radius: 10px; background: var(--ba-hover); color: var(--ba-fg); font-size: 14px; font-weight: 650; }
+.ba-branding-name { min-width: 0; overflow: hidden; color: var(--ba-fg); font-size: 15px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.ba-environment { display: inline-flex; width: fit-content; align-items: center; gap: 6px; border: 1px solid var(--ba-border); border-radius: 999px; padding: 3px 8px; background: var(--ba-hover); color: var(--ba-muted); font-size: 11px; font-weight: 600; line-height: 1.2; }
+.ba-environment-dot { width: 6px; height: 6px; border-radius: 999px; background: #16a34a; }
+.ba-environment-development .ba-environment-dot { background: var(--ba-accent-solid); }
+.ba-branding-align-left { align-items: flex-start; text-align: left; }
+.ba-branding-align-center { align-items: center; text-align: center; }
+.ba-branding-align-right { align-items: flex-end; text-align: right; }
+.ba-profile-heading .ba-branding, .ba-profile-modal-header .ba-branding { margin-bottom: 16px; }
+
+/* "Secured by AuthOwl" attribution (free plan; hidden on paid, or forced on
+   via the showBadge prop). A small owl mark + wordmark, like other embeddable
+   auth widgets. */
+.ba-badge { align-self: center; display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--ba-muted); text-decoration: none; }
+.ba-badge:hover { color: var(--ba-fg); }
+.ba-badge-mark { width: 14px; height: 14px; flex-shrink: 0; display: block; }
+.ba-badge-brand { font-weight: 600; color: var(--ba-fg); }
+
+/* Inline text button (e.g. "Use a different email", passkey list actions) */
+.ba-link-button { background: none; border: 0; padding: 0; cursor: pointer; color: var(--ba-accent); font-size: 13px; font-weight: 500; align-self: flex-start; }
+.ba-link-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.ba-link-button.ba-danger { color: var(--ba-danger-text); }
+
+/* MFA enrolment: the manual TOTP secret (rendered inline in a sentence) and the
+   one-time backup codes. Monospace and boxed so they read cleanly, with
+   `user-select: all` so one click/tap selects the whole value to copy - shown at
+   the one moment the user must read and save these EXACTLY. `direction: ltr`
+   keeps the alphanumeric strings readable inside an RTL (Arabic) layout. Colors
+   are token-based, so dark mode is automatic. */
+.ba-code { display: inline-block; direction: ltr; unicode-bidi: isolate; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; font-size: 13px; line-height: 1.5; padding: 2px 6px; border-radius: 5px; background: var(--ba-hover); color: var(--ba-fg); overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; }
+.ba-backup-codes { list-style: none; margin: 6px 0 0; padding: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; border: 1px solid var(--ba-border); border-radius: 8px; background: var(--ba-surface); }
+.ba-backup-codes .ba-code { display: block; text-align: center; padding: 8px 10px; font-size: 14px; letter-spacing: 0.06em; }
+@media (max-width: 400px) { .ba-backup-codes { grid-template-columns: minmax(0, 1fr); } }
+
+/* Passkey manager */
+.ba-passkey-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ba-passkey-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid var(--ba-border); border-radius: 6px; font-size: 14px; }
+.ba-passkey-name { color: var(--ba-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ba-passkey-actions { display: flex; gap: 12px; flex-shrink: 0; }
+
+/* Social sign-in */
+.ba-social { display: flex; flex-direction: column; gap: 8px; }
+.ba-social-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; box-sizing: border-box; background: var(--ba-surface); color: var(--ba-fg); padding: 9px 14px; border: 1px solid var(--ba-border); border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; }
+.ba-social-button:hover:not(:disabled) { border-color: var(--ba-accent); background: var(--ba-hover); }
+.ba-social-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.ba-social-icon { width: 18px; height: 18px; flex-shrink: 0; display: block; }
+.ba-divider { display: flex; align-items: center; text-align: center; color: var(--ba-muted); font-size: 12px; }
+.ba-divider::before, .ba-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--ba-divider); }
+.ba-divider::before { margin-inline-end: 8px; }
+.ba-divider::after { margin-inline-start: 8px; }
+
+/* Loading skeleton */
+.ba-skeleton { height: 38px; border-radius: 6px; background: linear-gradient(90deg, var(--ba-skeleton-a) 25%, var(--ba-skeleton-b) 37%, var(--ba-skeleton-a) 63%); background-size: 400% 100%; animation: ba-shimmer 1.4s ease infinite; }
+@keyframes ba-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+/* In-flight spinner (action buttons via <Busy>, session bootstrap via
+   <AuthLoading>). `currentColor` picks up the right hue on filled/secondary/
+   social buttons; `border-inline-end-color` + rotation is RTL-safe with no
+   [dir] override. It sits inline in the button's existing flex gap. */
+.ba-spinner { width: 14px; height: 14px; flex: none; border: 2px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; animation: ba-spin 0.6s linear infinite; }
+@keyframes ba-spin { to { transform: rotate(360deg); } }
+.ba-auth-loading { display: flex; align-items: center; justify-content: center; padding: 24px; color: var(--ba-muted, currentColor); }
+@media (prefers-reduced-motion: reduce) { .ba-spinner { animation-duration: 1.6s; } .ba-skeleton { animation: none; } }
+
+.ba-user-button { position: relative; display: inline-block; }
+.ba-user-button-trigger { background: none; border: 0; padding: 0; cursor: pointer; }
+.ba-avatar { width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--ba-hover); font-weight: 600; color: var(--ba-fg); }
+.ba-menu { position: absolute; inset-inline-end: 0; margin-top: 4px; background: var(--ba-surface); border: 1px solid var(--ba-border); border-radius: 6px; padding: 4px; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 50; }
+.ba-menu-label { font-size: 12px; padding: 6px 8px; color: var(--ba-muted); margin: 0; border-bottom: 1px solid var(--ba-divider); }
+.ba-menu-item { display: block; width: 100%; text-align: start; padding: 6px 8px; background: none; border: 0; cursor: pointer; font-size: 13px; border-radius: 4px; color: var(--ba-fg); }
+.ba-menu-item:hover { background: var(--ba-hover); }
+
+/* UserProfile account settings */
+.ba-profile { color: var(--ba-fg); background: var(--ba-surface); border: 1px solid var(--ba-border); border-radius: 14px; font-size: 14px; }
+.ba-profile-page { width: min(100%, 920px); margin-inline: auto; overflow: hidden; }
+.ba-profile-heading, .ba-profile-modal-header { padding: 24px 28px; border-bottom: 1px solid var(--ba-divider); }
+.ba-profile-heading h1, .ba-profile-modal-header h1 { margin: 0; font-size: 22px; line-height: 1.25; }
+.ba-profile-heading p, .ba-profile-modal-header p { margin: 6px 0 0; color: var(--ba-muted); }
+/* No min-height. A grid row already sizes to its tallest column, which here is
+   the nav, so the panel is exactly as tall as it needs to be. The 460px floor it
+   replaces was there to stop the modal resizing between tabs, but the shortest
+   tab - Profile, an avatar field and a button - is the one most people open
+   first, and it left roughly 200px of empty white below the content, reading as
+   a broken panel rather than a stable one. */
+.ba-profile-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+.ba-profile-nav { display: flex; flex-direction: column; gap: 4px; padding: 18px 12px; border-inline-end: 1px solid var(--ba-divider); background: color-mix(in srgb, var(--ba-hover) 55%, var(--ba-surface)); }
+.ba-profile-nav-item { width: 100%; min-height: 40px; padding: 9px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--ba-muted); cursor: pointer; font: inherit; font-weight: 500; text-align: start; }
+.ba-profile-nav-item:hover { color: var(--ba-fg); background: var(--ba-hover); }
+.ba-profile-nav-item[aria-current='page'] { color: var(--ba-fg); background: var(--ba-surface); box-shadow: 0 0 0 1px var(--ba-border); }
+.ba-profile-content { min-width: 0; padding: 28px; }
+.ba-profile-section { max-width: 560px; }
+.ba-profile-section-header { margin-bottom: 22px; }
+.ba-profile-section-header .ba-title { font-size: 20px; }
+.ba-profile-section-header .ba-muted { margin-top: 6px; line-height: 1.55; }
+.ba-profile-section .ba-fields { max-width: 440px; gap: 16px; }
+.ba-profile-section .ba-label { gap: 7px; font-size: 13px; font-weight: 500; }
+.ba-profile-section .ba-input { min-height: 42px; box-sizing: border-box; width: 100%; }
+.ba-profile-section input[type='email'],
+.ba-profile-section input[inputmode='url'] { direction: ltr; text-align: left; }
+.ba-profile-submit { align-self: flex-start; min-width: 132px; }
+.ba-profile-list + .ba-profile-submit { margin-top: 20px; }
+.ba-profile-current { display: flex; flex-direction: column; gap: 5px; margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--ba-border); border-radius: 8px; }
+.ba-profile-current span { color: var(--ba-muted); font-size: 12px; }
+.ba-profile-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--ba-border); border-radius: 9px; overflow: hidden; }
+.ba-profile-list-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 12px 14px; border-bottom: 1px solid var(--ba-divider); }
+.ba-profile-list-item:last-child { border-bottom: 0; }
+.ba-profile-list-item > span { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.ba-profile-list-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.ba-profile-list-item small { display: flex; flex-wrap: wrap; color: var(--ba-muted); font-size: 11px; }
+.ba-profile-list-item small em { color: var(--ba-success); font-style: normal; font-weight: 600; }
+.ba-profile-list-skeleton { display: flex; flex-direction: column; gap: 8px; }
+.ba-profile-provider-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.ba-profile-provider-actions .ba-profile-subtitle { width: 100%; margin: 0 0 2px; font-weight: 600; }
+.ba-inline-error,
+.ba-profile-inline-error { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.ba-profile-status { display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px; padding: 14px 16px; border: 1px solid var(--ba-border); border-radius: 8px; background: var(--ba-hover); }
+.ba-profile-status span { color: var(--ba-muted); font-size: 12px; }
+.ba-profile-security-form { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--ba-divider); }
+.ba-profile-action-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.ba-profile-recovery-card { display: flex; flex-direction: column; gap: 7px; margin-bottom: 24px; padding: 14px 16px; border: 1px solid var(--ba-border); border-radius: 8px; }
+.ba-profile-recovery-card p { margin: 0; color: var(--ba-muted); line-height: 1.5; }
+.ba-profile-recovery-card bdi { direction: ltr; text-align: left; font-weight: 600; }
+.ba-profile-danger-zone { padding: 18px; border: 1px solid color-mix(in srgb, #dc2626 45%, var(--ba-border)); border-radius: 10px; }
+.ba-profile-delete-warning { margin: 0; color: var(--ba-fg); line-height: 1.55; }
+/* Fixed-palette destructive action - override the brand-derived hairline the
+   base .ba-button now carries with a matching red-toned one. */
+.ba-danger-button { background: #dc2626; color: #fff; border-color: color-mix(in oklab, #dc2626 85%, var(--ba-border)); }
+.ba-danger-button:hover:not(:disabled) { background: #b91c1c; }
+.ba-profile-loading { display: flex; flex-direction: column; gap: 10px; padding: 28px; }
+.ba-profile-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: var(--ba-overlay); }
+.ba-profile-modal { width: min(920px, 100%); max-height: min(760px, calc(100dvh - 48px)); overflow: auto; box-shadow: 0 24px 70px rgba(0,0,0,0.3); }
+.ba-profile-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; position: sticky; top: 0; z-index: 2; background: var(--ba-surface); }
+.ba-profile-close { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--ba-border); border-radius: 50%; background: var(--ba-surface); color: var(--ba-fg); cursor: pointer; }
+.ba-profile-close svg { width: 16px; height: 16px; display: block; }
+.ba-profile-close:hover { background: var(--ba-hover); }
+.ba-profile-modal-footer { display: flex; justify-content: center; padding: 14px 28px; border-top: 1px solid var(--ba-divider); }
+.ba-menu-badge { display: flex; justify-content: center; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--ba-divider); }
+.ba-menu-badge .ba-badge { margin-top: 4px; }
+/* <AuthOwlBadge/> renders null on a paid/comped project (config.badge false), and these
+   wrappers are rendered unconditionally by UserButton/UserProfile/UserProfileModal - so
+   without this they became a bare divider with dead space under it. Keyed on :empty rather
+   than duplicating the plan check at three call sites: React emits a genuinely empty
+   element when the child returns null, so this tracks the badge's own visibility
+   automatically and still honours its `force` prop. */
+.ba-profile-modal-footer:empty,
+.ba-menu-badge:empty { display: none; }
+
+/* Organization lifecycle */
+.ba-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.ba-organization-avatar { width: 32px; height: 32px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--ba-hover); color: var(--ba-fg); font-weight: 700; }
+.ba-organization-avatar-large { width: 42px; height: 42px; font-size: 17px; }
+.ba-organization-switcher { position: relative; display: inline-block; min-width: 220px; }
+.ba-organization-switcher-skeleton { width: 220px; }
+.ba-organization-switcher-trigger { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--ba-border); border-radius: 10px; background: var(--ba-surface); color: var(--ba-fg); cursor: pointer; font: inherit; text-align: start; }
+.ba-organization-switcher-trigger > span:nth-child(2) { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.ba-organization-menu { position: absolute; z-index: 80; inset-block-start: calc(100% + 6px); inset-inline-end: 0; width: min(320px, calc(100vw - 32px)); padding: 6px; border: 1px solid var(--ba-border); border-radius: 12px; background: var(--ba-surface); box-shadow: 0 16px 40px rgba(0,0,0,0.18); }
+.ba-organization-menu-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--ba-fg); cursor: pointer; font: inherit; text-align: start; }
+.ba-organization-menu-item:hover, .ba-organization-menu-item[aria-current='true'] { background: var(--ba-hover); }
+.ba-organization-menu-item > span:nth-child(2) { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.ba-organization-menu-item small { overflow: hidden; color: var(--ba-muted); text-overflow: ellipsis; white-space: nowrap; }
+.ba-organization-menu-actions { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--ba-divider); }
+.ba-organization-menu-actions .ba-menu-item { padding: 9px; }
+.ba-organization-overlay { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 24px; background: var(--ba-overlay); }
+.ba-organization-modal { width: min(920px, 100%); max-height: min(820px, calc(100dvh - 48px)); overflow: auto; border: 1px solid var(--ba-border); border-radius: 14px; background: var(--ba-surface); color: var(--ba-fg); box-shadow: 0 24px 70px rgba(0,0,0,0.3); }
+.ba-organization-modal-header { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 22px; border-bottom: 1px solid var(--ba-divider); background: var(--ba-surface); }
+.ba-organization-modal-header .ba-title { margin: 0; }
+.ba-organization-modal-body { min-width: 0; }
+.ba-organization-create { max-width: 560px; padding: 28px; }
+.ba-organization-section-header { margin-bottom: 20px; }
+.ba-organization-section-header .ba-title { margin: 0; font-size: 19px; }
+.ba-organization-section-header .ba-muted { margin: 6px 0 0; line-height: 1.5; }
+.ba-organization-directory { max-width: 960px; margin-inline: auto; padding: 28px; border: 1px solid var(--ba-border); border-radius: 14px; background: var(--ba-surface); color: var(--ba-fg); }
+.ba-organization-directory-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+.ba-organization-directory-header h2, .ba-organization-directory-header p { margin: 0; }
+.ba-organization-directory-header p { margin-top: 6px; }
+.ba-organization-card-grid { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; }
+.ba-organization-card-grid > .ba-skeleton { min-height: 120px; }
+.ba-organization-card { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 110px; padding: 16px; border: 1px solid var(--ba-border); border-radius: 10px; }
+.ba-organization-card-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ba-organization-card-copy strong, .ba-organization-card-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ba-organization-card-copy small { color: var(--ba-muted); }
+.ba-organization-active { align-self: start; padding: 4px 7px; border-radius: 999px; background: var(--ba-hover); color: var(--ba-success); font-size: 11px; font-weight: 700; }
+.ba-organization-card-actions { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.ba-organization-user-invitations { margin-top: 30px; padding-top: 26px; border-top: 1px solid var(--ba-divider); }
+.ba-organization-list { list-style: none; display: flex; flex-direction: column; margin: 0; padding: 0; border: 1px solid var(--ba-border); border-radius: 10px; overflow: hidden; }
+.ba-organization-member, .ba-organization-invitation { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 12px 14px; border-bottom: 1px solid var(--ba-divider); }
+.ba-organization-member:last-child, .ba-organization-invitation:last-child { border-bottom: 0; }
+.ba-organization-member-copy, .ba-organization-invitation > span:first-child { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.ba-organization-member-copy small, .ba-organization-invitation small { color: var(--ba-muted); }
+.ba-organization-member-actions { display: flex; align-items: center; gap: 10px; }
+.ba-organization-role { width: auto; min-width: 110px; min-height: 36px; }
+.ba-organization-role-label { flex: 0 0 auto; color: var(--ba-muted); font-size: 12px; }
+.ba-organization-profile { color: var(--ba-fg); }
+.ba-organization-profile-heading { display: flex; align-items: center; gap: 13px; padding: 22px 26px; border-bottom: 1px solid var(--ba-divider); }
+.ba-organization-profile-heading h2, .ba-organization-profile-heading p { margin: 0; }
+.ba-organization-profile-heading p { margin-top: 4px; }
+/* Same reasoning as .ba-profile-layout: the nav column sets the height. */
+.ba-organization-profile-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); align-items: start; }
+.ba-organization-profile-nav { display: flex; flex-direction: column; gap: 4px; padding: 16px 10px; border-inline-end: 1px solid var(--ba-divider); background: color-mix(in srgb, var(--ba-hover) 55%, var(--ba-surface)); }
+.ba-organization-profile-content { min-width: 0; padding: 26px; }
+.ba-organization-section { max-width: 610px; }
+.ba-organization-facts { display: flex; flex-direction: column; gap: 12px; }
+.ba-organization-facts div { display: flex; justify-content: space-between; gap: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--ba-divider); }
+.ba-organization-facts dt { color: var(--ba-muted); }
+.ba-organization-facts dd { margin: 0; font-weight: 600; }
+.ba-organization-invite-form { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; align-items: end; gap: 10px; margin-bottom: 20px; }
+.ba-organization-invite-form .ba-label { margin: 0; }
+.ba-organization-danger { display: flex; flex-direction: column; gap: 14px; }
+.ba-organization-danger-action { padding: 18px; border: 1px solid var(--ba-border); border-radius: 10px; }
+.ba-organization-danger-action > p { line-height: 1.5; }
+.ba-organization-delete { border-color: color-mix(in srgb, #dc2626 45%, var(--ba-border)); }
+
+@media (max-width: 680px) {
+  .ba-profile-overlay { align-items: end; padding: 0; }
+  .ba-profile-modal { width: 100%; max-height: 94dvh; border-radius: 16px 16px 0 0; border-bottom: 0; }
+  .ba-profile-heading, .ba-profile-modal-header { padding: 20px; }
+  .ba-profile-layout { display: block; }
+  .ba-profile-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 14px; border-inline-end: 0; border-bottom: 1px solid var(--ba-divider); }
+  .ba-profile-nav-item { width: 100%; min-width: 0; }
+  .ba-profile-content { padding: 22px 20px 28px; }
+  .ba-profile-list-item { align-items: flex-start; }
+  .ba-profile-list-item .ba-link-button { padding-block: 5px; }
+  .ba-organization-overlay { align-items: end; padding: 0; }
+  .ba-organization-modal { width: 100%; max-height: 94dvh; border-radius: 16px 16px 0 0; border-bottom: 0; }
+  .ba-organization-modal-header { padding: 16px 18px; }
+  .ba-organization-create, .ba-organization-directory { padding: 20px; }
+  .ba-organization-directory { border-radius: 0; }
+  .ba-organization-directory-header { flex-direction: column; }
+  .ba-organization-card-grid { grid-template-columns: 1fr; }
+  .ba-organization-profile-layout { display: block; }
+  .ba-organization-profile-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 14px; border-inline-end: 0; border-bottom: 1px solid var(--ba-divider); }
+  .ba-organization-profile-content { padding: 20px; }
+  .ba-organization-member { align-items: flex-start; flex-wrap: wrap; }
+  .ba-organization-member-actions { width: 100%; padding-inline-start: 44px; }
+  .ba-organization-invite-form { grid-template-columns: 1fr; }
+}
+
+/* --- RTL (B.3) ------------------------------------------------------------
+   Arabic-capable font stack when the components render RTL (plan 04). Font
+   files are not bundled: if the host app loads IBM Plex Sans Arabic it is
+   used, otherwise the platform's Arabic-capable system fonts render.
+   Targeted at the component surfaces directly (not inheritance from the
+   root): a host font-family anywhere between the root and our markup would
+   silently win by inheritance, and form controls don't inherit fonts at all. */
+.authowl-root[dir='rtl'] .ba-form,
+.authowl-root[dir='rtl'] .ba-menu,
+.authowl-root[dir='rtl'] .ba-input,
+.authowl-root[dir='rtl'] .ba-button,
+.authowl-root[dir='rtl'] .ba-social-button,
+.authowl-root[dir='rtl'] .ba-link-button,
+.authowl-root[dir='rtl'] .ba-organization-switcher-trigger,
+.authowl-root[dir='rtl'] .ba-organization-menu-item {
+  font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif;
+}
+.authowl-root[dir='rtl'] .ba-profile,
+.authowl-root[dir='rtl'] .ba-profile button,
+.authowl-root[dir='rtl'] .ba-profile input {
+  font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif;
+}

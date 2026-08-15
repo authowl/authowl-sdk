@@ -1,0 +1,34 @@
+# Gitleaks config extends the default ruleset.
+title = "authowl-sdk gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Official Firebase modified-scrypt reference vector used in import compatibility tests"
+condition = "AND"
+regexTarget = "match"
+paths = [
+  '''packages/cli/test/fixtures/imports/firebase-(auth-export|hash-config)\.json''',
+  '''scripts/ci/cli-install-check\.sh''',
+]
+regexes = [
+  '''lSrfV15cpx95/sZS2W9c9Kp6i/LVgQNDNC/qzrCnh1SAyZvqmZqAjTdn3aoItz\+VHjoZilo78198JAdRuid5lQ==''',
+  '''jxspr8Ki0RYycVU8zykbdLGjFQ3McFUH0uiiTvC8pVMXAn210wjLNmdZJzxUECKbm0QsEmYUSDzZvpjeJ9WmXA==''',
+]
+
+# The cross-language conformance corpus. Every value in these two files is a
+# SYNTHETIC fixture emitted by conformance/generate.mjs: JWTs signed by a
+# throwaway P-256 key that exists only in that generator, and `pk_live_…` strings
+# built from a fixed placeholder project id. They authenticate nothing.
+#
+# Scoped to these exact generated files rather than the directory, so a real
+# credential dropped anywhere else under conformance/ is still caught. The
+# generator itself is NOT allowlisted - if someone ever pastes a production key
+# in there, gitleaks still fires.
+[[allowlists]]
+description = "Generated AuthOwl conformance vectors (synthetic JWTs and publishable keys)"
+paths = [
+  '''conformance/vectors/jwt-verify\.json''',
+  '''conformance/vectors/publishable-key\.json''',
+]

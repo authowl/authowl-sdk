@@ -1,0 +1,139 @@
+# Flutter SDK publish (SDK repo).
+#
+# Separate from deploy.yml for one reason: pub.dev's automated publishing only
+# trusts a run started by a Git tag. It reads the `ref` claim out of the GitHub
+# OIDC token and refuses anything that is not a tag matching the pattern
+# configured on the package, so a workflow_dispatch on main cannot publish here
+# no matter how it authenticates.
+#
+# deploy.yml pushes the sdks/flutter-vX.Y.Z tag; this workflow is what that tag
+# starts. A tag pushed with the default GITHUB_TOKEN deliberately starts no
+# workflow, so either give deploy.yml a RELEASE_TAG_TOKEN PAT or dispatch this
+# workflow by hand and pick the tag as the ref.
+#
+# One-time setup: pub.dev > authowl > Admin > Automated publishing > enable
+# publishing from GitHub Actions with repository `authowl/authowl-sdk` and tag
+# pattern `sdks/flutter-v{{version}}`.
+
+name: Publish Flutter SDK
+
+on:
+  push:
+    tags: ['sdks/flutter-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-flutter-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: pub.dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # the GitHub Release for this tag, once pub.dev has it
+      id-token: write # OIDC trusted publishing
+    steps:
+      - name: A tag has to be what starts this
+        if: github.ref_type != 'tag'
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::pub.dev only accepts tag-triggered publishes (got $REF)"
+          exit 1
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install the Flutter SDK
+        # Cloned at a pinned tag rather than via a marketplace action, matching
+        # sdks.yml and keeping this workflow free of third-party actions.
+        run: |
+          git clone --depth 1 --branch 3.44.8 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >>"$GITHUB_PATH"
+
+      - name: The tag and the pubspec have to agree
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # --only keeps this to the one pub.dev probe: an unrelated registry
+          # having a bad day must not block the Flutter release.
+          unit=$(node scripts/release/sdk-manifest.mjs --only pub:authowl --registry-state \
+            | jq -c '.units[0]')
+          version=$(printf '%s' "$unit" | jq -r '.version')
+          published=$(printf '%s' "$unit" | jq -r '.published')
+          if [ "$TAG" != "sdks/flutter-v${version}" ]; then
+            echo "::error::tag $TAG does not match pubspec version $version"
+            exit 1
+          fi
+          {
+            printf 'version=%s\n' "$version"
+            printf 'published=%s\n' "$published"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Resolve dependencies
+        if: steps.version.outputs.published == 'false'
+        working-directory: sdks/flutter
+        run: flutter pub get
+
+      - name: Dry-run the publish
+        if: steps.version.outputs.published == 'false'
+        working-directory: sdks/flutter
+        run: flutter pub publish --dry-run
+
+      - name: Publish to pub.dev
+        if: steps.version.outputs.published == 'false'
+        working-directory: sdks/flutter
+        run: |
+          set -euo pipefail
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo '::error::no OIDC credentials in this job (permissions: id-token: write)'
+            exit 1
+          fi
+          # pub.dev takes the GitHub identity token itself - it validates the
+          # repository and tag claims against the package's publishing config.
+          PUB_TOKEN=$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://pub.dev" \
+            | jq -r '.value // empty')
+          if [ -z "$PUB_TOKEN" ]; then
+            echo '::error::GitHub returned no OIDC identity token'
+            exit 1
+          fi
+          echo "::add-mask::$PUB_TOKEN"
+          export PUB_TOKEN
+          flutter pub token add https://pub.dev --env-var PUB_TOKEN
+          flutter pub publish --force
+
+      - name: Create the GitHub Release
+        # Only now, with pub.dev actually serving it. deploy.yml deliberately
+        # tags without releasing, because the tag is a request to publish.
+        if: steps.version.outputs.published == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release exists: $TAG"
+            exit 0
+          fi
+          notes=$(printf '`authowl` `%s` released from %s.\n\nhttps://pub.dev/packages/authowl/versions/%s\n' \
+            "$VERSION" "$GITHUB_SHA" "$VERSION")
+          gh release create "$TAG" --verify-tag --title "authowl (Flutter) $VERSION" --notes "$notes"
+
+      - name: Already published
+        if: steps.version.outputs.published != 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "pub.dev already serves authowl $VERSION; nothing to publish" \
+            >>"$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,35 @@
+# CI - plan 11, task 0.5 (SDK repo).
+# Gates every PR and push to main with the same `pnpm ci:local` command used
+# before local merges and package releases.
+#
+# Supply-chain: this SDK ships to end-user browsers, so every third-party action
+# is pinned to a full commit SHA (tag hijacks are a real attack). Dependabot
+# (task 0.2, github-actions ecosystem) keeps the pins fresh.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: nothing here writes to the repo.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: canonical exact-commit pinned-Linux gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run canonical gate
+        run: bash scripts/ci/local-gate.sh

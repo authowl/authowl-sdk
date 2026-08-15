@@ -1,0 +1,22 @@
+[
+  {
+    "id": "user_clerk_json_001",
+    "first_name": "Salma",
+    "last_name": "Mahmoud",
+    "username": null,
+    "primary_email_address": "salma@example.test",
+    "email_addresses": ["salma@example.test"],
+    "primary_phone_number": null,
+    "phone_numbers": null,
+    "password_digest": null,
+    "password_hasher": null,
+    "unsafe_metadata": { "locale": "ar" },
+    "public_metadata": { "customer_tier": "starter" },
+    "private_metadata": { "legacy_customer_id": "customer_synthetic_001" },
+    "has_image": false,
+    "image_url": null,
+    "backup_codes_enabled": false,
+    "backup_codes": null,
+    "totp_secret": null
+  }
+]

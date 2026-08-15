@@ -1,0 +1,7 @@
+{
+  "packageManager": "pnpm@9.15.0",
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^19.0.0"
+  }
+}

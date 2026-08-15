@@ -1,0 +1,39 @@
+# Dependabot for the pnpm workspace and pinned GitHub Actions.
+version: 2
+updates:
+  # ---- npm (all workspace packages) ----
+  - package-ecosystem: npm
+    directories:
+      - "/"
+      - "/packages/*"
+      - "/examples/*"
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Africa/Cairo
+    open-pull-requests-limit: 10
+    # Let a freshly-published version bake before we pull it — cheap insurance
+    # against a compromised release. Security advisories bypass the cooldown.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+    groups:
+      react:
+        # Ordered before dev-dependencies so @types/react* group here.
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+      dev-dependencies:
+        dependency-type: development
+
+  # ---- github actions (keeps SHA-pinned actions fresh once ci.yml lands, 0.5) ----
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Africa/Cairo
+    cooldown:
+      default-days: 7

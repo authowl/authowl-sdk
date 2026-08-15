@@ -1,0 +1,2 @@
+external_id,email,email_verified,phone,phone_verified,name,image_url,password_scheme,password_hash,password_parameters,external_accounts,organization_slugs,public_metadata,private_metadata,unsafe_metadata,created_at
+custom-user-001,custom@example.test,true,,,Custom User,,bcrypt,$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2,,,"[""acme""]","{""locale"":""en""}",,,"2026-01-04T08:00:00.000Z"

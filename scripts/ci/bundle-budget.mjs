@@ -1,0 +1,198 @@
+// Bundle budget guard (plan 11 task 0.5; budgets from plan 04).
+//
+// Measures the REAL gzipped browser payload a consumer ships: the published
+// auth-react artifact bundled together with its whole runtime dependency graph
+// (auth-core + the AuthOwl fetch/state client + WebAuthn helper), minified,
+// with only react/react-dom left external - the host app already ships those as
+// peer dependencies. Gating the raw `dist/index.js` on its own would be
+// meaningless, because tsup leaves every dependency external, so a PR that
+// bloats auth-core or pulls in a heavy runtime dep would still slip under the
+// gate. Run after `pnpm run build`.
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
+import { build } from 'esbuild';
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+
+// react/react-dom are @authowl/react peer deps the host app already bundles, so
+// they are excluded from that measured payload. Core itself has no React
+// dependency; keeping the same external list for both entries makes no change
+// to its result.
+const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
+
+// Budgets are gzipped kilobytes. Plan 21.5 consciously raises @authowl/react
+// from 50kb to 55kb after adding the Google Identity/FedCM lifecycle manager;
+// the measured 49.9kb baseline keeps 10% headroom without weakening the gate.
+// The @authowl/core row guards the framework-agnostic runtime payload:
+// its published dist includes the first-party fetch/state client and reviewed
+// WebAuthn helper, so this measures what a framework-agnostic consumer ships.
+// Native-client baseline: 8.1kb gzip after named JWT template identity and
+// policy-isolated caching on 2026-07-15.
+//
+// Org custom-permissions Slice C (2026-07-23) consciously raises both rows for
+// the new advisory permission surface: @authowl/core gains the pure membership
+// evaluators + `organization.has()`/`hasPermission()`/`listRoles()` (8.5->9.0),
+// and @authowl/react gains `useOrganization()` + `<Protect role|permission>` +
+// the server-driven role select (55->57). The pure server token verifier lives
+// in the `@authowl/core/server` entry, so it is NOT in either measured browser
+// payload. Both rows keep regression headroom over the measured size.
+//
+// Brand accent derivation P1-5 (2026-07-24) raises @authowl/react 57->60: the
+// new brand.ts (OKLab/OKLCH color math + WCAG contrast solve + sRGB gamut clamp)
+// that fixes the muddy accent adds ~1.4kb gz (measured 57.7->59.1). Core is
+// untouched. The row keeps regression headroom over the 59.1kb measured size.
+//
+// Browser session-token containment (2026-07-26) raises core 9->9.5 and React
+// 60->61. The exact-path response projector adds defense in depth for consumers
+// running against an older server while preserving the separate short-lived
+// backend JWT. Measured baselines are 9.2kb and 59.7kb respectively.
+//
+// Canonical browser transport (2026-07-26) raises core 9.5->11.5 and React
+// 61->62.5. The required redirect refusal, total deadline, streamed byte cap,
+// strict JSON boundary, safe error mapping, and retry policy measure 10.8kb in
+// core and 61.5kb through React. This is reviewed security code, not dependency
+// weight, and both rows retain explicit regression headroom.
+//
+// Session/account runtime DTO decoding (2026-07-26) raises core 11.5->12.5 and
+// React 62.5->63.5. Exact shape construction prevents malformed JSON from
+// becoming authenticated state, crashing account lists, or carrying unknown
+// credential fields forward. Measured baselines are 11.6kb and 62.4kb.
+//
+// Organization runtime DTO decoding (2026-07-26) raises core 12.5->13.5 and
+// React 63.5->64.5. Exact entity projection, tenant-id consistency checks, and
+// bounded metadata/permission reconstruction prevent credential-shaped plugin
+// fields or cross-organization rows from entering browser state. Measured
+// baselines are 12.4kb and 63.2kb.
+//
+// WebAuthn runtime contract hardening (2026-07-26) raises core 13.5->16.5 and
+// React 64.5->67.5. Bounded ceremony options, exact passkey/session projection,
+// credential relation checks, extension-result stripping, and canonical name
+// input prevent malformed or secret-bearing data from crossing the browser
+// boundary. Measured baselines are 15.9kb and 66.8kb.
+//
+// Identity lifecycle adoption (2026-07-30) raises React 67.5->70. The central
+// compatibility resolver, username sign-in, structured identity fields, code
+// verification, and separate passkey-add/email-change controls measure 69.0kb.
+// Core remains inside its existing budget.
+//
+// Canonical transport adoption (2026-07-30) raises core 16.5->18 and React
+// 70->71.5. Public config, consent, token, Admin API, and JWKS now share the
+// bounded transport and runtime response contracts. Measured baselines are
+// 17.1kb and 70.0kb; the new rows retain explicit regression headroom.
+//
+// Akedly Shield phone-OTP challenge (plan 36) raises Core 18->19 and React
+// 71.5->73. The runtime challenge decoder and lazy proof surface measure 18.2kb
+// in Core; the server-selected challenge lookup, discriminated guard state,
+// and conditional Turnstile/proof ceremony in <PhoneOTP /> measure 71.8kb in
+// React. Both rows retain explicit regression headroom.
+//
+// Header session transports (2026-08-07) raise Core 19->21 and React 73->75.
+// TWO causes, named separately rather than folded together, because one of them
+// is debt this entry is regularizing rather than requesting:
+//
+//   1. The bearer session transport (sdk#132) merged OVER the existing budget
+//      and nobody noticed. GitHub Actions are billing-paused, so `local-gate.sh`
+//      is the only thing that runs this file, and it was not run before that
+//      merge. `main` measures 19.7kb and 73.8kb TODAY, against ceilings of 19
+//      and 73. That overage is stated here rather than absorbed silently, so the
+//      history does not read as though this raise paid for one feature when it
+//      paid for two.
+//   2. The 2FA challenge transport adds the wire grammar, the per-name merge and
+//      the session-scoped store: +0.5kb Core, +0.4kb React. Measured baselines
+//      after both are 20.2kb and 74.2kb.
+//
+// The new ceilings keep 0.8kb of regression headroom on each row, matching what
+// every prior entry above reserved. A size sweep is queued separately: this
+// raise buys the release, it does not license drift.
+//
+// The provider package `@akedly/shield` is a direct dependency so consumer
+// bundlers always resolve it. The measurement uses code splitting and follows
+// static imports only, matching the initial browser payload: Shield remains in
+// an on-demand chunk and is still built, rather than hidden behind an external.
+const BUDGETS = [
+  {
+    entry: 'packages/auth-react/dist/index.js',
+    maxGzipKb: 75,
+    label: '@authowl/react (provider + hooks + components)',
+  },
+  {
+    entry: 'packages/auth-core/dist/index.js',
+    maxGzipKb: 21,
+    label: '@authowl/core (framework-neutral fetch/state client)',
+  },
+];
+
+async function measureGzipKb(entry) {
+  const absoluteEntry = resolve(root, entry);
+  const result = await build({
+    absWorkingDir: root,
+    entryPoints: [absoluteEntry],
+    bundle: true,
+    format: 'esm',
+    minify: true,
+    platform: 'browser',
+    write: false,
+    splitting: true,
+    outdir: 'bundle-budget-output',
+    metafile: true,
+    external: PEER_EXTERNALS,
+    logLevel: 'silent',
+  });
+
+  const outputs = result.metafile.outputs;
+  const entryOutput = Object.entries(outputs).find(([, metadata]) =>
+    metadata.entryPoint && resolve(root, metadata.entryPoint) === absoluteEntry)?.[0];
+  if (!entryOutput) throw new Error(`Could not identify bundle entry for ${entry}`);
+
+  const initialOutputs = new Set();
+  const visitStaticImports = (outputPath) => {
+    if (initialOutputs.has(outputPath)) return;
+    initialOutputs.add(outputPath);
+    for (const imported of outputs[outputPath]?.imports ?? []) {
+      if (imported.external || imported.kind === 'dynamic-import') continue;
+      const resolvedPath = outputs[imported.path]
+        ? imported.path
+        : relative(root, resolve(root, dirname(outputPath), imported.path));
+      if (outputs[resolvedPath]) visitStaticImports(resolvedPath);
+    }
+  };
+  visitStaticImports(entryOutput);
+
+  const filesByPath = new Map(result.outputFiles.map((file) => [
+    relative(root, file.path),
+    file,
+  ]));
+  const gzipBytes = [...initialOutputs].reduce((total, outputPath) => {
+    const file = filesByPath.get(outputPath);
+    if (!file) throw new Error(`Missing generated output ${outputPath}`);
+    return total + gzipSync(Buffer.from(file.contents)).length;
+  }, 0);
+  return gzipBytes / 1024;
+}
+
+let failed = false;
+const corePackage = JSON.parse(readFileSync(resolve(root, 'packages/auth-core/package.json'), 'utf8'));
+if (!corePackage.dependencies?.['@akedly/shield'] || corePackage.peerDependencies?.['@akedly/shield']) {
+  console.error('bundle-budget: @akedly/shield must remain a direct @authowl/core dependency');
+  failed = true;
+}
+console.log('bundle-budget (gzipped browser payload, react/react-dom external):');
+for (const b of BUDGETS) {
+  if (!existsSync(resolve(root, b.entry))) {
+    console.error(`  MISSING  ${b.entry} - run \`pnpm run build\` first`);
+    failed = true;
+    continue;
+  }
+  const kb = await measureGzipKb(b.entry);
+  const ok = kb <= b.maxGzipKb;
+  console.log(`  [${ok ? 'OK  ' : 'OVER'}] ${b.label}: ${kb.toFixed(1)}kb / ${b.maxGzipKb}kb`);
+  if (!ok) failed = true;
+}
+
+if (failed) {
+  console.error('bundle-budget: FAILED');
+  process.exit(1);
+}
+console.log('bundle-budget: OK');

@@ -1,0 +1,6 @@
+{
+  "name": "server-only-app",
+  "scripts": {
+    "dev": "node server.js -p 8080"
+  }
+}

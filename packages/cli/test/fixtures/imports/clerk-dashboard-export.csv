@@ -1,0 +1,5 @@
+# Sanitized Clerk Dashboard export fixture. Values are synthetic.
+id,first_name,last_name,username,primary_email_address,primary_phone_number,verified_email_addresses,unverified_email_addresses,verified_phone_numbers,unverified_phone_numbers,totp_secret,password_digest,password_hasher
+user_clerk_001,Mariam,Hassan,,mariam@example.test,,mariam@example.test,,,,,$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2,bcrypt
+user_clerk_002,Omar,Nabil,omar.nabil,omar@example.test,+201001112223,omar@example.test,,+201001112223,,,,
+user_clerk_003,Nour,Ali,,nour@example.test,,nour@example.test,,,,,"$argon2id$v=19$m=65536,t=2,p=1$J6Q/82PCyaNpYKRELJyTZg$m04qUAB8rexWDR4+/0f+SFB+4XMFxt7YAvAq2UycYos",argon2

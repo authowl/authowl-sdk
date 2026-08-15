@@ -1,0 +1,436 @@
+# Manual SDK deploy (SDK repo).
+#
+# One hand-triggered entry point that ships every AuthOwl SDK to the place its
+# ecosystem expects:
+#
+#   packages/*     -> npm         seven packages, through the exact-commit
+#                                 release contract (docs/releasing.md)
+#   sdks/python    -> PyPI
+#   sdks/rust      -> crates.io
+#   sdks/go        -> a Git tag   Go has no registry: consumers resolve the
+#                                 module out of this repository, and a
+#                                 subdirectory module must carry its path in
+#                                 the tag (sdks/go/vX.Y.Z)
+#   sdks/flutter   -> pub.dev     from publish-flutter.yml, which the
+#                                 sdks/flutter-vX.Y.Z tag pushed here starts.
+#                                 pub.dev only trusts tag-triggered runs.
+#   sdks/php       -> nowhere     Packagist reads composer.json from the
+#                                 repository root, so shipping sdks/php needs a
+#                                 subtree-split mirror repository first
+#
+# Every version is read from its own manifest by scripts/release/sdk-manifest.mjs
+# and skipped when that exact version is already on its registry, so re-running
+# this workflow is safe and mostly a no-op.
+#
+# Authentication is OIDC trusted publishing everywhere - no registry tokens live
+# in this repository. Each registry must be told to trust THIS workflow file
+# once; docs/releasing.md has the click paths.
+#
+# Supply-chain: actions/checkout is the only action used, pinned to a full
+# commit SHA. Every other toolchain comes from the runner image or is installed
+# at an exact pinned version from its own registry.
+
+name: Deploy SDKs
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Rehearse only: build, verify and dry-run without publishing'
+        type: boolean
+        default: true
+      npm:
+        description: 'npm: packages/* (runs the full pinned Docker gate, ~1h)'
+        type: boolean
+        default: true
+      python:
+        description: 'PyPI: sdks/python'
+        type: boolean
+        default: true
+      rust:
+        description: 'crates.io: sdks/rust'
+        type: boolean
+        default: true
+      flutter:
+        description: 'pub.dev: sdks/flutter (pushes the tag that publishes it)'
+        type: boolean
+        default: true
+      go_version:
+        description: 'Go module version to tag, e.g. 0.1.0 (empty skips the Go SDK)'
+        type: string
+        default: ''
+      dist_tag:
+        description: 'npm dist-tag'
+        type: string
+        default: 'latest'
+      tags:
+        description: 'Push Git tags and create GitHub Releases for what shipped'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Releases are not interchangeable: never let two of them interleave, and never
+# cancel one that may already have published half of a package set.
+concurrency:
+  group: deploy-sdks
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+      npm_pending: ${{ steps.plan.outputs.npm_pending }}
+      python_pending: ${{ steps.plan.outputs.python_pending }}
+      rust_pending: ${{ steps.plan.outputs.rust_pending }}
+    steps:
+      - name: Deploys run only from main
+        if: github.ref != 'refs/heads/main'
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          echo "::error::Deploy must be dispatched from main (got $REF)"
+          exit 1
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Resolve versions and registry state
+        id: plan
+        env:
+          GO_VERSION: ${{ inputs.go_version }}
+          TAGS: ${{ inputs.tags }}
+        run: |
+          set -euo pipefail
+          arguments=(--registry-state --summary-file "$GITHUB_STEP_SUMMARY")
+          if [ -n "$GO_VERSION" ]; then
+            arguments+=(--go-version "$GO_VERSION")
+          fi
+          plan=$(node scripts/release/sdk-manifest.mjs "${arguments[@]}")
+          if [ -n "$GO_VERSION" ] && [ "$TAGS" != 'true' ]; then
+            echo '::warning::go_version is set but tags are off - the tag IS the Go release, so nothing will ship'
+          fi
+          {
+            printf 'plan=%s\n' "$plan"
+            printf '%s' "$plan" | jq -r '
+              ([.units[] | select(.ecosystem == "npm" and .published == false)] | length) as $npm
+              | (.units[] | select(.id == "pypi:authowl")) as $python
+              | (.units[] | select(.id == "crates:authowl")) as $rust
+              | "npm_pending=\($npm)",
+                "python_pending=\($python.published | not)",
+                "rust_pending=\($rust.published | not)"
+            '
+          } >>"$GITHUB_OUTPUT"
+
+  npm:
+    name: npm
+    needs: plan
+    # Nothing to do when every package version is already on the registry: the
+    # gate below costs about an hour.
+    if: inputs.npm && needs.plan.outputs.npm_pending != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      id-token: write # OIDC trusted publishing
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0 # the gate refuses to run against a shallow history
+          persist-credentials: false
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Pin the npm release client
+        # The runner ships whatever npm its bundled Node carries; trusted
+        # publishing needs 11.5.1 or newer.
+        #
+        # Installed under a user-owned prefix rather than the system one. The
+        # runner's /usr/local is root-owned, so a plain global install dies with
+        # EACCES writing npm's man pages - and doing it with sudo would leave
+        # root-owned files that later user-run npm steps trip over.
+        run: |
+          npm config set prefix "$HOME/.npm-global"
+          echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
+          npm install --global npm@11.19.0
+
+      - name: Build the exact release artifacts
+        # Runs the full pinned Docker gate and exports one tarball per package,
+        # bound to this commit and to passing gate evidence.
+        run: pnpm release:prepare
+
+      - name: Verify the artifacts against this commit
+        run: pnpm release:verify
+
+      - name: Dry-run the publish
+        env:
+          DIST_TAG: ${{ inputs.dist_tag }}
+        run: pnpm release:publish -- --tag "$DIST_TAG" --dry-run
+
+      - name: Publish to npm
+        if: ${{ !inputs.dry_run }}
+        env:
+          DIST_TAG: ${{ inputs.dist_tag }}
+        run: pnpm release:publish -- --tag "$DIST_TAG" --trusted-publishing --confirm
+
+  python:
+    name: PyPI
+    needs: plan
+    if: inputs.python && needs.plan.outputs.python_pending == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # OIDC trusted publishing
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Build the distribution
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/pypi-tools"
+          "$RUNNER_TEMP/pypi-tools/bin/pip" install --quiet --disable-pip-version-check \
+            'build==1.5.0' 'twine==7.0.0'
+          "$RUNNER_TEMP/pypi-tools/bin/python" -m build --outdir "$RUNNER_TEMP/pypi-dist" sdks/python
+          "$RUNNER_TEMP/pypi-tools/bin/twine" check --strict "$RUNNER_TEMP/pypi-dist"/*
+
+      # A dry run skips this step entirely, so it proves the distribution BUILDS
+      # and nothing about whether we can publish it. npm's dry run is not like
+      # this - it really does call `npm publish --dry-run` - so a green dry run
+      # says much less here than it does there. The first live run of this job is
+      # the first time PyPI is ever contacted.
+      - name: Publish to PyPI
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo '::error::no OIDC credentials in this job (permissions: id-token: write)'
+            exit 1
+          fi
+          identity=$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=pypi" | jq -r '.value // empty')
+          if [ -z "$identity" ]; then
+            echo '::error::GitHub returned no OIDC identity token'
+            exit 1
+          fi
+          echo "::add-mask::$identity"
+          # No --fail-with-body here: it exits non-zero under `set -e` before the
+          # diagnostic below can run, so a declined mint surfaced as a bare
+          # `curl: (22)` with none of the guidance. Capture the status instead.
+          minted=$(curl --silent --show-error --write-out '\n%{http_code}' --request POST \
+            --header 'Content-Type: application/json' \
+            --data "$(jq -nc --arg token "$identity" '{token: $token}')" \
+            https://pypi.org/_/oidc/mint-token) || minted=$'\n000'
+          status=$(printf '%s' "$minted" | tail -n1)
+          token=$(printf '%s' "$minted" | sed '$d' | jq -r '.token // empty' 2>/dev/null || true)
+          if [ -z "$token" ]; then
+            echo "::error::PyPI declined to mint a token (HTTP $status) - is this workflow a trusted publisher for \`authowl\`? A project that does not exist on PyPI yet needs a PENDING publisher registered first at https://pypi.org/manage/account/publishing/ (owner authowl, repository authowl-sdk, workflow deploy.yml)."
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          TWINE_USERNAME=__token__ TWINE_PASSWORD="$token" \
+            "$RUNNER_TEMP/pypi-tools/bin/twine" upload --non-interactive "$RUNNER_TEMP/pypi-dist"/*
+
+  rust:
+    name: crates.io
+    needs: plan
+    if: inputs.rust && needs.plan.outputs.rust_pending == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # OIDC trusted publishing
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Package the crate
+        run: cargo package --manifest-path sdks/rust/Cargo.toml
+
+      # Skipped on a dry run, same as the PyPI job: this proves the crate builds,
+      # not that it can be published. See the note there.
+      - name: Publish to crates.io
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo '::error::no OIDC credentials in this job (permissions: id-token: write)'
+            exit 1
+          fi
+          identity=$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=crates.io" | jq -r '.value // empty')
+          if [ -z "$identity" ]; then
+            echo '::error::GitHub returned no OIDC identity token'
+            exit 1
+          fi
+          echo "::add-mask::$identity"
+          # No --fail-with-body here: it exits non-zero under `set -e` before the
+          # diagnostic below can run, so a declined mint surfaced as a bare
+          # `curl: (22)` with none of the guidance. Capture the status instead.
+          minted=$(curl --silent --show-error --write-out '\n%{http_code}' --request POST \
+            --header 'Content-Type: application/json' \
+            --data "$(jq -nc --arg jwt "$identity" '{jwt: $jwt}')" \
+            https://crates.io/api/v1/trusted_publishing/tokens) || minted=$'\n000'
+          status=$(printf '%s' "$minted" | tail -n1)
+          token=$(printf '%s' "$minted" | sed '$d' | jq -r '.token // empty' 2>/dev/null || true)
+          if [ -z "$token" ]; then
+            echo "::error::crates.io declined to mint a token (HTTP $status). Trusted publishing is configured per EXISTING crate, so a crate that has never been published cannot use it: run \`cargo publish\` once with an API token, then add this workflow as a trusted publisher on the crate's settings page."
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          # The credential is short-lived, but hand it back the moment the
+          # publish is over rather than leaving it valid for its full window.
+          revoke() {
+            curl --silent --show-error --request DELETE \
+              --header "Authorization: Bearer $token" \
+              https://crates.io/api/v1/trusted_publishing/tokens \
+              || echo '::warning::could not revoke the crates.io token; it expires on its own'
+          }
+          trap revoke EXIT
+          CARGO_REGISTRY_TOKEN="$token" cargo publish --manifest-path sdks/rust/Cargo.toml
+
+  tag:
+    name: Tags and releases
+    needs: [plan, npm, python, rust]
+    # `always()` so a skipped publish job (nothing pending) still tags, but never
+    # after a failure: a tag claims the version is out there.
+    if: >-
+      always() && inputs.tags && !inputs.dry_run
+      && !contains(needs.*.result, 'failure')
+      && !contains(needs.*.result, 'cancelled')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0 # existing tags, so this step stays idempotent
+          persist-credentials: false
+
+      - name: Push tags
+        id: push
+        env:
+          PLAN: ${{ needs.plan.outputs.plan }}
+          NPM_RESULT: ${{ needs.npm.result }}
+          PYTHON_RESULT: ${{ needs.python.result }}
+          RUST_RESULT: ${{ needs.rust.result }}
+          FLUTTER: ${{ inputs.flutter }}
+          # A tag pushed with GITHUB_TOKEN starts no workflow, which leaves
+          # publish-flutter.yml waiting. Add RELEASE_TAG_TOKEN (a fine-grained
+          # PAT with contents: write) to close that loop automatically.
+          TAG_TOKEN: ${{ secrets.RELEASE_TAG_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # A tag points at THIS commit and its Release says the version came
+          # from it, so a tag is only ever cut for something this run actually
+          # released. A version the registry already had was built by some
+          # other commit - tagging it here would invent provenance, so it is
+          # left alone (docs/releasing.md covers back-filling by hand).
+          # Go is the exception in the other direction: its tag IS the release.
+          wanted() {
+            case "$1" in
+              npm) [ "$NPM_RESULT" = success ] ;;
+              pypi) [ "$PYTHON_RESULT" = success ] ;;
+              crates.io) [ "$RUST_RESULT" = success ] ;;
+              go) return 0 ;;
+              # The Flutter tag starts publish-flutter.yml; pointless once
+              # pub.dev already serves the version.
+              pub.dev) [ "$FLUTTER" = true ] && [ "$2" != true ] ;;
+              *) return 1 ;;
+            esac
+          }
+
+          created=()
+          while IFS=$'\t' read -r ecosystem tag name version published url; do
+            if ! wanted "$ecosystem" "$published"; then
+              printf 'not released by this run, no tag: %s\n' "$tag"
+              continue
+            fi
+            # Recorded whether or not the tag had to be created, so a re-run
+            # can still create a Release that failed the first time.
+            printf '%s\t%s\t%s\t%s\t%s\n' "$ecosystem" "$tag" "$name" "$version" "$url" \
+              >>"$RUNNER_TEMP/release-tags"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              printf 'tag exists: %s\n' "$tag"
+              continue
+            fi
+            git tag "$tag" "$GITHUB_SHA"
+            created+=("$tag")
+          done < <(
+            printf '%s' "$PLAN" | jq -r '
+              .units[]
+              | select(.publishable and .tag != null)
+              | [.ecosystem, .tag, .name, .version, (.published | tostring), (.url // "")]
+              | @tsv
+            '
+          )
+
+          if [ "${#created[@]}" -eq 0 ]; then
+            echo 'no new tags'
+            exit 0
+          fi
+          git push --atomic \
+            "https://x-access-token:${TAG_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "${created[@]}"
+          printf 'Pushed %d tag(s): %s\n' "${#created[@]}" "${created[*]}"
+
+      - name: Create GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ ! -f "$RUNNER_TEMP/release-tags" ]; then
+            echo 'nothing was released' >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo '## Released' >>"$GITHUB_STEP_SUMMARY"
+          while IFS=$'\t' read -r ecosystem tag name version url; do
+            # The Flutter Release belongs to publish-flutter.yml: this tag only
+            # starts that run, and pub.dev has not accepted anything yet.
+            if [ "$ecosystem" = 'pub.dev' ]; then
+              printf -- '- `%s` `%s` — tagged, publishing to pub.dev\n' "$name" "$version" \
+                >>"$GITHUB_STEP_SUMMARY"
+              continue
+            fi
+            if gh release view "$tag" >/dev/null 2>&1; then
+              printf 'release exists: %s\n' "$tag"
+              continue
+            fi
+            notes=$(printf '`%s` `%s` released from %s.\n\n%s\n' \
+              "$name" "$version" "$GITHUB_SHA" "$url")
+            gh release create "$tag" --verify-tag --title "$name $version" --notes "$notes"
+            printf -- '- `%s` `%s` %s\n' "$name" "$version" "$url" >>"$GITHUB_STEP_SUMMARY"
+          done <"$RUNNER_TEMP/release-tags"
+
+      - name: Warm the Go module proxy
+        if: inputs.go_version != ''
+        env:
+          GO_VERSION: ${{ inputs.go_version }}
+        run: |
+          set -euo pipefail
+          module='github.com/mstfash/authowl-sdk/sdks/go'
+          # The proxy fetches a version the first time anyone asks for it. Ask
+          # now, so `go get` works the moment this run finishes.
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error \
+              "https://proxy.golang.org/${module}/@v/v${GO_VERSION}.info"; then
+              printf '\nproxy.golang.org serves %s@v%s\n' "$module" "$GO_VERSION"
+              exit 0
+            fi
+            printf 'attempt %d: proxy has not indexed the tag yet\n' "$attempt"
+            sleep 15
+          done
+          echo "::warning::proxy.golang.org has not indexed v${GO_VERSION} yet; it will on first use"

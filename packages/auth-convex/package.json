@@ -1,0 +1,64 @@
+{
+  "name": "@authowl/convex",
+  "version": "0.1.3",
+  "description": "Convex integration for AuthOwl: ConvexProviderWithAuthOwl, a drop-in replacement for ConvexProviderWithClerk.",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/authowl/authowl-sdk.git",
+    "directory": "packages/auth-convex"
+  },
+  "homepage": "https://authowl.dev",
+  "keywords": [
+    "authentication",
+    "auth",
+    "authowl",
+    "convex",
+    "react",
+    "jwt"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react,convex && node ../../scripts/gen-notices.mjs src/index.ts",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch --external react,convex",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs"
+  },
+  "peerDependencies": {
+    "convex": ">=1.24",
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.2",
+    "convex": "^1.42.1",
+    "react": "^19.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
+  }
+}

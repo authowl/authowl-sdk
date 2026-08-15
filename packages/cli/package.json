@@ -1,0 +1,55 @@
+{
+  "name": "authowl",
+  "version": "0.2.18",
+  "description": "AuthOwl CLI for browser login and safe application detection.",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/authowl/authowl-sdk.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://authowl.dev",
+  "keywords": [
+    "authentication",
+    "auth",
+    "authowl",
+    "cli",
+    "nextjs",
+    "vite"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "authowl": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup && node ../../scripts/gen-notices.mjs src/cli.ts",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/stream-json": "1.7.8",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "dependencies": {
+    "csv-parse": "6.1.0",
+    "stream-json": "1.9.1"
+  }
+}

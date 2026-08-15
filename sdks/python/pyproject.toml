@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "authowl"
+version = "0.1.0"
+description = "Server-side token verification and webhook helpers for AuthOwl, the multi-tenant auth SaaS."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+keywords = ["authentication", "auth", "authowl", "jwt", "oauth", "sdk"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Security",
+]
+# `cryptography` is the only runtime dependency: P-256 ECDSA verification is the
+# one primitive the standard library does not provide. Everything else (HMAC,
+# JSON, HTTP) is stdlib on purpose - backend auth is where a surprise transitive
+# dependency is least welcome.
+dependencies = ["cryptography>=42.0"]
+
+[project.urls]
+Homepage = "https://authowl.dev"
+Repository = "https://github.com/authowl/authowl-sdk"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/authowl"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,21 @@
+packages:
+  - "packages/*"
+  - "examples/*"
+
+blockExoticSubdeps: true
+minimumReleaseAge: 10080
+# Security-only exception for the release that fixes GHSA-rgw5-rvv9-x895.
+minimumReleaseAgeExclude:
+  - "brace-expansion@5.0.9"
+trustPolicy: no-downgrade
+# Transitive dependencies already present in the reviewed lockfile. These exact
+# releases predate registry provenance, so keep the trust exceptions scoped.
+trustPolicyExclude:
+  - "undici-types@6.21.0"
+  - "semver@6.3.1"
+  # tsup's file watcher, already resolved in this lockfile for every package that
+  # builds with tsup. Adding the @authowl/expo workspace package forces a fresh
+  # resolution, which re-runs the trust check against a release that predates
+  # chokidar's provenance attestations. Same exact version, no new code entering
+  # the tree - so the exception stays pinned to that one release.
+  - "chokidar@4.0.3"

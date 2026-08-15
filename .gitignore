@@ -1,0 +1,38 @@
+node_modules
+dist
+storybook-static
+.turbo
+.next
+*.tsbuildinfo
+.DS_Store
+.env*.local
+.authowl-ci/
+.authowl-release/
+
+# Non-JavaScript SDK build output and vendored dependencies (sdks/*). Each
+# ecosystem resolves its own dependencies from its committed manifest, so none
+# of this belongs in the repository.
+#
+# Lockfiles are ignored on purpose: these are LIBRARIES, not applications. A
+# committed lockfile in a published library is ignored by consumers anyway and
+# only serves to hide resolution drift from CI.
+sdks/php/vendor/
+sdks/php/.phpunit.cache/
+sdks/php/composer.lock
+sdks/rust/target/
+sdks/rust/Cargo.lock
+sdks/flutter/.dart_tool/
+sdks/flutter/build/
+sdks/flutter/pubspec.lock
+sdks/flutter/.flutter-plugins*
+sdks/python/.venv/
+sdks/python/src/*.egg-info/
+.venv-authowl/
+__pycache__/
+.pytest_cache/
+
+# Local agent worktrees and scratch state. Never committed, and left untracked
+# they break the canonical gate twice over: `local-gate.sh` refuses to run with
+# any untracked file present, and a nested checkout here is a second copy of the
+# whole repo, which eslint walks and reports thousands of parse errors in.
+.claude/

@@ -1,0 +1,29 @@
+{
+  "name": "example-convex",
+  "private": true,
+  "version": "0.0.19",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:convex": "convex dev",
+    "configure:local": "node scripts/configure-local.mjs",
+    "acceptance:local": "node scripts/local-acceptance.mjs",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@authowl/convex": "workspace:*",
+    "@authowl/react": "workspace:*",
+    "convex": "^1.42.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "@types/node": "^22.10.2"
+  }
+}

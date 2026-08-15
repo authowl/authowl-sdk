@@ -1,0 +1,146 @@
+# Cross-language SDK conformance.
+#
+# The whole point of conformance/vectors is that every implementation answers
+# identically. That guarantee is only real if CI runs ALL of them, so this
+# workflow sets AUTHOWL_CONFORMANCE_STRICT=1: a missing toolchain FAILS rather
+# than silently reducing the gate to "whatever happened to be installed".
+#
+# Supply-chain: this repo pins every third-party action to a full commit SHA. To
+# keep that surface at zero, the language jobs use the toolchains already present
+# on the runner image (Go, Python, PHP, Rust) and install Flutter from a pinned
+# upstream tag - no unpinned marketplace actions anywhere in this file.
+
+name: SDK conformance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typescript:
+    name: TypeScript (reference implementation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Conformance
+        run: pnpm --filter @authowl/core exec vitest run src/conformance.test.ts
+
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Vet
+        working-directory: sdks/go
+        run: go vet ./...
+      - name: Gofmt is clean
+        working-directory: sdks/go
+        run: test -z "$(gofmt -l .)"
+      - name: Conformance
+        working-directory: sdks/go
+        run: go test ./...
+
+  python:
+    name: Python
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Install
+        working-directory: sdks/python
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -e '.[dev]'
+      - name: Conformance
+        working-directory: sdks/python
+        run: .venv/bin/python -m pytest -q
+
+  php:
+    name: PHP
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Install
+        working-directory: sdks/php
+        run: composer install --no-interaction --no-progress
+      - name: Conformance
+        working-directory: sdks/php
+        run: ./vendor/bin/phpunit --no-coverage
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Formatting is clean
+        working-directory: sdks/rust
+        run: cargo fmt --check
+      - name: Clippy
+        working-directory: sdks/rust
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Conformance
+        working-directory: sdks/rust
+        run: cargo test
+
+  flutter:
+    name: Flutter
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Install the Flutter SDK
+        # Cloned at a pinned tag rather than via a marketplace action, keeping
+        # this workflow free of third-party actions.
+        run: |
+          git clone --depth 1 --branch 3.44.8 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install JavaScript workspace
+        run: pnpm install --frozen-lockfile
+      - name: Build the shared catalogs
+        # The Flutter catalog is generated from @authowl/core's built artifact, so
+        # the drift check below needs that artifact to exist.
+        run: pnpm --filter @authowl/core run build
+      - name: Message catalogs match @authowl/core
+        run: pnpm dart-i18n:check
+      - name: Flutter changelog is current
+        run: pnpm flutter:changelog:check
+      - name: Install
+        working-directory: sdks/flutter
+        run: flutter pub get
+      - name: Analyze
+        working-directory: sdks/flutter
+        run: flutter analyze
+      - name: Conformance and widget tests
+        working-directory: sdks/flutter
+        run: flutter test

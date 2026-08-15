@@ -1,0 +1,31 @@
+{
+  "users": [
+    {
+      "localId": "kYi4EvWQlQTKSfnJ3dRSP6IH3ed2",
+      "email": "firebase-password@example.test",
+      "emailVerified": true,
+      "passwordHash": "lSrfV15cpx95/sZS2W9c9Kp6i/LVgQNDNC/qzrCnh1SAyZvqmZqAjTdn3aoItz+VHjoZilo78198JAdRuid5lQ==",
+      "salt": "42xEC+ixf3L2lw==",
+      "displayName": "Firebase Password",
+      "photoUrl": "https://example.test/firebase-password.png",
+      "createdAt": "1508893925000",
+      "lastSignedInAt": "1508893925000",
+      "providerUserInfo": [
+        {
+          "providerId": "google.com",
+          "rawId": "google-synthetic-001",
+          "email": "firebase-password@example.test",
+          "displayName": "Firebase Password",
+          "photoUrl": "https://example.test/google.png"
+        }
+      ]
+    },
+    {
+      "localId": "firebase-phone-synthetic-002",
+      "phoneNumber": "+201001112233",
+      "displayName": "Firebase Phone",
+      "createdAt": "1710000000000",
+      "providerUserInfo": []
+    }
+  ]
+}

@@ -1,0 +1,369 @@
+import type { ResolvedAuthConfig } from './config';
+import { requestPublishableJson, requireOk } from './http';
+import { decodeJsonObject } from './response-schema';
+
+export type EnvironmentType = 'development' | 'production';
+
+/**
+ * The public, publishable-key-safe project config the SDK renders its sign-in
+ * UI from (server contract CONTRACTS §2, `GET /api/projects/:id/public-config`).
+ * Nothing here is secret. Method slugs are canonical snake_case.
+ */
+export type PublicConfig = {
+  /** Stable workspace product container shared by its environments. */
+  applicationId: string;
+  /** Stable tenant id for the exact environment selected by the publishable key. */
+  environmentId: string;
+  /** Environment class that determines key prefixes and billing treatment. */
+  environmentType: EnvironmentType;
+  /** Canonical authentication endpoint for this environment. */
+  authBaseUrl: string;
+  /**
+   * Public acquisition mode. Optional only for rolling compatibility with
+   * servers released before waitlist support.
+   */
+  signUp?: {
+    mode: 'open' | 'restricted' | 'allowlist' | 'waitlist';
+  };
+  /**
+   * Identity and credential lifecycle policy. Optional only for rolling
+   * compatibility with AuthOwl servers released before plan 35.
+   */
+  authentication?: {
+    email: {
+      signUp: boolean;
+      signIn: Array<'password' | 'magic_link' | 'email_otp'>;
+    };
+    phone: { signUp: boolean; signIn: boolean };
+    password: {
+      signUp: boolean;
+      add: boolean;
+      /** Server-owned password length policy. Optional for rolling compatibility. */
+      minLength?: number;
+      maxLength?: number;
+    };
+    passkey: {
+      signIn: boolean;
+      add: boolean;
+      /**
+       * The domain this environment binds passkeys to. Absent or null means the
+       * server derives it from the auth host, which is what every server before
+       * this field did - so treating both the same keeps a new SDK correct
+       * against an older server.
+       */
+      relyingPartyId?: string | null;
+    };
+    username: { collectOnSignUp: boolean; signIn: boolean };
+  };
+  /** Email ownership ceremony selected by the project. */
+  emailVerification?: {
+    required: boolean;
+    method: 'link' | 'code';
+  };
+  /** End-user profile fields and self-service permissions. */
+  userModel?: {
+    requireEmail: boolean;
+    firstLastName: boolean;
+    emailChange: boolean;
+    accountDeletion: boolean;
+  };
+  /**
+   * MFA presentation contract. Backup codes follow TOTP and are not an
+   * independently configurable authentication method.
+   */
+  mfa?: {
+    totp: boolean;
+    required: boolean;
+    backupCodes: boolean;
+  };
+  branding: {
+    appName?: string;
+    logoUrl?: string;
+    /** Whether the application name is visible beside the logo. */
+    showAppName?: boolean;
+    /** Alignment of the brand identity within managed component headers. */
+    alignment?: 'left' | 'center' | 'right';
+    primaryColor?: string;
+    theme?: 'light' | 'dark' | 'system';
+  };
+  /** Canonical method slugs, e.g. "password", "magic_link", "passkey". */
+  enabledMethods: string[];
+  /** Configured social provider ids, e.g. "google". */
+  socialProviders: string[];
+  /**
+   * Public OAuth client ids keyed by provider. Optional for rolling compatibility
+   * with servers released before Google One Tap support.
+   */
+  socialProviderClientIds?: Record<string, string>;
+  /**
+   * When true, an email/password sign-up does not create a session - the user
+   * must confirm their address first. <SignUp/> shows a "check your email" state
+   * instead of redirecting. Always false unless password sign-up is enabled.
+   */
+  requireEmailVerification: boolean;
+  /**
+   * Legal consent gate. When `required`, <SignUp/> shows an acceptance checkbox
+   * linking `termsUrl`/`privacyUrl` and blocks sign-up until it's checked, echoing
+   * `version` back so the server records and enforces it. `required` is true only
+   * when the project both requires consent and has a document URL to link.
+   */
+  legal: {
+    termsUrl?: string;
+    privacyUrl?: string;
+    version: number;
+    required: boolean;
+  };
+  /**
+   * Whether the project lets signed-in users enrol a second factor (TOTP). A
+   * capability flag, not a sign-in method (so it's absent from `enabledMethods`):
+   * gate an "enable two-factor" affordance / <MFAEnrollment/> on it. The sign-in
+   * 2FA challenge is handled by <SignIn/> regardless of this flag.
+   */
+  twoFactor: boolean;
+  /** Whether enrolled MFA is mandatory rather than optional for this project. */
+  mfaRequired: boolean;
+  /** Whether signed-in users may delete their own account. */
+  accountDeletion: boolean;
+  /** Whether organization routes and components are available for this project. */
+  organizations: boolean;
+  /**
+   * Whether inbound enterprise SSO is enabled for this project. SSO IS a sign-in
+   * method, so when true the server also pushes `'sso'` into `enabledMethods`;
+   * this flag mirrors the server capability (matching the `twoFactor`
+   * convention). <SignIn/> gates the SSO affordance on `enabledMethods`, not on
+   * this flag, so the two never drift.
+   */
+  sso: boolean;
+  /**
+   * JWT issuer (server contract CONTRACTS §8). Non-null only when the project's
+   * issuer toggle is on: exactly what a third-party verifier needs (Convex
+   * `auth.config.ts` = `{ type: "customJwt", issuer, jwks: jwksUrl,
+   * applicationID: aud, algorithm: "ES256" }`). `getToken` mints from
+   * `<issuer>/token`.
+   */
+  jwtIssuer: { issuer: string; jwksUrl: string; aud: string } | null;
+  /** Public Cloudflare Turnstile site key for the phone OTP challenge. */
+  turnstileSiteKey: string | null;
+  /** Public Cloudflare Turnstile site key for protected sign-up/sign-in actions. */
+  authTurnstileSiteKey: string | null;
+  locale: string;
+  badge: boolean;
+  configVersion: number;
+};
+
+/**
+ * Fetch a project's public config. Publishable-key gated server-side; sent
+ * without cookies (the payload is public, so no session is needed). Throws on a
+ * non-2xx response so the caller can distinguish "config unavailable" from a
+ * project that simply has a method disabled.
+ */
+export async function getPublicConfig(config: ResolvedAuthConfig): Promise<PublicConfig> {
+  const origin = new URL(config.apiUrl).origin;
+  const url = `${origin}/api/projects/${config.decoded.projectId}/public-config`;
+
+  return requireOk(
+    await requestPublishableJson(config, url, {
+      init: { method: 'GET', credentials: 'omit' },
+      maxResponseBytes: 256 * 1024,
+      decode: (value) => decodePublicConfig(value, config),
+    }),
+    'public-config',
+  );
+}
+
+function decodePublicConfig(
+  value: unknown,
+  config: ResolvedAuthConfig,
+): PublicConfig {
+  const row = decodeJsonObject(value);
+  const environmentId = row.environmentId;
+  const environmentType = row.environmentType;
+  const expectedAuthBaseUrl =
+    `${new URL(config.apiUrl).origin}/api/projects/${config.decoded.projectId}/auth`;
+  if (
+    typeof row.applicationId !== 'string' ||
+    !isUuid(row.applicationId) ||
+    environmentId !== config.decoded.projectId ||
+    (environmentType !== 'development' && environmentType !== 'production') ||
+    row.authBaseUrl !== expectedAuthBaseUrl
+  ) {
+    throw invalidPublicConfig();
+  }
+  const branding = asObject(row.branding);
+  const legal = asObject(row.legal);
+  if (
+    !isStringArray(row.enabledMethods, 64)
+    || !isStringArray(row.socialProviders, 64)
+    || !optionalStrings(branding, ['appName', 'logoUrl', 'primaryColor'])
+    || (branding.showAppName !== undefined && typeof branding.showAppName !== 'boolean')
+    || (
+      branding.alignment !== undefined
+      && branding.alignment !== 'left'
+      && branding.alignment !== 'center'
+      && branding.alignment !== 'right'
+    )
+    || (
+      branding.theme !== undefined
+      && branding.theme !== 'light'
+      && branding.theme !== 'dark'
+      && branding.theme !== 'system'
+    )
+    || !optionalStrings(legal, ['termsUrl', 'privacyUrl'])
+    || !Number.isSafeInteger(legal.version)
+    || (legal.version as number) < 0
+    || typeof legal.required !== 'boolean'
+  ) {
+    throw invalidPublicConfig();
+  }
+  if (row.socialProviderClientIds !== undefined) {
+    const ids = asObject(row.socialProviderClientIds);
+    if (
+      Object.keys(ids).length > 64
+      || Object.values(ids).some((entry) => typeof entry !== 'string' || entry.length > 2048)
+    ) {
+      throw invalidPublicConfig();
+    }
+  }
+  if (!hasBooleans(row, [
+    'requireEmailVerification',
+    'twoFactor',
+    'mfaRequired',
+    'accountDeletion',
+    'organizations',
+    'sso',
+    'badge',
+  ])) throw invalidPublicConfig();
+  if (
+    !isNullableString(row.turnstileSiteKey)
+    || !isNullableString(row.authTurnstileSiteKey)
+    || typeof row.locale !== 'string'
+    || row.locale.length === 0
+    || row.locale.length > 64
+    || !Number.isSafeInteger(row.configVersion)
+    || (row.configVersion as number) < 0
+  ) {
+    throw invalidPublicConfig();
+  }
+  if (row.jwtIssuer !== null) {
+    const jwt = asObject(row.jwtIssuer);
+    if (
+      jwt.issuer !== expectedAuthBaseUrl
+      || jwt.jwksUrl !== `${expectedAuthBaseUrl}/jwks`
+      || jwt.aud !== config.decoded.projectId
+    ) throw invalidPublicConfig();
+  }
+  if (row.signUp !== undefined) {
+    const mode = asObject(row.signUp).mode;
+    if (
+      typeof mode !== 'string'
+      || !['open', 'restricted', 'allowlist', 'waitlist'].includes(mode)
+    ) {
+      throw invalidPublicConfig();
+    }
+  }
+  if (row.authentication !== undefined) assertAuthentication(row.authentication);
+  if (row.emailVerification !== undefined) {
+    const email = asObject(row.emailVerification);
+    if (
+      !hasBooleans(email, ['required'])
+      || (email.method !== 'link' && email.method !== 'code')
+    ) throw invalidPublicConfig();
+  }
+  if (
+    row.userModel !== undefined
+    && !hasBooleans(asObject(row.userModel), [
+      'requireEmail',
+      'firstLastName',
+      'emailChange',
+      'accountDeletion',
+    ])
+  ) throw invalidPublicConfig();
+  if (row.mfa !== undefined) {
+    const mfa = asObject(row.mfa);
+    if (
+      !hasBooleans(mfa, ['totp', 'required', 'backupCodes'])
+      || ((mfa.required === true || mfa.backupCodes === true) && mfa.totp !== true)
+    ) throw invalidPublicConfig();
+  }
+  return row as unknown as PublicConfig;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+function invalidPublicConfig(): Error {
+  return new TypeError('public-config returned an invalid response');
+}
+
+function asObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw invalidPublicConfig();
+  }
+  return value as Record<string, unknown>;
+}
+
+function isNullableString(value: unknown): boolean {
+  return value === null || (typeof value === 'string' && value.length <= 4096);
+}
+
+function assertAuthentication(value: unknown): void {
+  const row = asObject(value);
+  const email = asObject(row.email);
+  const password = asObject(row.password);
+  const hasPasswordLimits = password.minLength !== undefined || password.maxLength !== undefined;
+  if (
+    !hasBooleans(email, ['signUp'])
+    || !isStringArray(email.signIn, 3)
+    || (email.signIn as string[]).some(
+      (method) => method !== 'password' && method !== 'magic_link' && method !== 'email_otp',
+    )
+    || !hasBooleans(asObject(row.phone), ['signUp', 'signIn'])
+    || !hasBooleans(password, ['signUp', 'add'])
+    || (hasPasswordLimits && (
+      !Number.isSafeInteger(password.minLength)
+      || !Number.isSafeInteger(password.maxLength)
+      || (password.minLength as number) < 1
+      || (password.maxLength as number) > 4096
+      || (password.minLength as number) > (password.maxLength as number)
+    ))
+    || !hasBooleans(asObject(row.passkey), ['signIn', 'add'])
+    // Optional on purpose: an older server sends no such field, and rejecting
+    // its config would turn a forward-compatible addition into an outage.
+    || !isOptionalNullableString(asObject(row.passkey).relyingPartyId)
+    || !hasBooleans(asObject(row.username), ['collectOnSignUp', 'signIn'])
+  ) {
+    throw invalidPublicConfig();
+  }
+}
+
+function isOptionalNullableString(value: unknown): boolean {
+  return value === undefined || value === null || typeof value === 'string';
+}
+
+function hasBooleans(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): boolean {
+  return keys.every((key) => typeof value[key] === 'boolean');
+}
+
+function optionalStrings(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): boolean {
+  return keys.every((key) =>
+    value[key] === undefined
+    || (typeof value[key] === 'string' && value[key].length <= 4096));
+}
+
+function isStringArray(value: unknown, maxItems: number): value is string[] {
+  return (
+    Array.isArray(value)
+    && value.length <= maxItems
+    && value.every((entry) => typeof entry === 'string' && entry.length <= 128)
+    && new Set(value).size === value.length
+  );
+}

@@ -1,0 +1,64 @@
+{
+  "name": "@authowl/expo",
+  "version": "0.3.7",
+  "description": "Expo SecureStore adapter and React Native hooks for AuthOwl, the multi-tenant auth SaaS.",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/authowl/authowl-sdk.git",
+    "directory": "packages/auth-expo"
+  },
+  "homepage": "https://authowl.dev",
+  "keywords": [
+    "authentication",
+    "auth",
+    "authowl",
+    "expo",
+    "react-native",
+    "sdk"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react --external expo-secure-store && node ../../scripts/gen-notices.mjs src/index.ts",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch --external react --external expo-secure-store",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs"
+  },
+  "dependencies": {
+    "@authowl/react-native": "workspace:*"
+  },
+  "peerDependencies": {
+    "expo-secure-store": ">=13",
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
+  }
+}
