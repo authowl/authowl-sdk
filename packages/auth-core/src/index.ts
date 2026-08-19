@@ -158,6 +158,7 @@ export type {
 export {
   membershipHas,
   membershipHasPermission,
+  membershipHasRole,
   membershipHasTeam,
   createMembershipHas,
   type OrganizationMembership,
