@@ -9,6 +9,14 @@ export {
 } from './config';
 export { sessionChallengeIsEphemeral } from './session-challenge';
 export {
+  captureInvitationClaim,
+  clearInvitationClaim,
+  INVITATION_CLAIM_MAX_AGE_MS,
+  INVITATION_QUERY_PARAM,
+  readInvitationClaim,
+  type InvitationClaim,
+} from './invitation-claim';
+export {
   SESSION_TOKEN_HEADER,
   SESSION_TRANSPORT_BEARER,
   SESSION_TRANSPORT_HEADER,

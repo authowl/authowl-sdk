@@ -14,6 +14,7 @@ import { FormError } from './FormError';
 import { Waitlist } from './Waitlist';
 import { resolveProjectCapabilities } from '../project-capabilities';
 import { AuthOwlBranding } from './AuthOwlBranding';
+import { InvitationBanner } from './InvitationBanner';
 
 export type SignUpProps = {
   redirectTo?: string;
@@ -201,6 +202,7 @@ export function SignUp({
     <div className="ba-form" data-testid="signup-form">
       {showBranding ? <AuthOwlBranding /> : null}
       <h2 className="ba-title">{t('signUp.title')}</h2>
+      <InvitationBanner />
       <SocialButtons providers={social} callbackURL={redirectTo} />
       {showPassword && social.length > 0 && (
         <div className="ba-divider">{t('common.orDivider')}</div>
