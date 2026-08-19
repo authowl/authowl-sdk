@@ -2,14 +2,35 @@
 import * as React from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { OrganizationDetails } from '@authowl/core';
 
 const membership = { role: 'billing_manager', permissions: ['org:billing:read', 'org:sys_roles:read'] };
-const orgDetails = {
+const orgDetails: OrganizationDetails = {
   id: 'org-1',
   name: 'Acme',
   slug: 'acme',
   createdAt: new Date('2026-07-14T08:00:00.000Z'),
   members: [],
+  invitations: [],
+};
+
+// A member with no display name and a withheld email - both ordinary values:
+// <SignUp> posts `name: ''` by default and the server redacts phone-only
+// addresses. Typed as OrganizationDetails on purpose, so the public types have
+// to admit this shape.
+const namelessMemberOrg: OrganizationDetails = {
+  id: 'org-1',
+  name: 'Acme',
+  slug: 'acme',
+  createdAt: new Date('2026-07-14T08:00:00.000Z'),
+  members: [{
+    id: 'member-1',
+    organizationId: 'org-1',
+    userId: 'user-1',
+    role: 'member',
+    createdAt: new Date('2026-07-14T08:00:00.000Z'),
+    user: { id: 'user-1', name: '', email: null },
+  }],
   invitations: [],
 };
 
@@ -69,6 +90,7 @@ function Probe() {
       <span data-testid="activeTeam">{activeTeamId ?? 'none'}</span>
       <span data-testid="hasTeam">{String(has({ teamId: 'team-alpha' }))}</span>
       <span data-testid="org">{organization?.name ?? 'pending'}</span>
+      <span data-testid="members">{organization ? String(organization.members.length) : 'none'}</span>
       <span data-testid="loaded">{String(isLoaded)}</span>
     </div>
   );
@@ -123,6 +145,21 @@ describe('useOrganization', () => {
     expect(screen.getByTestId('hasTeam').textContent).toBe('false');
     // The role gate on that same claim still works.
     expect(screen.getByTestId('hasRole').textContent).toBe('true');
+  });
+
+  it('loads an organization whose member has no display name', async () => {
+    // The decoder used to refuse an empty `name`, so `get()` failed and the hook
+    // settled on isLoaded=true WITH organization=null while an active org was
+    // set - a state its own contract forbids. Membership is unaffected either
+    // way, which is what made the failure so confusing in the field.
+    mocks.session.data.session.membership = membership;
+    mocks.session.data.session.activeOrganizationId = 'org-1';
+    mocks.get.mockResolvedValueOnce({ data: namelessMemberOrg, error: null });
+    render(<Probe />);
+
+    await waitFor(() => expect(screen.getByTestId('loaded').textContent).toBe('true'));
+    expect(screen.getByTestId('org').textContent).toBe('Acme');
+    expect(screen.getByTestId('members').textContent).toBe('1');
   });
 
   it('returns null membership + false has() and skips the org fetch with no active org', async () => {

@@ -118,6 +118,23 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // bundlers always resolve it. The measurement uses code splitting and follows
 // static imports only, matching the initial browser payload: Shield remains in
 // an on-demand chunk and is still built, rather than hidden behind an external.
+// Tolerant organization display strings (2026-08-19) raise React 75->76. Core
+// stays at 21: it measures 20.81kb.
+//
+// The change itself is small - two decoder helpers, `asDisplayString` and
+// `asEmail`, so one member with no display name stops making the whole
+// organization undecodable. Measured cost is +36 bytes gzipped through React and
+// +48 through Core.
+//
+// It failed the gate anyway, and the reason matters more than the raise: `main`
+// measures 76774 bytes, which is TWENTY-SIX bytes under this row's ceiling. The
+// 2026-08-07 entry above states it reserved 0.8kb of regression headroom; that
+// headroom was spent by intervening merges without anyone re-measuring, and the
+// "size sweep queued separately" it promised never happened. So a 36-byte
+// correctness fix is what finally reported a drift it did not cause.
+//
+// 76 restores roughly a kilobyte of real headroom against a measured 75.01kb.
+// The sweep is still owed.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',

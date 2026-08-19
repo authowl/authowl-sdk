@@ -130,7 +130,7 @@ export function decodeInvitation(
   const invitation = {
     id: asString(row.id),
     organizationId: asString(row.organizationId),
-    email: asString(row.email),
+    email: asDisplayString(row.email),
     role: asString(row.role),
     status,
     inviterId: asString(row.inviterId),
@@ -160,7 +160,7 @@ export function decodeUserInvitations(value: unknown): OrganizationUserInvitatio
     const row = asRecord(entry);
     return {
       ...decodeInvitation(row),
-      organizationName: asString(row.organizationName),
+      organizationName: asDisplayString(row.organizationName),
     };
   });
 }
@@ -174,7 +174,7 @@ export function decodeInvitationDetails(
     ...decodeInvitation(row, expectedId),
     organizationName: asString(row.organizationName),
     organizationSlug: asString(row.organizationSlug),
-    inviterEmail: asString(row.inviterEmail),
+    inviterEmail: asEmail(row.inviterEmail),
   };
 }
 
@@ -274,7 +274,7 @@ function decodeOrganizationTeam(
   const updatedAt = row.updatedAt;
   const team = {
     id: asString(row.id),
-    name: asString(row.name),
+    name: asDisplayString(row.name),
     organizationId: asString(row.organizationId),
     createdAt: asDate(row.createdAt),
     ...(updatedAt === undefined ? {} : { updatedAt: asDate(updatedAt) }),
@@ -326,12 +326,46 @@ function decodePermission(value: unknown): Record<string, string[]> {
   return permission;
 }
 
+/**
+ * Identifiers and other load-bearing strings: non-empty, length-capped. Used for
+ * ids, slugs, roles, and statuses - anything an empty value would silently
+ * corrupt rather than merely render blank.
+ */
 function asString(value: unknown): string {
   const decoded = asWireString(value);
   if (decoded.length === 0 || decoded.length > MAX_PUBLIC_STRING_LENGTH) {
     invalidResponse();
   }
   return decoded;
+}
+
+/**
+ * Display strings, which are allowed to be empty. A user's `name` is nullable in
+ * the store AND this SDK's own sign-up form posts `name: ''` under the default
+ * capability config, so `''` and `null` are both real wire values that mean the
+ * same thing: no display name. Rejecting them made a single nameless member
+ * undecodable for the WHOLE organization - including the receipt of `leave()`
+ * and `removeMember()`, mutations the server had already performed.
+ *
+ * The `MAX_PUBLIC_STRING_LENGTH` cap stays: that is response hardening, not a
+ * presence check.
+ */
+function asDisplayString(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const decoded = asWireString(value);
+  if (decoded.length > MAX_PUBLIC_STRING_LENGTH) invalidResponse();
+  return decoded;
+}
+
+/**
+ * Addresses that the server may REDACT. `null` is meaningful here in a way it is
+ * not for a display name: it says "this address was withheld", which is exactly
+ * what a phone-only user's synthetic address must become. So `null` is preserved
+ * rather than coerced, and a present address still has to be a non-empty capped
+ * string - an empty address is malformed, not redacted.
+ */
+function asEmail(value: unknown): string | null {
+  return value === null ? null : asString(value);
 }
 
 function assertExpected(actual: string, expected?: string): void {
@@ -355,8 +389,8 @@ function decodeMemberUser(value: unknown): OrganizationMemberUser {
   const row = asRecord(value);
   return {
     id: asString(row.id),
-    name: asString(row.name),
-    email: asString(row.email),
+    name: asDisplayString(row.name),
+    email: asEmail(row.email),
     ...optionalField('image', optionalNullableString(row, 'image')),
   };
 }

@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createAuthOwlClient, type ActionFetchOptions } from './client';
 import { resolveConfig } from './config';
+import type {
+  OrganizationDetails,
+  OrganizationInvitation,
+  OrganizationTeam,
+  OrganizationUserInvitation,
+} from './organization-client';
 
 const PK = 'pk_live_11111111-1111-1111-1111-111111111111_abcdefghij0123456789';
 const PROJECT_ID = '11111111-1111-1111-1111-111111111111';
@@ -585,6 +591,175 @@ describe('organization client', () => {
         expect.objectContaining({ failure: 'invalid_response' }),
       );
     }
+  });
+
+  it('accepts the empty, null, and absent display strings the platform emits', async () => {
+    // The SDK is its OWN producer of the empty display name: <SignUp> posts
+    // `name: ''` under the default capability config, and the store column is
+    // nullable, so a member with no display name is ordinary data - not a
+    // malformed response. Rejecting it made one nameless member poison the whole
+    // organization, including the receipts of `leave()` and `removeMember()`,
+    // mutations the server had ALREADY performed.
+    const detailsWith = (user: Record<string, unknown>) => ({
+      ...organizationWire(),
+      members: [{ ...memberWire(), user }],
+      invitations: [],
+    });
+    const memberUser = (data: unknown) =>
+      (data as OrganizationDetails | null)?.members[0]?.user;
+    const cases: Array<{
+      name: string;
+      response: () => Response;
+      invoke: (
+        organization: ReturnType<typeof clientWith>['organization'],
+      ) => Promise<unknown>;
+      /** Read null-safely: a rejected decode yields `data: null`. */
+      read: (data: unknown) => unknown;
+      expected: unknown;
+    }> = [
+      {
+        name: 'member with an empty display name',
+        response: () => Response.json(detailsWith({
+          id: 'user-1',
+          name: '',
+          email: 'member@example.test',
+        })),
+        invoke: (organization) => organization.get({ organizationId: 'org-1' }),
+        read: memberUser,
+        expected: { id: 'user-1', name: '', email: 'member@example.test' },
+      },
+      {
+        name: 'member with a null display name',
+        response: () => Response.json(detailsWith({
+          id: 'user-1',
+          name: null,
+          email: 'member@example.test',
+        })),
+        invoke: (organization) => organization.get({ organizationId: 'org-1' }),
+        // Coerced, NOT passed through: `name` stays a string so surfaces can
+        // keep calling `.trim()` on it.
+        read: (data) => memberUser(data)?.name,
+        expected: '',
+      },
+      {
+        name: 'member with a withheld email',
+        response: () => Response.json(detailsWith({
+          id: 'user-1',
+          name: 'Member',
+          email: null,
+        })),
+        invoke: (organization) => organization.get({ organizationId: 'org-1' }),
+        // Preserved as null, never coerced: a withheld address has to stay
+        // distinguishable from a present one.
+        read: (data) => memberUser(data)?.email,
+        expected: null,
+      },
+      {
+        name: 'team with an empty name',
+        response: () => Response.json([{ ...teamWire(), name: '' }]),
+        invoke: (organization) => organization.listTeams({ organizationId: 'org-1' }),
+        read: (data) => (data as OrganizationTeam[] | null)?.[0]?.name,
+        expected: '',
+      },
+      {
+        name: 'invitation with an empty email',
+        response: () => Response.json([{ ...invitationWire(), email: '' }]),
+        invoke: (organization) =>
+          organization.listInvitations({ organizationId: 'org-1' }),
+        read: (data) => (data as OrganizationInvitation[] | null)?.[0]?.email,
+        expected: '',
+      },
+      {
+        name: 'user invitation with no organizationName at all',
+        response: () => Response.json([invitationWire()]),
+        invoke: (organization) => organization.listUserInvitations(),
+        read: (data) =>
+          (data as OrganizationUserInvitation[] | null)?.[0]?.organizationName,
+        expected: '',
+      },
+    ];
+
+    // Collected into ONE table assertion rather than asserted per iteration, so
+    // a regression reports every affected route instead of aborting on the first.
+    const observed = [];
+    for (const testCase of cases) {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(testCase.response());
+      const result = await testCase.invoke(
+        clientWith(fetchImpl).organization,
+      ) as { data: unknown; error: { code?: string } | null };
+      observed.push({
+        name: testCase.name,
+        error: result.error?.code ?? null,
+        value: testCase.read(result.data),
+      });
+    }
+
+    expect(observed).toEqual(cases.map((testCase) => ({
+      name: testCase.name,
+      error: null,
+      value: testCase.expected,
+    })));
+  });
+
+  it('keeps rejecting the empty strings that are never merely blank', async () => {
+    // The relaxation is scoped to DISPLAY strings. A blank slug, a blank role,
+    // or a present-but-empty address is a malformed response, not a nameless
+    // user: the first two are load-bearing identifiers, and an address is either
+    // sent or withheld (null) - never sent empty.
+    const cases: Array<{
+      name: string;
+      response: () => Response;
+      invoke: (
+        organization: ReturnType<typeof clientWith>['organization'],
+      ) => Promise<unknown>;
+    }> = [
+      {
+        name: 'organization with an empty slug',
+        response: () => Response.json({
+          ...organizationWire(),
+          slug: '',
+          members: [],
+          invitations: [],
+        }),
+        invoke: (organization) => organization.get({ organizationId: 'org-1' }),
+      },
+      {
+        name: 'member with an empty role',
+        response: () => Response.json({ ...memberWire(), role: '' }),
+        invoke: (organization) => organization.leave({ organizationId: 'org-1' }),
+      },
+      {
+        name: 'member with a present-but-empty email',
+        response: () => Response.json({
+          ...organizationWire(),
+          members: [{
+            ...memberWire(),
+            user: { id: 'user-1', name: 'Member', email: '' },
+          }],
+          invitations: [],
+        }),
+        invoke: (organization) => organization.get({ organizationId: 'org-1' }),
+      },
+    ];
+
+    const observed = [];
+    for (const testCase of cases) {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(testCase.response());
+      const result = await testCase.invoke(
+        clientWith(fetchImpl).organization,
+      ) as { data: unknown; error: { code?: string } | null };
+      observed.push({
+        name: testCase.name,
+        data: result.data,
+        error: result.error?.code ?? null,
+      });
+    }
+
+    expect(observed).toEqual(cases.map((testCase) => ({
+      name: testCase.name,
+      data: null,
+      error: 'INVALID_RESPONSE',
+    })));
   });
 
   it('evaluates has()/hasPermission() locally and NEVER hits the network', async () => {

@@ -40,8 +40,14 @@ export interface Organization {
 
 export interface OrganizationMemberUser {
   id: string;
+  /**
+   * Display name. Empty when the member never supplied one - the store column is
+   * nullable and the sign-up form posts `''` by default - so render it with a
+   * fallback rather than assuming it is populated.
+   */
   name: string;
-  email: string;
+  /** `null` when the server withholds the address (for example a phone-only member). */
+  email: string | null;
   image?: string | null;
 }
 
@@ -78,7 +84,8 @@ export interface OrganizationInvitation {
 export interface OrganizationInvitationDetails extends OrganizationInvitation {
   organizationName: string;
   organizationSlug: string;
-  inviterEmail: string;
+  /** `null` when the server withholds the inviter's address. */
+  inviterEmail: string | null;
 }
 
 export interface OrganizationUserInvitation extends OrganizationInvitation {
