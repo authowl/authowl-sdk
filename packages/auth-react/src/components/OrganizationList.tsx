@@ -127,6 +127,10 @@ export function OrganizationList({ onOrganizationChange }: OrganizationListProps
             {organizationError && <button className="ba-link-button" type="button" onClick={() => void refresh()}>{t('organization.retry')}</button>}
           </div>
         )}
+        {/* A failed load is not an empty directory. Rendering the empty copy
+            under the error told the user they belong to no organization, which
+            is a claim this component cannot make when the request never
+            answered - and the retry beside the error is the actual next step. */}
         {isLoading ? <div className="ba-organization-card-grid"><div className="ba-skeleton" /><div className="ba-skeleton" /></div> : organizations?.length ? (
           <ul className="ba-organization-card-grid">
             {organizations.map((organization) => (
@@ -141,7 +145,7 @@ export function OrganizationList({ onOrganizationChange }: OrganizationListProps
               </li>
             ))}
           </ul>
-        ) : <p className="ba-muted">{t('organization.list.empty')}</p>}
+        ) : organizationError ? null : <p className="ba-muted">{t('organization.list.empty')}</p>}
 
         <section className="ba-organization-user-invitations">
           <header className="ba-organization-section-header"><h3 className="ba-title">{t('organization.list.invitationsTitle')}</h3><p className="ba-muted">{t('organization.list.invitationsDescription')}</p></header>

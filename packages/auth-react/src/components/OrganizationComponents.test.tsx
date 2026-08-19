@@ -181,6 +181,27 @@ describe('organization components', () => {
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
+  /**
+   * A failed load is not an empty directory. The list used to render "you do not
+   * belong to an organization yet" underneath the error, which is a claim it
+   * cannot make when the request never answered - and it buries the retry that
+   * is the actual next step.
+   */
+  it('does not claim an empty directory when the organizations failed to load', async () => {
+    // The mock is typed from its happy-path default, so the failure envelope -
+    // the shape the client really returns on an error - needs the cast.
+    mocks.organization.list.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'nope' },
+    } as never);
+    render(<OrganizationList />);
+
+    await screen.findByText('organization.error.load');
+    expect(screen.queryByText('organization.list.empty')).toBeNull();
+    // The retry stays reachable: it is what resolves the state the user is in.
+    expect(screen.getByRole('button', { name: 'organization.retry' })).toBeTruthy();
+  });
+
   it('accepts a pending invitation from the organization list', async () => {
     render(<OrganizationList />);
     fireEvent.click(await screen.findByRole('button', { name: 'organization.list.accept' }));
