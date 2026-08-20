@@ -814,6 +814,32 @@ describe('createAuthOwlClient consent wiring', () => {
     });
   });
 
+  it('preserves every organization role at the session decode boundary', async () => {
+    const timestamp = '2026-07-26T08:00:00.000Z';
+    const fetchImpl = vi.fn(async () => Response.json({
+      session: {
+        id: 'session-1',
+        userId: 'user-1',
+        expiresAt: timestamp,
+        membership: {
+          role: 'owner',
+          roles: ['auditor', 'owner'],
+          permissions: [],
+        },
+      },
+      user: USER_WIRE,
+    })) as unknown as typeof fetch;
+
+    const result = await clientWith(fetchImpl).getSession();
+
+    expect(result.error).toBeNull();
+    expect(result.data?.session.membership).toEqual({
+      role: 'owner',
+      roles: ['auditor', 'owner'],
+      permissions: [],
+    });
+  });
+
   it('fails closed on malformed passkey management responses before success hooks', async () => {
     const malformedPasskey = {
       ...PASSKEY_WIRE,

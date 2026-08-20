@@ -173,6 +173,17 @@ describe('server has() over a verified token', () => {
     expect(legacy.membership?.teams).toBeUndefined();
   });
 
+  it('preserves every role through verification and authorizes a secondary role', async () => {
+    const token = mintToken({
+      membership: { ...membership, role: 'owner', roles: ['auditor', 'owner'] },
+    });
+
+    const verified = await verifyToken(token, config);
+
+    expect(verified.membership?.roles).toEqual(['auditor', 'owner']);
+    expect(await has(token, { role: 'auditor' }, config)).toBe(true);
+  });
+
   it('verifyToken returns the subject + membership from the verified claim', async () => {
     const verified = await verifyToken(mintToken(), config);
     expect(verified.sub).toBe('user-1');
