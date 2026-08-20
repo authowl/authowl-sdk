@@ -58,8 +58,16 @@ const mocks = vi.hoisted(() => {
     createdAt: new Date('2026-07-14T08:00:00.000Z'),
   };
   const userInvitation = { ...pendingInvitation, id: 'invitation-user', organizationName: 'Alexandria Labs' };
+  const mutationListeners = new Set<() => void>();
   const organization = {
-    create: vi.fn(async () => ({ data: cairo, error: null })),
+    subscribe: (listener: () => void) => {
+      mutationListeners.add(listener);
+      return () => mutationListeners.delete(listener);
+    },
+    create: vi.fn(async () => {
+      mutationListeners.forEach((listener) => listener());
+      return { data: cairo, error: null };
+    }),
     list: vi.fn(async () => ({ data: [cairo, delta], error: null })),
     get: vi.fn(async () => ({ data: cairo, error: null })),
     setActive: vi.fn(async () => ({ data: cairo, error: null })),
@@ -152,6 +160,22 @@ describe('organization components', () => {
 
     await waitFor(() => expect(mocks.organization.create).toHaveBeenCalledWith({ name: 'Cairo Labs', slug: 'cairo-labs', logo: null }));
     expect(onCreated).toHaveBeenCalledWith(mocks.cairo);
+  });
+
+  it('refreshes a mounted switcher after creating an organization', async () => {
+    mocks.organization.list
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [mocks.cairo], error: null });
+    render(<><OrganizationSwitcher /><CreateOrganization /></>);
+
+    await screen.findByRole('button', { name: /organization.personal/ });
+    fireEvent.change(screen.getByLabelText('organization.create.name'), {
+      target: { value: 'Cairo Studio' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'organization.create.submit' }));
+
+    await waitFor(() => expect(mocks.organization.list).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('button', { name: /Cairo Studio/ })).toBeTruthy();
   });
 
   it('switches the active organization and refreshes the session', async () => {

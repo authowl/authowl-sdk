@@ -119,6 +119,8 @@ describe('organization client', () => {
       return Response.json(organizationWire());
     }) as unknown as typeof fetch;
     const organization = clientWith(fetchImpl).organization;
+    const mutationListener = vi.fn();
+    const unsubscribe = organization.subscribe(mutationListener);
     const options = { headers: { 'x-test': 'organization' } };
 
     const results = [];
@@ -187,6 +189,8 @@ describe('organization client', () => {
       error: result.error?.code ?? null,
     }))).toEqual(resultNames.map((name) => ({ name, error: null })));
     expect(results[0]?.data).toMatchObject({ createdAt: expect.any(Date) });
+    expect(mutationListener).toHaveBeenCalledTimes(12);
+    unsubscribe();
     const calls = (
       fetchImpl as unknown as { mock: { calls: [string | URL, RequestInit][] } }
     ).mock.calls;

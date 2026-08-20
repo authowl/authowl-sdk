@@ -55,6 +55,11 @@ export function useOrganizationsResource(enabled = true): OrganizationsResource 
     };
   }, [identity, isLoaded, refresh]);
 
+  React.useEffect(
+    () => api.subscribe(() => void refresh()),
+    [api, refresh],
+  );
+
   return {
     organizations,
     isLoading: !isLoaded || (organizations === null && error === null),
