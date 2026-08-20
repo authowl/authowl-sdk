@@ -366,13 +366,47 @@ export function createOrganizationClient(
    */
   getMembership: () => OrganizationMembership | null = () => null,
 ): OrganizationClient {
-  const { post, mutation } = createAuthActionHelpers(http, notifyMutation);
+  const { post, mutation: sendMutation } = createAuthActionHelpers(http, notifyMutation);
+  /**
+   * Reads of the same thing that are open AT THE SAME TIME, joined.
+   *
+   * `useOrganization()` fetches per consumer, so a page that renders the switcher,
+   * a members table and three `<Protect>` boundaries asked the server for the
+   * same organization once per component - a dozen identical requests for one
+   * load, every load.
+   *
+   * This is a JOIN, not a cache. Nothing is retained after a request settles, so
+   * the next read is a real read and this cannot serve anything staler than a
+   * request that is still open - the same reasoning the session store's idle
+   * refresh already uses.
+   */
+  const inFlightReads = new Map<string, Promise<AuthActionResult<unknown>>>();
   const get = <T>(
     path: string,
     query?: Record<string, string | number | boolean | undefined>,
     fetchOptions?: ActionFetchOptions,
     decode?: (value: unknown) => T,
-  ) => http.request<T>(path, { query, fetchOptions, decode });
+  ): Promise<AuthActionResult<T>> => {
+    // A caller supplying its own fetch options gets its own request: those carry
+    // an abort signal or headers that belong to one caller, and handing it a
+    // promise another caller can abort would be a bug wearing a speed-up.
+    if (fetchOptions) return http.request<T>(path, { query, fetchOptions, decode });
+    const key = `${path}\u0000${JSON.stringify(query ?? null)}`;
+    const joined = inFlightReads.get(key);
+    if (joined) return joined as Promise<AuthActionResult<T>>;
+    const request = http.request<T>(path, { query, decode }).finally(() => {
+      inFlightReads.delete(key);
+    });
+    inFlightReads.set(key, request as Promise<AuthActionResult<unknown>>);
+    return request;
+  };
+  /**
+   * A write ends every join in progress. A read that STARTED before the write
+   * committed would answer with the state the write just replaced, and a caller
+   * refreshing straight after its own mutation must not be handed that.
+   */
+  const mutation = <T>(action: Promise<AuthActionResult<T>>): Promise<AuthActionResult<T>> =>
+    sendMutation(action).finally(() => inFlightReads.clear());
   return {
     create: (params, fetchOptions) =>
       mutation(post('/organization/create', params, fetchOptions, decodeOrganization)),
