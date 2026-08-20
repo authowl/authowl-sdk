@@ -144,5 +144,6 @@ export type {
   OrganizationMemberWithUser,
   OrganizationRoleSummary,
   OrganizationTeam,
+  OrganizationTeamMember,
   OrganizationUserInvitation,
 } from '@authowl/core';

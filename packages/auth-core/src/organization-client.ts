@@ -20,8 +20,12 @@ import {
   decodeOrganizationOrNull,
   decodeOrganizationRoles,
   decodeOrganizations,
+  decodeOrganizationTeam,
+  decodeOrganizationTeamMember,
+  decodeOrganizationTeamMembers,
   decodeOrganizationTeamOrNull,
   decodeOrganizationTeams,
+  decodeMutationMessage,
   decodeRejectInvitation,
   decodeRemoveMember,
   decodeUserInvitations,
@@ -134,9 +138,67 @@ export interface OrganizationTeam {
   updatedAt?: Date;
 }
 
+/** A user's membership in a team. Teams group organization members; they grant no authority. */
+export interface OrganizationTeamMember {
+  id: string;
+  teamId: string;
+  userId: string;
+  createdAt: Date;
+}
+
+export interface CreateOrganizationTeamOptions {
+  /** The team name shown to organization members. */
+  name: string;
+  /** Defaults to the caller's active organization. */
+  organizationId?: string;
+}
+
 export interface ListOrganizationTeamsOptions {
   /** Defaults to the caller's active organization. */
   organizationId?: string;
+}
+
+export interface UpdateOrganizationTeamOptions {
+  teamId: string;
+  data: {
+    /** The new team name. */
+    name?: string;
+    /** Defaults to the caller's active organization. */
+    organizationId?: string;
+  };
+}
+
+export interface RemoveOrganizationTeamOptions {
+  teamId: string;
+  /** Defaults to the caller's active organization. */
+  organizationId?: string;
+}
+
+export interface RemoveOrganizationTeamData {
+  message: string;
+}
+
+export interface ListOrganizationTeamMembersOptions {
+  /** Defaults to the caller's active team. */
+  teamId?: string;
+}
+
+export interface AddOrganizationTeamMemberOptions {
+  teamId: string;
+  userId: string;
+  /** Defaults to the caller's active organization. */
+  organizationId?: string;
+}
+
+export interface RemoveOrganizationTeamMemberOptions {
+  teamId: string;
+  userId: string;
+  /** Defaults to the caller's active organization. */
+  organizationId?: string;
+}
+
+export interface RemoveOrganizationTeamMemberData {
+  message: string;
 }
 
 export interface SetActiveTeamOptions {
@@ -267,6 +329,11 @@ export interface OrganizationClient {
     params: SetActiveOrganizationOptions,
     fetchOptions?: ActionFetchOptions,
   ): Promise<AuthActionResult<Organization | null>>;
+  /** Create a named grouping of members inside an organization. A team grants no authority. */
+  createTeam(
+    params: CreateOrganizationTeamOptions,
+    fetchOptions?: ActionFetchOptions,
+  ): Promise<AuthActionResult<OrganizationTeam>>;
   /**
    * The teams of an organization, for resolving the team ids carried in the
    * membership claim to names. Requires membership of that organization.
@@ -275,6 +342,35 @@ export interface OrganizationClient {
     params?: ListOrganizationTeamsOptions,
     fetchOptions?: ActionFetchOptions,
   ): Promise<AuthActionResult<OrganizationTeam[]>>;
+  /** Rename a team. Team membership remains grouping-only and grants no authority. */
+  updateTeam(
+    params: UpdateOrganizationTeamOptions,
+    fetchOptions?: ActionFetchOptions,
+  ): Promise<AuthActionResult<OrganizationTeam>>;
+  /** Remove a team and its grouping memberships from an organization. */
+  removeTeam(
+    params: RemoveOrganizationTeamOptions,
+    fetchOptions?: ActionFetchOptions,
+  ): Promise<AuthActionResult<RemoveOrganizationTeamData>>;
+  /** List every team the signed-in user belongs to across their organizations. */
+  listUserTeams(
+    fetchOptions?: ActionFetchOptions,
+  ): Promise<AuthActionResult<OrganizationTeam[]>>;
+  /** List the grouping memberships for a team, defaulting to the active team. */
+  listTeamMembers(
+    params?: ListOrganizationTeamMembersOptions,
+    fetchOptions?: ActionFetchOptions,
+  ): Promise<AuthActionResult<OrganizationTeamMember[]>>;
+  /** Add an existing organization member to a team. This grants no authority. */
+  addTeamMember(
+    params: AddOrganizationTeamMemberOptions,
+    fetchOptions?: ActionFetchOptions,
+  ): Promise<AuthActionResult<OrganizationTeamMember>>;
+  /** Remove an organization member from a team without changing their organization role. */
+  removeTeamMember(
+    params: RemoveOrganizationTeamMemberOptions,
+    fetchOptions?: ActionFetchOptions,
+  ): Promise<AuthActionResult<RemoveOrganizationTeamMemberData>>;
   /**
    * Select the caller's active team, which surfaces as `activeTeamId` on the session
    * and `team_id` in the project token. Only a team the caller is on can be made
@@ -461,7 +557,16 @@ export function createOrganizationClient(
               value,
               params.organizationId,
               params.organizationSlug,
-            ),
+          ),
+        ),
+      ),
+    createTeam: (params, fetchOptions) =>
+      mutation(
+        post(
+          '/organization/create-team',
+          params,
+          fetchOptions,
+          (value) => decodeOrganizationTeam(value, undefined, params.organizationId),
         ),
       ),
     listTeams: (params = {}, fetchOptions) =>
@@ -470,6 +575,57 @@ export function createOrganizationClient(
         { organizationId: params.organizationId },
         fetchOptions,
         (value) => decodeOrganizationTeams(value, params.organizationId),
+      ),
+    updateTeam: (params, fetchOptions) =>
+      mutation(
+        post(
+          '/organization/update-team',
+          params,
+          fetchOptions,
+          (value) =>
+            decodeOrganizationTeam(value, params.teamId, params.data.organizationId),
+        ),
+      ),
+    removeTeam: (params, fetchOptions) =>
+      mutation(
+        post(
+          '/organization/remove-team',
+          params,
+          fetchOptions,
+          decodeMutationMessage,
+        ),
+      ),
+    listUserTeams: (fetchOptions) =>
+      get(
+        '/organization/list-user-teams',
+        undefined,
+        fetchOptions,
+        (value) => decodeOrganizationTeams(value, undefined, true),
+      ),
+    listTeamMembers: (params = {}, fetchOptions) =>
+      get(
+        '/organization/list-team-members',
+        { teamId: params.teamId },
+        fetchOptions,
+        (value) => decodeOrganizationTeamMembers(value, params.teamId),
+      ),
+    addTeamMember: (params, fetchOptions) =>
+      mutation(
+        post(
+          '/organization/add-team-member',
+          params,
+          fetchOptions,
+          (value) => decodeOrganizationTeamMember(value, params.teamId, params.userId),
+        ),
+      ),
+    removeTeamMember: (params, fetchOptions) =>
+      mutation(
+        post(
+          '/organization/remove-team-member',
+          params,
+          fetchOptions,
+          decodeMutationMessage,
+        ),
       ),
     setActiveTeam: (params, fetchOptions) =>
       mutation(

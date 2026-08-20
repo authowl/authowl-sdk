@@ -1,6 +1,6 @@
 import type { OrganizationMember } from '@authowl/core';
 
-export type OrganizationProfileSection = 'general' | 'members' | 'invitations' | 'danger';
+export type OrganizationProfileSection = 'general' | 'members' | 'teams' | 'invitations' | 'danger';
 
 export function organizationSlugFromName(name: string): string {
   return name

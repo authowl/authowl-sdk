@@ -154,10 +154,31 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // plainly: the first regularized headroom that earlier merges had silently
 // spent, and this one is a feature paying its own way. The size sweep the
 // 2026-08-07 entry queued is still owed, and now visibly so.
+// Team management (2026-08-20) raises React 78->80. Core stays at 22.
+// Measured 79587 and 21909 bytes: +1351 through React, +195 through Core.
+//
+// What it buys: teams could be listed and selected from the client and nothing
+// else. Creating, renaming, removing one, or moving a member in or out meant
+// sending the end user to the AuthOwl dashboard - not because the platform
+// lacked the routes, which have existed the whole time, but because the SDK
+// never wrapped them. The cost is seven client methods with their decoders, a
+// Teams section in <OrganizationProfile/>, and eight catalog keys in two
+// locales.
+//
+// The raise is NOT because the feature overran. At 79587 it fits 78 with 285
+// bytes to spare, and shipping that is the mistake this file already has on
+// record: the 2026-08-07 entry left 0.8kb, intervening merges spent it without
+// re-measuring, and a 36-byte correctness fix took the blame. 285 bytes is that
+// story with a smaller number. 80 restores ~2.3kb of real headroom.
+//
+// Third raise on the React row in two days. The size sweep queued on 2026-08-07
+// is now well overdue, and this entry is the strongest argument yet for doing
+// it: the row has grown 75->80 while the sweep stayed queued.
+
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 78,
+    maxGzipKb: 80,
     label: '@authowl/react (provider + hooks + components)',
   },
   {

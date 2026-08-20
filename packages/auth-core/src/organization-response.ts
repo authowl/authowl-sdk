@@ -11,6 +11,7 @@ import type {
   OrganizationMemberWithUser,
   OrganizationRoleSummary,
   OrganizationTeam,
+  OrganizationTeamMember,
   OrganizationUserInvitation,
   RejectOrganizationInvitationData,
   RemoveOrganizationMemberData,
@@ -88,14 +89,44 @@ export function decodeOrganizationDetailsOrNull(
 export function decodeOrganizationTeams(
   value: unknown,
   expectedOrganizationId?: string,
+  allowMultipleOrganizations = false,
 ): OrganizationTeam[] {
   const teams = decodeArray(value, (team) => decodeOrganizationTeam(team));
-  assertSingleOrganization(
-    teams.map((team) => team.organizationId),
-    expectedOrganizationId,
-  );
+  if (!allowMultipleOrganizations) {
+    assertSingleIdentifier(
+      teams.map((team) => team.organizationId),
+      expectedOrganizationId,
+    );
+  }
   return teams;
 }
+
+export function decodeOrganizationTeamMembers(
+  value: unknown,
+  expectedTeamId?: string,
+): OrganizationTeamMember[] {
+  const members = decodeArray(value, (member) => decodeOrganizationTeamMember(member));
+  assertSingleIdentifier(members.map((member) => member.teamId), expectedTeamId);
+  return members;
+}
+
+export function decodeOrganizationTeamMember(
+  value: unknown,
+  expectedTeamId?: string,
+  expectedUserId?: string,
+): OrganizationTeamMember {
+  const row = asRecord(value);
+  const member = {
+    id: asString(row.id),
+    teamId: asString(row.teamId),
+    userId: asString(row.userId),
+    createdAt: asDate(row.createdAt),
+  };
+  assertExpected(member.teamId, expectedTeamId);
+  assertExpected(member.userId, expectedUserId);
+  return member;
+}
+
 
 export function decodeOrganizationTeamOrNull(
   value: unknown,
@@ -148,7 +179,7 @@ export function decodeInvitations(
 ): OrganizationInvitation[] {
   const invitations = decodeArray(value, (invitation) =>
     decodeInvitation(invitation));
-  assertSingleOrganization(
+  assertSingleIdentifier(
     invitations.map((invitation) => invitation.organizationId),
     expectedOrganizationId,
   );
@@ -258,14 +289,14 @@ export function decodeOrganizationRoles(
       },
     };
   });
-  assertSingleOrganization(
+  assertSingleIdentifier(
     roles.map((role) => role.organizationId),
     expectedOrganizationId,
   );
   return roles.map((role) => role.data);
 }
 
-function decodeOrganizationTeam(
+export function decodeOrganizationTeam(
   value: unknown,
   expectedId?: string,
   expectedOrganizationId?: string,
@@ -284,6 +315,11 @@ function decodeOrganizationTeam(
   return team;
 }
 
+export function decodeMutationMessage(value: unknown): { message: string } {
+  const row = asRecord(value);
+  return { message: asDisplayString(row.message) };
+}
+
 function decodeMemberWithUser(
   value: unknown,
   expectedOrganizationId?: string,
@@ -300,7 +336,7 @@ function decodeOrganizationMembers(
   expectedOrganizationId?: string,
 ): OrganizationMemberWithUser[] {
   const members = decodeArray(value, (member) => decodeMemberWithUser(member));
-  assertSingleOrganization(
+  assertSingleIdentifier(
     members.map((member) => member.organizationId),
     expectedOrganizationId,
   );
@@ -372,14 +408,14 @@ function assertExpected(actual: string, expected?: string): void {
   if (expected !== undefined && actual !== expected) invalidResponse();
 }
 
-function assertSingleOrganization(
-  organizationIds: string[],
+function assertSingleIdentifier(
+  identifiers: string[],
   expected?: string,
 ): void {
-  const organizationId = expected ?? organizationIds[0];
+  const identifier = expected ?? identifiers[0];
   if (
-    organizationId !== undefined
-    && organizationIds.some((candidate) => candidate !== organizationId)
+    identifier !== undefined
+    && identifiers.some((candidate) => candidate !== identifier)
   ) {
     invalidResponse();
   }
