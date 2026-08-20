@@ -202,6 +202,36 @@ describe('organization components', () => {
     expect(screen.getByRole('button', { name: 'organization.retry' })).toBeTruthy();
   });
 
+  it('does not claim there are no invitations when invitations failed to load', async () => {
+    mocks.organization.listUserInvitations.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'nope' },
+    } as never);
+    render(<OrganizationList />);
+
+    await screen.findByText('organization.list.invitationsError');
+    expect(screen.queryByText('organization.list.noInvitations')).toBeNull();
+    expect(screen.getByRole('button', { name: 'organization.retry' })).toBeTruthy();
+  });
+
+  it('keeps already-loaded invitations visible when a later refetch fails', async () => {
+    // Data-first, matching the organizations section: an error never hides a list
+    // that did load. Only the empty state is suppressed, because that is the claim
+    // a failed load cannot make.
+    render(<OrganizationList />);
+    await screen.findByText('Alexandria Labs');
+
+    mocks.organization.listUserInvitations.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'INTERNAL_ERROR', message: 'nope' },
+    } as never);
+    fireEvent.click(screen.getByRole('button', { name: 'organization.list.reject' }));
+
+    await screen.findByText('organization.list.invitationsError');
+    expect(screen.getByText('Alexandria Labs')).toBeTruthy();
+    expect(screen.queryByText('organization.list.noInvitations')).toBeNull();
+  });
+
   it('accepts a pending invitation from the organization list', async () => {
     render(<OrganizationList />);
     fireEvent.click(await screen.findByRole('button', { name: 'organization.list.accept' }));
