@@ -923,6 +923,7 @@ describe('createAuthOwlClient consent wiring', () => {
     expect(typeof client.signOut).toBe('function');
     expect(typeof client.sessionStore.subscribe).toBe('function');
     expect(typeof client.sessionStore.getSnapshot).toBe('function');
+    expect(typeof client.sessionStore.refresh).toBe('function');
   });
 
   it('routes every authentication action to the v1 wire endpoint', async () => {

@@ -42,6 +42,8 @@ export function createSessionController({
   let channel: BroadcastChannel | null = null;
   let detachBrowserListeners: (() => void) | null = null;
   let activeRequest: AbortController | null = null;
+  /** The explicit, cache-bypassing store refresh currently in flight, if any. */
+  let storeRefresh: Promise<void> | null = null;
   /**
    * The idle refresh currently in flight, if any.
    *
@@ -95,11 +97,21 @@ export function createSessionController({
 
   function refresh(options?: SessionQuery): Promise<void> {
     if (options?.query?.disableCookieCache === true) return runRefresh(options);
+    if (storeRefresh) return storeRefresh;
     if (idleRefresh) return idleRefresh;
     const running = runRefresh(options).finally(() => {
       if (idleRefresh === running) idleRefresh = null;
     });
     idleRefresh = running;
+    return running;
+  }
+
+  function refreshStore(): Promise<void> {
+    if (storeRefresh) return storeRefresh;
+    const running = runRefresh({ query: { disableCookieCache: true } }).finally(() => {
+      if (storeRefresh === running) storeRefresh = null;
+    });
+    storeRefresh = running;
     return running;
   }
 
@@ -277,6 +289,10 @@ export function createSessionController({
         // aborted run keeps its own promise and guard, while the new lifetime
         // is free to start a fresh read immediately.
         idleRefresh = null;
+        // The explicit store refresh is abandoned by the same reasoning: it is
+        // tracked separately, so clearing only `idleRefresh` would leave a
+        // resubscribe joining the promise of the request just aborted.
+        storeRefresh = null;
         abandoned?.abort();
         detachBrowserListeners?.();
       }
@@ -310,6 +326,7 @@ export function createSessionController({
     store: {
       subscribe,
       getSnapshot: () => state,
+      refresh: refreshStore,
     },
     getSession,
     notifyMutation() {
