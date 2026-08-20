@@ -328,14 +328,24 @@ function readMembership(claims: Record<string, unknown>): OrganizationMembership
   const permissions = Array.isArray(record.permissions)
     ? record.permissions.filter((entry): entry is string => typeof entry === 'string')
     : [];
+  // Absent on a token minted before multiple roles shipped. Preserve that
+  // distinction so legacy tokens continue to authorize against their primary role.
+  const roles = Array.isArray(record.roles)
+    ? record.roles.filter((entry): entry is string => typeof entry === 'string')
+    : undefined;
   // Absent on a token minted before teams shipped, which stays undefined rather
   // than [] so `has({ teamId })` cannot be satisfied by a claim that never said so.
   const teams = Array.isArray(record.teams)
     ? record.teams.filter((entry): entry is string => typeof entry === 'string')
     : undefined;
-  // A membership with only teams is still a membership worth returning.
-  if (role === '' && permissions.length === 0 && !teams?.length) return null;
-  return { role, permissions, ...(teams === undefined ? {} : { teams }) };
+  // A membership with only roles or teams is still worth returning.
+  if (role === '' && permissions.length === 0 && !roles?.length && !teams?.length) return null;
+  return {
+    role,
+    ...(roles === undefined ? {} : { roles }),
+    permissions,
+    ...(teams === undefined ? {} : { teams }),
+  };
 }
 
 /**

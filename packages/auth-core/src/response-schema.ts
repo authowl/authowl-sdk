@@ -132,6 +132,7 @@ function decodeMembership(value: unknown): OrganizationMembership {
   const row = asRecord(value);
   return {
     role: asString(row.role),
+    ...(row.roles === undefined ? {} : { roles: asStringArray(row.roles) }),
     permissions: asStringArray(row.permissions),
     ...(row.teams === undefined ? {} : { teams: asStringArray(row.teams) }),
   };
