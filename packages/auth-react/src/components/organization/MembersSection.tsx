@@ -80,7 +80,7 @@ export function MembersSection({
                   </button>
                 </span>
               ) : (
-                <span className="ba-organization-role-label">{organizationRoleLabel(primaryRole, t)}</span>
+                <span className="ba-organization-role-label"><Bidi>{organizationRoleLabel(member.role, t)}</Bidi></span>
               )}
             </li>
           );
