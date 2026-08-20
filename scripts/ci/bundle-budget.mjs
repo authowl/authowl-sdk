@@ -118,15 +118,51 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // bundlers always resolve it. The measurement uses code splitting and follows
 // static imports only, matching the initial browser payload: Shield remains in
 // an on-demand chunk and is still built, rather than hidden behind an external.
+// Tolerant organization display strings (2026-08-19) raise React 75->76. Core
+// stays at 21: it measures 20.81kb.
+//
+// The change itself is small - two decoder helpers, `asDisplayString` and
+// `asEmail`, so one member with no display name stops making the whole
+// organization undecodable. Measured cost is +36 bytes gzipped through React and
+// +48 through Core.
+//
+// It failed the gate anyway, and the reason matters more than the raise: `main`
+// measures 76774 bytes, which is TWENTY-SIX bytes under this row's ceiling. The
+// 2026-08-07 entry above states it reserved 0.8kb of regression headroom; that
+// headroom was spent by intervening merges without anyone re-measuring, and the
+// "size sweep queued separately" it promised never happened. So a 36-byte
+// correctness fix is what finally reported a drift it did not cause.
+//
+// 76 restores roughly a kilobyte of real headroom against a measured 75.01kb.
+// The sweep is still owed.
+// Invitation redemption (2026-08-19) raises React 76->78 and Core 21->22.
+// Measured 78398 and 21637 bytes: +1588 through React, +328 through Core.
+//
+// What it buys: the emailed organization invitation link produced no membership
+// at all - nothing consumed the id it carries, so the invitee signed up and
+// never joined while the flow reported success. The cost is the claim store, the
+// redemption hook, a confirm modal, a pre-auth notice on both auth forms, and
+// eleven catalog keys in two locales.
+//
+// A lazy chunk for the modal was tried first and REJECTED on measurement, not
+// taste: 76.9kb lazy against 76.6kb static, because Suspense plus the chunk
+// boundary cost more than the modal saves - the hook it needs is public API and
+// stays in the entry either way. Recorded so the next person does not re-run the
+// experiment.
+//
+// This is the second raise on the React row in one day, and that is worth saying
+// plainly: the first regularized headroom that earlier merges had silently
+// spent, and this one is a feature paying its own way. The size sweep the
+// 2026-08-07 entry queued is still owed, and now visibly so.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 76,
+    maxGzipKb: 78,
     label: '@authowl/react (provider + hooks + components)',
   },
   {
     entry: 'packages/auth-core/dist/index.js',
-    maxGzipKb: 21,
+    maxGzipKb: 22,
     label: '@authowl/core (framework-neutral fetch/state client)',
   },
 ];

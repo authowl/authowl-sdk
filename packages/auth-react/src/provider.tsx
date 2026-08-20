@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import {
+  captureInvitationClaim,
   createAuthOwlClient,
   directionFor,
   getPublicConfig,
@@ -13,6 +14,7 @@ import {
   type ResolvedAuthConfig,
 } from '@authowl/core';
 import { resolveAppearance } from './appearance';
+import { InvitationPrompt } from './components/InvitationPrompt';
 
 // Dev-only, once-per-project warning for the silent config-failure fallback.
 // When public-config can't be fetched, the drop-ins degrade to a password-only
@@ -72,6 +74,16 @@ export type AuthOwlProviderProps = AuthConfig & {
    * project's default from public-config ('en' until the config loads).
    */
   locale?: Locale | 'auto';
+  /**
+   * Render the organization-invitation prompt when this browser arrives from an
+   * invitation link. Default true, because the link is otherwise inert: the
+   * emailed URL lands on the operator's own page and nothing else redeems it.
+   *
+   * Pass false for a headless app - it never imports our stylesheet, so the
+   * modal would render unstyled - and drive `useOrganizationInvitation()`
+   * instead.
+   */
+  invitationPrompt?: boolean;
   children: React.ReactNode;
 };
 
@@ -111,6 +123,7 @@ export function AuthOwlProvider({
   fetch,
   appearance,
   locale: localeProp,
+  invitationPrompt = true,
   children,
 }: AuthOwlProviderProps) {
   // Capture the optional `fetch` override in a ref so an inline `fetch` prop
@@ -167,6 +180,14 @@ export function AuthOwlProvider({
 
   const locale = resolveLocale(localeProp, autoLocale, config?.locale);
 
+  // Take the invitation id out of the URL on the first mount that sees it. The
+  // query parameter dies at the first redirect of the sign-up the invitee still
+  // has to complete, so it is moved to storage here and read back by the prompt
+  // once a session exists.
+  React.useEffect(() => {
+    captureInvitationClaim();
+  }, []);
+
   const ctxValue = React.useMemo<Ctx>(
     () => ({ client, appearance, config, configState, locale }),
     [client, appearance, config, configState, locale],
@@ -191,6 +212,7 @@ export function AuthOwlProvider({
         style={{ display: 'contents', ...merged.style }}
       >
         {children}
+        {invitationPrompt ? <InvitationPrompt /> : null}
       </div>
     </Context.Provider>
   );

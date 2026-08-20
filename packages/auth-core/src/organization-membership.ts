@@ -15,8 +15,21 @@
 
 /** The active-membership shape carried on the session / decoded from a token. */
 export interface OrganizationMembership {
-  /** The member's canonical role key (built-in `owner`/`admin`/`member` or a project role). */
+  /**
+   * The member's PRIMARY role key (built-in `owner`/`admin`/`member` or a
+   * project role). One value, for display - use {@link membershipHas} to gate,
+   * because a member can hold more than one.
+   */
   role: string;
+  /**
+   * EVERY role the member holds, sorted. `member.role` is a comma-separated set
+   * server-side, so `admin,editor` is an ordinary membership - and gating on
+   * `role` alone made the others invisible.
+   *
+   * Optional because a token or session minted by an older AuthOwl carries only
+   * `role`; readers fall back to it rather than reporting a member holds nothing.
+   */
+  roles?: string[];
   /**
    * The member's effective permission ids: `org:sys_*` system claims (with
    * their legacy bare forms during dual-emit) plus custom `org:<feature>:<action>`
@@ -73,6 +86,21 @@ export function membershipHasTeam(
  * held. Returns false when there is no membership, or when no criterion at all is
  * given. Pure: no I/O, evaluated entirely against the local claim.
  */
+/**
+ * True when the member holds `role` - as one of their roles, not merely as the
+ * primary one. Falls back to the primary when `roles` is absent, which is what a
+ * session or token from an older server carries.
+ */
+export function membershipHasRole(
+  membership: OrganizationMembership | null | undefined,
+  role: string,
+): boolean {
+  if (!membership) return false;
+  return membership.roles === undefined
+    ? membership.role === role
+    : membership.roles.includes(role);
+}
+
 export function membershipHas(
   membership: OrganizationMembership | null | undefined,
   params: HasParams,
@@ -80,7 +108,7 @@ export function membershipHas(
   if (!membership) return false;
   const { role, permission, teamId } = params;
   if (role === undefined && permission === undefined && teamId === undefined) return false;
-  if (role !== undefined && membership.role !== role) return false;
+  if (role !== undefined && !membershipHasRole(membership, role)) return false;
   if (permission !== undefined && !membership.permissions.includes(permission)) return false;
   if (teamId !== undefined && !membershipHasTeam(membership, teamId)) return false;
   return true;

@@ -18,6 +18,7 @@ export {
   useSession,
   useUser,
   useOrganization,
+  useOrganizationInvitation,
   useSignIn,
   useSignUp,
   useSignOut,
@@ -33,6 +34,8 @@ export type {
   UseAuthResult,
   UseAccountResult,
   UseOrganizationResult,
+  UseOrganizationInvitationResult,
+  InvitationPromptStatus,
   UsePublicConfigResult,
   UseWaitlistResult,
   UseSignInResult,
@@ -108,6 +111,7 @@ export type { UserProfileProps } from './components/UserProfile';
 export type { UserProfileSection } from './components/user-profile/model';
 export { OrganizationSwitcher } from './components/OrganizationSwitcher';
 export type { OrganizationSwitcherProps } from './components/OrganizationSwitcher';
+export { InvitationPrompt } from './components/InvitationPrompt';
 export { OrganizationList } from './components/OrganizationList';
 export type { OrganizationListProps } from './components/OrganizationList';
 export { CreateOrganization } from './components/CreateOrganization';

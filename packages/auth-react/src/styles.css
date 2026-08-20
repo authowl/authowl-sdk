@@ -284,6 +284,10 @@
 .ba-organization-menu-item small { overflow: hidden; color: var(--ba-muted); text-overflow: ellipsis; white-space: nowrap; }
 .ba-organization-menu-actions { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--ba-divider); }
 .ba-organization-menu-actions .ba-menu-item { padding: 9px; }
+.ba-invitation-overlay { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 24px; background: var(--ba-overlay); }
+.ba-invitation-panel { width: min(420px, 100%); padding: 24px; border: 1px solid var(--ba-border); border-radius: 14px; background: var(--ba-surface); color: var(--ba-fg); box-shadow: 0 24px 70px rgba(0,0,0,0.3); }
+.ba-invitation-panel .ba-title { margin: 0 0 8px; }
+.ba-invitation-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 .ba-organization-overlay { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 24px; background: var(--ba-overlay); }
 .ba-organization-modal { width: min(920px, 100%); max-height: min(820px, calc(100dvh - 48px)); overflow: auto; border: 1px solid var(--ba-border); border-radius: 14px; background: var(--ba-surface); color: var(--ba-fg); box-shadow: 0 24px 70px rgba(0,0,0,0.3); }
 .ba-organization-modal-header { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 22px; border-bottom: 1px solid var(--ba-divider); background: var(--ba-surface); }

@@ -1,13 +1,17 @@
 'use client';
 import * as React from 'react';
 import {
+  clearInvitationClaim,
   createMembershipHas,
+  readInvitationClaim,
   type AuthClientError,
   type AuthUser,
   type AuthOwlClient,
   type ConsentStatus,
   type HasParams,
+  type InvitationClaim,
   type OrganizationDetails,
+  type OrganizationInvitationDetails,
   type OrganizationMembership,
   type PublicConfig,
   type SessionState,
@@ -199,6 +203,128 @@ export function useOrganization(): UseOrganizationResult {
     hasPermission: bound.hasPermission,
     isLoaded: !isPending && orgLoaded,
   };
+}
+
+export type InvitationPromptStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'joining'
+  | 'wrong_account'
+  | 'verify_email'
+  | 'gone'
+  | 'error';
+
+export type UseOrganizationInvitationResult = {
+  /** The stashed invitation once it has been read back, else null. */
+  invitation: OrganizationInvitationDetails | null;
+  status: InvitationPromptStatus;
+  /** Redeem it. Resolves true when the membership was written. */
+  accept: () => Promise<boolean>;
+  /** Forget it locally. Never rejects it server-side - that is a terminal state. */
+  dismiss: () => void;
+};
+
+/**
+ * The organization invitation this browser arrived carrying, if any.
+ *
+ * The emailed link lands on the operator's page with `?authowl_invitation=<id>`
+ * and the only route that can redeem it needs a session, which the invitee
+ * usually does not have yet. `AuthOwlProvider` captures the id into storage on
+ * mount so it survives the sign-up's own redirects; this hook reads it back once
+ * a session exists and drives the redemption.
+ *
+ * The details come from `getInvitation`, which is recipient-only - so the
+ * organization's name is available to the person invited and to nobody else,
+ * and no pre-authentication call can leak it.
+ */
+export function useOrganizationInvitation(): UseOrganizationInvitationResult {
+  const client = useAuthClient();
+  const apiRef = React.useRef(client.organization);
+  apiRef.current = client.organization;
+  const { data, isPending } = useSession();
+  const identity = data?.user?.id ?? null;
+
+  const [claim, setClaim] = React.useState<InvitationClaim | null>(null);
+  const [invitation, setInvitation] = React.useState<OrganizationInvitationDetails | null>(null);
+  const [status, setStatus] = React.useState<InvitationPromptStatus>('idle');
+  const requestRef = React.useRef(0);
+
+  React.useEffect(() => {
+    setClaim(readInvitationClaim());
+  }, [identity]);
+
+  React.useEffect(() => {
+    const token = ++requestRef.current;
+    if (isPending || !claim) return;
+    // Redemption needs a session. Without one the claim simply waits: the
+    // sign-in and sign-up forms show their own banner instead.
+    if (!identity) {
+      setStatus('idle');
+      return;
+    }
+    setStatus('loading');
+    void (async () => {
+      const result = await apiRef.current.getInvitation({ id: claim.id });
+      if (token !== requestRef.current) return;
+      if (result.data) {
+        setInvitation(result.data);
+        setStatus('ready');
+        return;
+      }
+      // Recipient-only, so a refusal here is either "not yours" or "not a live
+      // invitation any more". Both are dead ends for THIS session and neither
+      // should keep re-asking on every mount.
+      setInvitation(null);
+      setStatus(result.error?.code === 'YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION'
+        ? 'wrong_account'
+        : 'gone');
+    })();
+    return () => {
+      requestRef.current += 1;
+    };
+  }, [claim, identity, isPending]);
+
+  const accept = React.useCallback(async () => {
+    const current = readInvitationClaim();
+    if (!current) return false;
+    setStatus('joining');
+    const result = await apiRef.current.acceptInvitation({ invitationId: current.id });
+    if (result.data) {
+      clearInvitationClaim();
+      setClaim(null);
+      setStatus('idle');
+      // No `setActive` here: accepting an invitation already re-points the
+      // session at the new organization SERVER-side, unconditionally, and the
+      // mutation above refreshes the session so this client picks that up. A
+      // call here would be a second round trip to reach the state we are
+      // already in - and the conditional it used to carry claimed to protect an
+      // existing active organization, which it never could: the server had
+      // switched it before the condition was evaluated.
+      return true;
+    }
+    const code = result.error?.code;
+    if (code === 'YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION') setStatus('wrong_account');
+    else if (code !== undefined && code.startsWith('EMAIL_VERIFICATION_REQUIRED')) {
+      setStatus('verify_email');
+    } else if (code === 'INVITATION_NOT_FOUND') {
+      clearInvitationClaim();
+      setClaim(null);
+      setStatus('gone');
+    } else setStatus('error');
+    return false;
+  }, []);
+
+  const dismiss = React.useCallback(() => {
+    // Local only. Rejecting is terminal and irreversible, and a reflexive
+    // "not now" must never burn an invitation the user still wants.
+    clearInvitationClaim();
+    setClaim(null);
+    setInvitation(null);
+    setStatus('idle');
+  }, []);
+
+  return { invitation, status, accept, dismiss };
 }
 
 export type UseSignInResult = {

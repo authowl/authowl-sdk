@@ -132,3 +132,37 @@ describe('createMembershipHas', () => {
     expect(createMembershipHas(null).has({ role: 'billing_manager' })).toBe(false);
   });
 });
+
+/**
+ * `member.role` is a comma-separated SET server-side, so `admin,editor` is an
+ * ordinary membership. Gating on the primary alone answered false for a role the
+ * member genuinely held, while `permissions` had unioned across both - the two
+ * halves of one membership disagreeing.
+ */
+describe('a member holding more than one role', () => {
+  const multi = {
+    role: 'admin',
+    roles: ['admin', 'editor'],
+    permissions: ['org:sys_memberships:create'],
+    teams: [],
+  };
+
+  it('matches on a secondary role, not only the primary', () => {
+    expect(membershipHas(multi, { role: 'editor' })).toBe(true);
+    expect(membershipHas(multi, { role: 'admin' })).toBe(true);
+    expect(membershipHas(multi, { role: 'viewer' })).toBe(false);
+  });
+
+  it('still ANDs the other criteria', () => {
+    expect(membershipHas(multi, { role: 'editor', permission: 'org:sys_memberships:create' }))
+      .toBe(true);
+    expect(membershipHas(multi, { role: 'editor', permission: 'org:billing:write' })).toBe(false);
+  });
+
+  it('falls back to the primary when an older server sent no set', () => {
+    const legacy = { role: 'admin', permissions: [], teams: [] };
+    expect(membershipHas(legacy, { role: 'admin' })).toBe(true);
+    // Not a claim that they hold nothing - just all the server told us.
+    expect(membershipHas(legacy, { role: 'editor' })).toBe(false);
+  });
+});

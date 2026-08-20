@@ -19,6 +19,7 @@ import { PhoneOTP } from './PhoneOTP';
 import { AUTH_CHALLENGE_ACTIONS, useAuthChallenge } from './AuthChallenge';
 import { FormError } from './FormError';
 import { AuthOwlBranding } from './AuthOwlBranding';
+import { InvitationBanner } from './InvitationBanner';
 
 export type SignInProps = {
   redirectTo?: string;
@@ -312,6 +313,7 @@ export function SignIn({
     <div className="ba-form" data-testid="signin-form">
       {branding}
       <h2 className="ba-title">{t('signIn.title')}</h2>
+      <InvitationBanner />
       {/* Dev-only: make the silent config-failure fallback visible in the UI too
           (not just the console warning), so a developer isn't left wondering why
           they see a bare password form. Stripped from production bundles via the
