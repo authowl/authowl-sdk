@@ -8,7 +8,7 @@ This repository ships twelve things to five different places:
 | `sdks/python` | `authowl` | PyPI | `deploy.yml` |
 | `sdks/rust` | `authowl` | crates.io | `deploy.yml` |
 | `sdks/flutter` | `authowl` | pub.dev | `publish-flutter.yml`, started by a tag |
-| `sdks/go` | `github.com/mstfash/authowl-sdk/sdks/go` | a Git tag | `deploy.yml` |
+| `sdks/go` | `github.com/authowl/authowl-sdk/sdks/go` | a Git tag | `deploy.yml` |
 | `sdks/php` | `authowl/authowl` | nowhere yet | see [PHP](#php-is-not-published-yet) |
 
 Every version is read from its own manifest by `scripts/release/sdk-manifest.mjs`,
@@ -71,7 +71,7 @@ other targets take minutes.
 A tag points at the deploy commit and its Release says the version came from
 there, so **a tag is only ever cut for something that run actually released**. A
 version the registry already had was built by a different commit, so it is left
-alone rather than given invented provenance — which is why the first deploy does
+alone rather than given invented provenance - which is why the first deploy does
 not back-fill tags for the versions already on npm and pub.dev. Cut those by
 hand, against the commit that really produced them:
 
@@ -85,6 +85,10 @@ the release and is always cut when `go_version` is set. The Flutter tag is a
 request to publish, so `deploy.yml` pushes it without creating a Release;
 `publish-flutter.yml` creates that Release once pub.dev has actually accepted
 the version.
+
+Publish jobs are recorded independently. If one ecosystem fails, the workflow
+still creates tags and GitHub Releases for every other ecosystem that completed
+successfully; a failed or cancelled job is never recorded as released.
 
 Two consequences worth knowing:
 

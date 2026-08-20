@@ -24,7 +24,7 @@ import { RELEASE_PACKAGES } from './artifact-contract.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 const USER_AGENT = 'authowl-sdk release (https://github.com/authowl/authowl-sdk)';
-const GO_MODULE = 'github.com/mstfash/authowl-sdk/sdks/go';
+const GO_MODULE = 'github.com/authowl/authowl-sdk/sdks/go';
 // Accepts the semver these ecosystems agree on, including the `+build` suffix
 // Dart allows. Everything here becomes a Git tag, so it is validated once.
 const VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
