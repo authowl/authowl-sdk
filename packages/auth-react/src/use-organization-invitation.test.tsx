@@ -117,13 +117,16 @@ describe('InvitationPrompt', () => {
     await waitFor(() => expect(mocks.acceptInvitation).toHaveBeenCalledWith({ invitationId: 'inv_1' }));
     // Consumed: a refresh must not re-offer an invitation already accepted.
     await waitFor(() => expect(readInvitationClaim()).toBeNull());
-    // A fresh invitee has nowhere else to be, so the new org becomes active.
-    expect(mocks.setActive).toHaveBeenCalledWith({ organizationId: 'org-1' });
   });
 
-  it('never yanks an existing active organization', async () => {
+  /**
+   * Accepting already re-points the session at the new organization SERVER-side,
+   * unconditionally, and the mutation refreshes the session so this client picks
+   * it up. A `setActive` here would be a second round trip to reach the state we
+   * are already in.
+   */
+  it('does not re-set the active organization the server has already set', async () => {
     stash();
-    mocks.session.data.session.activeOrganizationId = 'org-existing';
     mocks.getInvitation.mockResolvedValue({ data: invitationDetails, error: null });
     mocks.acceptInvitation.mockResolvedValue({
       data: { invitation: invitationDetails, member: { id: 'm1', organizationId: 'org-1' } },

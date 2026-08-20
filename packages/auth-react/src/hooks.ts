@@ -244,7 +244,6 @@ export function useOrganizationInvitation(): UseOrganizationInvitationResult {
   apiRef.current = client.organization;
   const { data, isPending } = useSession();
   const identity = data?.user?.id ?? null;
-  const hasActiveOrganization = (data?.session?.activeOrganizationId ?? null) !== null;
 
   const [claim, setClaim] = React.useState<InvitationClaim | null>(null);
   const [invitation, setInvitation] = React.useState<OrganizationInvitationDetails | null>(null);
@@ -295,11 +294,13 @@ export function useOrganizationInvitation(): UseOrganizationInvitationResult {
       clearInvitationClaim();
       setClaim(null);
       setStatus('idle');
-      // Strictly helpful for a fresh invitee, and never yanks the context of
-      // someone who already had one.
-      if (!hasActiveOrganization) {
-        await apiRef.current.setActive({ organizationId: result.data.member.organizationId });
-      }
+      // No `setActive` here: accepting an invitation already re-points the
+      // session at the new organization SERVER-side, unconditionally, and the
+      // mutation above refreshes the session so this client picks that up. A
+      // call here would be a second round trip to reach the state we are
+      // already in - and the conditional it used to carry claimed to protect an
+      // existing active organization, which it never could: the server had
+      // switched it before the condition was evaluated.
       return true;
     }
     const code = result.error?.code;
@@ -312,7 +313,7 @@ export function useOrganizationInvitation(): UseOrganizationInvitationResult {
       setStatus('gone');
     } else setStatus('error');
     return false;
-  }, [hasActiveOrganization]);
+  }, []);
 
   const dismiss = React.useCallback(() => {
     // Local only. Rejecting is terminal and irreversible, and a reflexive
