@@ -303,12 +303,11 @@ jobs:
   tag:
     name: Tags and releases
     needs: [plan, npm, python, rust]
-    # `always()` so a skipped publish job (nothing pending) still tags, but never
-    # after a failure: a tag claims the version is out there.
+    # `always()` lets successful ecosystems be recorded even when another
+    # ecosystem fails. `wanted()` below excludes every failed, cancelled, or
+    # skipped publish job, so a tag still only claims a version that shipped.
     if: >-
       always() && inputs.tags && !inputs.dry_run
-      && !contains(needs.*.result, 'failure')
-      && !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -421,7 +420,7 @@ jobs:
           GO_VERSION: ${{ inputs.go_version }}
         run: |
           set -euo pipefail
-          module='github.com/mstfash/authowl-sdk/sdks/go'
+          module='github.com/authowl/authowl-sdk/sdks/go'
           # The proxy fetches a version the first time anyone asks for it. Ask
           # now, so `go get` works the moment this run finishes.
           for attempt in 1 2 3 4 5; do

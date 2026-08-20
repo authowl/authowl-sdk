@@ -10,7 +10,7 @@ JSON, HTTP — is in the standard library. Backend auth is where a surprise
 transitive dependency is least welcome.
 
 ```bash
-go get github.com/mstfash/authowl-sdk/sdks/go
+go get github.com/authowl/authowl-sdk/sdks/go
 ```
 
 This package is the **relying-party** side of AuthOwl. It never signs anyone in:
