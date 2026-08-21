@@ -28,6 +28,14 @@ const CLAIM_KEY = 'authowl.invitation-claim';
  */
 const CLAIM_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
+/**
+ * The only hint value that exists. There is deliberately no `existing_user`:
+ * absence has to stay ambiguous across an existing account, an older AuthOwl,
+ * and an account created between the invite and the click - so it can never be
+ * read as proof that an address IS registered.
+ */
+export type InvitationRecipientHint = 'new_user';
+
 export type InvitationClaim = {
   id: string;
   /** Epoch milliseconds, for age display and for expiring a forgotten claim. */

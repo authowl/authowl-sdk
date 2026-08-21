@@ -10,6 +10,7 @@ import {
   type ConsentStatus,
   type HasParams,
   type InvitationClaim,
+  type InvitationRecipientHint,
   type OrganizationDetails,
   type OrganizationInvitationDetails,
   type OrganizationMembership,
@@ -224,6 +225,65 @@ export type UseOrganizationInvitationResult = {
   /** Forget it locally. Never rejects it server-side - that is a terminal state. */
   dismiss: () => void;
 };
+
+export type UseInvitationRecipientHintResult = {
+  recipientHint: InvitationRecipientHint | null;
+  /** False until browser storage and, when present, the server hint have settled. */
+  isLoaded: boolean;
+};
+
+/**
+ * Whether the invitation this browser is carrying was sent to an address that had
+ * no account, so an operator can land the invitee on sign-UP instead of sign-in.
+ *
+ * Readable BEFORE there is a session, which is the whole point: an invitee
+ * usually has no account, and `getInvitation` is recipient-only so nothing else
+ * can tell you anything about them until they have authenticated.
+ *
+ * Once `isLoaded` is true, `null` means "not told" and never "they have an
+ * account". It covers an unknown, inactive, expired, foreign-project, or
+ * existing-user invitation. Treat the hint as a default, not a fact.
+ *
+ * Read after mount, never during render: the claim lives in `localStorage`,
+ * which does not exist on the server.
+ */
+export function useInvitationRecipientHint(): UseInvitationRecipientHintResult {
+  const client = useAuthClient();
+  const apiRef = React.useRef(client.organization);
+  apiRef.current = client.organization;
+  const [result, setResult] = React.useState<UseInvitationRecipientHintResult>({
+    recipientHint: null,
+    isLoaded: false,
+  });
+  React.useEffect(() => {
+    let active = true;
+    const claim = readInvitationClaim();
+    if (!claim) {
+      setResult({ recipientHint: null, isLoaded: true });
+      return () => {
+        active = false;
+      };
+    }
+    void (async () => {
+      try {
+        const response = await apiRef.current.getInvitationRecipientHint({
+          invitationId: claim.id,
+        });
+        if (!active) return;
+        setResult({
+          recipientHint: response.data?.recipientHint ?? null,
+          isLoaded: true,
+        });
+      } catch {
+        if (active) setResult({ recipientHint: null, isLoaded: true });
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+  return result;
+}
 
 /**
  * The organization invitation this browser arrived carrying, if any.

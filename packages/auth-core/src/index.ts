@@ -15,6 +15,7 @@ export {
   INVITATION_QUERY_PARAM,
   readInvitationClaim,
   type InvitationClaim,
+  type InvitationRecipientHint,
 } from './invitation-claim';
 export {
   SESSION_TOKEN_HEADER,

@@ -1,5 +1,6 @@
 import type { ActionFetchOptions, AuthActionResult } from './client';
 import type { AuthHttpClient } from './http-client';
+import type { InvitationRecipientHint } from './invitation-claim';
 import { createAuthActionHelpers } from './http-client';
 import {
   membershipHas,
@@ -11,6 +12,7 @@ import {
   decodeAcceptInvitation,
   decodeInvitation,
   decodeInvitationDetails,
+  decodeInvitationRecipientHint,
   decodeInvitationOrNull,
   decodeInvitations,
   decodeMember,
@@ -263,6 +265,14 @@ export interface GetOrganizationInvitationOptions {
   id: string;
 }
 
+export interface GetInvitationRecipientHintOptions {
+  invitationId: string;
+}
+
+export interface InvitationRecipientHintData {
+  recipientHint: InvitationRecipientHint | null;
+}
+
 export interface OrganizationInvitationActionOptions {
   invitationId: string;
 }
@@ -421,6 +431,14 @@ export interface OrganizationClient {
     params: GetOrganizationInvitationOptions,
     fetchOptions?: ActionFetchOptions,
   ): Promise<AuthActionResult<OrganizationInvitationDetails>>;
+  /**
+   * Resolve the invitation's pre-authentication screen hint without exposing
+   * its recipient, organization, or existence. `null` means only "not told".
+   */
+  getInvitationRecipientHint(
+    params: GetInvitationRecipientHintOptions,
+    fetchOptions?: ActionFetchOptions,
+  ): Promise<AuthActionResult<InvitationRecipientHintData>>;
   acceptInvitation(
     params: OrganizationInvitationActionOptions,
     fetchOptions?: ActionFetchOptions,
@@ -717,6 +735,13 @@ export function createOrganizationClient(
         { id: params.id },
         fetchOptions,
         (value) => decodeInvitationDetails(value, params.id),
+      ),
+    getInvitationRecipientHint: (params, fetchOptions) =>
+      get(
+        '/organization/invitation-recipient-hint',
+        { invitationId: params.invitationId },
+        fetchOptions,
+        decodeInvitationRecipientHint,
       ),
     acceptInvitation: (params, fetchOptions) =>
       mutation(

@@ -367,6 +367,38 @@ describe('organization client', () => {
     expect(new URL(String(calls[0]![0])).searchParams.get('organizationId')).toBe('org-1');
   });
 
+  it('resolves and validates an invitation recipient hint without a session', async () => {
+    const fetchImpl = vi.fn(
+      async () => Response.json({ recipientHint: 'new_user' }),
+    ) as unknown as typeof fetch;
+
+    const result = await clientWith(fetchImpl).organization.getInvitationRecipientHint({
+      invitationId: '11111111-2222-4333-8444-555555555555',
+    });
+
+    expect(result).toEqual({ data: { recipientHint: 'new_user' }, error: null });
+    const [url, init] = (fetchImpl as unknown as {
+      mock: { calls: [string | URL, RequestInit][] };
+    }).mock.calls[0]!;
+    expect(`${init.method ?? 'GET'} ${new URL(String(url)).pathname}`)
+      .toBe(`GET ${AUTH_PATH}/organization/invitation-recipient-hint`);
+    expect(new URL(String(url)).searchParams.get('invitationId'))
+      .toBe('11111111-2222-4333-8444-555555555555');
+  });
+
+  it('rejects an unknown invitation recipient hint value at the runtime boundary', async () => {
+    const fetchImpl = vi.fn(
+      async () => Response.json({ recipientHint: 'existing_user' }),
+    ) as unknown as typeof fetch;
+
+    const result = await clientWith(fetchImpl).organization.getInvitationRecipientHint({
+      invitationId: '11111111-2222-4333-8444-555555555555',
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error?.code).toBe('INVALID_RESPONSE');
+  });
+
   it('projects exact public organization DTOs and drops credential-shaped extras', async () => {
     const fetchImpl = vi.fn(async () => Response.json({
       ...organizationWire(),
