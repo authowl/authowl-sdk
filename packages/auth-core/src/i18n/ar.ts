@@ -292,6 +292,8 @@ export const ar: Record<keyof typeof en, string> = {
   'organization.role.owner': 'مالك',
   'organization.role.admin': 'مشرف',
   'organization.role.member': 'عضو',
+  'organization.role.custom': '{role}',
+  'organization.role.separator': '، ',
   'organization.switcher.label': 'تبديل المؤسسة',
   'organization.switcher.manage': 'إدارة المؤسسة',
   'organization.switcher.create': 'إنشاء مؤسسة',

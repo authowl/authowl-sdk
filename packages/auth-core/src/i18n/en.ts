@@ -294,6 +294,8 @@ export const en = {
   'organization.role.owner': 'Owner',
   'organization.role.admin': 'Admin',
   'organization.role.member': 'Member',
+  'organization.role.custom': '{role}',
+  'organization.role.separator': ', ',
   'organization.switcher.label': 'Switch organization',
   'organization.switcher.manage': 'Manage organization',
   'organization.switcher.create': 'Create organization',

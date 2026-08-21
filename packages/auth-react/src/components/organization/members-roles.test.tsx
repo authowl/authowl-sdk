@@ -21,7 +21,18 @@ vi.mock('../../hooks', () => ({
 
 vi.mock('../../i18n', () => ({
   Bidi: ({ children }: { children: React.ReactNode }) => <bdi>{children}</bdi>,
-  useT: () => (key: string) => key,
+  useT: () => (key: string, params?: Record<string, string | number>) => {
+    const messages: Record<string, string> = {
+      'organization.role.owner': 'Owner',
+      'organization.role.admin': 'Admin',
+      'organization.role.member': 'Member',
+      'organization.role.custom': '{role}',
+      'organization.role.separator': ', ',
+    };
+    let message = messages[key] ?? key;
+    for (const [name, value] of Object.entries(params ?? {})) message = message.replace(`{${name}}`, String(value));
+    return message;
+  },
   useServerError: () => (_error: unknown, fallback: string) => fallback,
 }));
 
@@ -62,6 +73,18 @@ describe('MembersSection role select source', () => {
     await waitFor(() => expect(options()).toContain('billing_manager'));
     // Built-ins are always present, custom project role from the server appended.
     expect(options()).toEqual(expect.arrayContaining(['owner', 'admin', 'member', 'billing_manager']));
+    expect(screen.getByRole('option', { name: 'Billing Manager' })).toBeTruthy();
+  });
+
+  it('shows every role held by a member', () => {
+    const multiRoleOrganization = {
+      ...organization,
+      members: [{ ...organization.members[0], role: 'admin,editor' }],
+    } as typeof organization;
+
+    render(<MembersSection organization={multiRoleOrganization} userId="user-owner" canManage={false} onChanged={vi.fn()} />);
+
+    expect(screen.getByText('Admin, Editor')).toBeTruthy();
   });
 
   it('falls back to the three built-ins when list-roles is unavailable', async () => {
