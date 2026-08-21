@@ -370,6 +370,16 @@ export function createOrganizationClient(
 ): OrganizationClient {
   const { post, mutation: sendMutation } = createAuthActionHelpers(http, notifyMutation);
   const mutationListeners = new Set<() => void>();
+  const notifyMutationListeners = (): void => {
+    for (const listener of mutationListeners) {
+      try {
+        listener();
+      } catch {
+        // A subscriber is an invalidation hint, not part of the committed write.
+        // Its failure must neither hide success nor prevent other subscribers.
+      }
+    }
+  };
   /**
    * Reads of the same thing that are open AT THE SAME TIME, joined.
    *
@@ -412,7 +422,7 @@ export function createOrganizationClient(
     action: Promise<AuthActionResult<T>>,
   ): Promise<AuthActionResult<T>> => {
     const result = await sendMutation(action).finally(() => inFlightReads.clear());
-    if (result.error === null) mutationListeners.forEach((listener) => listener());
+    if (result.error === null) notifyMutationListeners();
     return result;
   };
   return {

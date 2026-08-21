@@ -106,4 +106,22 @@ describe('organization reads open at the same time', () => {
 
     expect(listener).not.toHaveBeenCalled();
   });
+
+  it('keeps a committed mutation successful when a subscriber throws', async () => {
+    const request = vi.fn(async () => ({
+      data: { id: 'org-1', name: 'Renamed', slug: 'renamed', createdAt: new Date() },
+      error: null,
+    }));
+    const organization = clientWith(request as unknown as ReturnType<typeof vi.fn>);
+    const healthyListener = vi.fn();
+    organization.subscribe(() => {
+      throw new Error('consumer listener failed');
+    });
+    organization.subscribe(healthyListener);
+
+    await expect(
+      organization.update({ organizationId: 'org-1', data: { name: 'Renamed' } }),
+    ).resolves.toMatchObject({ error: null });
+    expect(healthyListener).toHaveBeenCalledTimes(1);
+  });
 });
