@@ -31,6 +31,7 @@ function sessionStore(): {
   return {
     store: {
       getSnapshot: () => state,
+      refresh: vi.fn(async () => undefined),
       subscribe: (listener) => {
         listeners.add(listener);
         return () => listeners.delete(listener);

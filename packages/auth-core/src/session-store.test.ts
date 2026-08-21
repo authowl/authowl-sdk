@@ -70,6 +70,72 @@ describe('session external store', () => {
     ).resolves.toMatchObject({ data: { user: { id: 'one' } }, error: null });
   });
 
+  it('explicitly refreshes past the cookie cache and notifies subscribers', async () => {
+    const request = vi
+      .fn()
+      .mockResolvedValueOnce({ data: session('one'), error: null })
+      .mockResolvedValueOnce({ data: session('two'), error: null });
+    const controller = controllerFor(request as AuthHttpClient['request']);
+    const listener = vi.fn();
+    const unsubscribe = controller.store.subscribe(listener);
+
+    await vi.waitFor(() => expect(controller.store.getSnapshot().data?.user.id).toBe('one'));
+    listener.mockClear();
+
+    await controller.store.refresh();
+
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[1]?.[1]).toMatchObject({
+      query: { disableCookieCache: true },
+    });
+    expect(controller.store.getSnapshot().data?.user.id).toBe('two');
+    expect(listener).toHaveBeenCalled();
+    unsubscribe();
+  });
+
+  it('does not join an abandoned store refresh after a resubscribe', async () => {
+    // React Strict Mode performs subscribe -> unsubscribe -> subscribe in
+    // development, which aborts the in-flight read. A store refresh started
+    // before that must not be handed to the new lifetime: the new subscription
+    // would join a promise for a request that was already abandoned, and so
+    // never re-read the session at all.
+    const request = vi.fn().mockResolvedValue({ data: session('one'), error: null });
+    const controller = controllerFor(request as AuthHttpClient['request']);
+    const unsubscribe = controller.store.subscribe(vi.fn());
+    await vi.waitFor(() => expect(controller.store.getSnapshot().data?.user.id).toBe('one'));
+
+    void controller.store.refresh();
+    unsubscribe();
+    const callsBeforeResubscribe = request.mock.calls.length;
+
+    const resubscribe = controller.store.subscribe(vi.fn());
+    await vi.waitFor(() =>
+      expect(request.mock.calls.length).toBeGreaterThan(callsBeforeResubscribe),
+    );
+    resubscribe();
+  });
+
+  it('shares one request between concurrent explicit refreshes', async () => {
+    let resolveRequest!: (value: unknown) => void;
+    const request = vi.fn(
+      (_path: string, _options?: unknown) =>
+        new Promise((resolve) => { resolveRequest = resolve; }),
+    );
+    const controller = controllerFor(request as unknown as AuthHttpClient['request']);
+
+    const first = controller.store.refresh();
+    const second = controller.store.refresh();
+
+    expect(first).toBe(second);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0]?.[1]).toMatchObject({
+      query: { disableCookieCache: true },
+    });
+
+    resolveRequest({ data: null, error: null });
+    await Promise.all([first, second]);
+  });
+
   it('joins a duplicate idle refresh instead of paying for a second database read', async () => {
     // A tab regaining focus fires `focus` AND `visibilitychange`. The bearer
     // transport carries no cookie cache - by design, on both sides - so every

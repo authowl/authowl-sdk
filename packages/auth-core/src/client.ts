@@ -172,6 +172,11 @@ export interface SessionState {
 export interface SessionStore {
   subscribe(listener: () => void): () => void;
   getSnapshot(): SessionState;
+  /**
+   * Re-read the session from the server, bypassing the cookie cache, and publish
+   * the resulting snapshot to subscribers. Concurrent calls share one request.
+   */
+  refresh(): Promise<void>;
 }
 
 /** Standard `{ data, error }` envelope returned by the client's auth actions. */
