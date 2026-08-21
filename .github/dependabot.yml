@@ -24,6 +24,18 @@ updates:
           - "@types/react-dom"
       dev-dependencies:
         dependency-type: development
+        # Keep routine updates reviewable. Major toolchain migrations need their
+        # own compatibility work and must not be hidden inside a bulk PR.
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Version-update majors are scheduled deliberately. Security updates use
+      # Dependabot's separate advisory path and are not excluded by this rule.
+      - dependency-name: "*"
+        dependency-type: development
+        update-types:
+          - version-update:semver-major
 
   # GitHub Actions: keep SHA-pinned actions fresh.
   - package-ecosystem: github-actions
