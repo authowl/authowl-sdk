@@ -46,8 +46,8 @@
     "@storybook/addon-vitest": "10.4.6",
     "@storybook/react-vite": "10.4.6",
     "@types/node": "^22.10.2",
-    "@types/react": "19.2.16",
-    "@types/react-dom": "19.2.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
     "@vitest/browser-playwright": "4.1.10",
     "esbuild": "^0.28.1",
     "eslint": "9.39.5",
@@ -56,8 +56,8 @@
     "globals": "16.5.0",
     "openapi-typescript": "7.13.0",
     "playwright": "1.61.1",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "storybook": "10.4.6",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
@@ -82,21 +82,19 @@
     "through metro at BUILD time, parsing an asset the developer added to their",
     "own project. Revisit when image-size ships any fixed release.",
     "",
-    "GHSA-2v37-7h3g-55p8 (nanoid, infinite loop with a custom generator at size",
-    "zero) IS fixed in 3.3.18 - published 2026-08-07, hours before this entry.",
-    "minimumReleaseAge in pnpm-workspace.yaml quarantines releases for 7 days,",
-    "which is the control working as designed, so this is a TEMPORARY entry:",
-    "remove it after 2026-08-14 and let the tree resolve the patched version.",
-    "postcss, the only consumer here, passes no custom generator.",
-    "",
     "Do not widen this list to whole packages or unpinned ranges. An advisory that",
     "reaches a published artifact is a release blocker, not an entry here."
   ],
   "pnpm": {
     "overrides": {
       "@types/node": "22.20.0",
+      "brace-expansion@>=1.0.0 <1.1.18": "1.1.18",
+      "brace-expansion@>=2.0.0 <2.1.4": "2.1.4",
       "brace-expansion@>=4.0.0 <5.0.9": "5.0.9",
+      "esbuild@>=0.27.3 <0.28.1": "0.28.1",
+      "js-yaml@>=3.0.0 <3.15.1": "3.15.1",
       "js-yaml@>=4.0.0 <4.3.1": "4.3.1",
+      "nanoid@>=3.0.0 <3.3.18": "3.3.18",
       "postcss": "8.5.23",
       "prettier": "3.9.4",
       "uuid@7.0.3": "11.1.1"
@@ -104,12 +102,11 @@
     "auditConfig": {
       "ignoreGhsas": [
         "GHSA-w3rx-r6r6-pgpr",
-        "GHSA-5p2g-fcmc-qvqq",
-        "GHSA-2v37-7h3g-55p8"
+        "GHSA-5p2g-fcmc-qvqq"
       ]
     }
   },
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=22.0.0"
   }
 }

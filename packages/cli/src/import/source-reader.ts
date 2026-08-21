@@ -4,8 +4,8 @@ import { createInterface } from "node:readline";
 import { Transform, type Readable } from "node:stream";
 import { parse } from "csv-parse";
 import streamJson from "stream-json";
-import Pick from "stream-json/filters/Pick.js";
-import StreamArray from "stream-json/streamers/StreamArray.js";
+import pick from "stream-json/filters/pick.js";
+import streamArray from "stream-json/streamers/stream-array.js";
 import { IMPORT_SOURCE_POLICY } from "./contracts";
 
 export type SourceRecord = Record<string, unknown>;
@@ -105,8 +105,8 @@ export async function* readJsonArrayRecords(
   filePath: string,
 ): AsyncGenerator<SourceRecord> {
   const values = createSourceStream(filePath)
-    .pipe(streamJson.parser())
-    .pipe(StreamArray.streamArray());
+    .pipe(streamJson())
+    .pipe(streamArray.asStream());
   try {
     for await (const entry of values) {
       const value = isRecord(entry) ? entry.value : undefined;
@@ -132,9 +132,9 @@ export async function* readJsonPropertyArrayRecords(
   property: string,
 ): AsyncGenerator<SourceRecord> {
   const values = createSourceStream(filePath)
-    .pipe(streamJson.parser())
-    .pipe(Pick.pick({ filter: property }))
-    .pipe(StreamArray.streamArray());
+    .pipe(streamJson())
+    .pipe(pick.asStream({ filter: property }))
+    .pipe(streamArray.asStream());
   try {
     for await (const entry of values) {
       const value = isRecord(entry) ? entry.value : undefined;
