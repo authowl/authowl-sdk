@@ -38,7 +38,7 @@ const MAX_PUBLIC_STRING_LENGTH = 10_000;
 export function decodeInvitationRecipientHint(value: unknown): InvitationRecipientHintData {
   const row = asRecord(value);
   if (row.recipientHint !== null && row.recipientHint !== 'new_user') invalidResponse();
-  return { recipientHint: row.recipientHint } as InvitationRecipientHintData;
+  return { recipientHint: row.recipientHint };
 }
 
 export function decodeOrganization(

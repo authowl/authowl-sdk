@@ -260,7 +260,9 @@ export function useInvitationRecipientHint(): UseInvitationRecipientHintResult {
     const claim = readInvitationClaim();
     if (!claim) {
       setResult({ recipientHint: null, isLoaded: true });
-      return () => { active = false; };
+      return () => {
+        active = false;
+      };
     }
     void (async () => {
       try {
@@ -296,7 +298,6 @@ export function useInvitationRecipientHint(): UseInvitationRecipientHintResult {
  * organization's name is available to the person invited and to nobody else,
  * and no pre-authentication call can leak it.
  */
-
 export function useOrganizationInvitation(): UseOrganizationInvitationResult {
   const client = useAuthClient();
   const apiRef = React.useRef(client.organization);
