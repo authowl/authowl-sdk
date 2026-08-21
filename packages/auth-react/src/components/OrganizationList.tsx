@@ -150,7 +150,7 @@ export function OrganizationList({ onOrganizationChange }: OrganizationListProps
         <section className="ba-organization-user-invitations">
           <header className="ba-organization-section-header"><h3 className="ba-title">{t('organization.list.invitationsTitle')}</h3><p className="ba-muted">{t('organization.list.invitationsDescription')}</p></header>
           {invitationError && <div className="ba-inline-error"><FormError>{invitationError}</FormError><button className="ba-link-button" type="button" onClick={() => void loadInvitations()}>{t('organization.retry')}</button></div>}
-          {invitations === null && !invitationError ? <div className="ba-skeleton" /> : invitations?.length ? (
+          {invitations?.length ? (
             <ul className="ba-organization-list">
               {invitations.map((invitation) => (
                 <li key={invitation.id} className="ba-organization-invitation">
@@ -162,7 +162,7 @@ export function OrganizationList({ onOrganizationChange }: OrganizationListProps
                 </li>
               ))}
             </ul>
-          ) : <p className="ba-muted">{t('organization.list.noInvitations')}</p>}
+          ) : invitationError ? null : invitations === null ? <div className="ba-skeleton" /> : <p className="ba-muted">{t('organization.list.noInvitations')}</p>}
         </section>
       </section>
       {dialog === 'create' && (
