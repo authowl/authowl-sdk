@@ -1,12 +1,9 @@
 # Dependabot for the pnpm workspace and pinned GitHub Actions.
 version: 2
 updates:
-  # ---- npm (all workspace packages) ----
+  # ---- npm (the root owns the complete pnpm workspace lockfile) ----
   - package-ecosystem: npm
-    directories:
-      - "/"
-      - "/packages/*"
-      - "/examples/*"
+    directory: "/"
     schedule:
       interval: weekly
       day: monday
