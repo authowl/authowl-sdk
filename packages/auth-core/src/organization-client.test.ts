@@ -238,7 +238,7 @@ describe('organization client', () => {
     expect(results[resultNames.indexOf('removeTeamMember')]?.data).toEqual({
       message: 'Team member removed successfully.',
     });
-    expect(mutationListener).toHaveBeenCalledTimes(18);
+    expect(mutationListener).toHaveBeenCalledTimes(17);
     unsubscribe();
     const calls = (
       fetchImpl as unknown as { mock: { calls: [string | URL, RequestInit][] } }

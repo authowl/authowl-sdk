@@ -131,7 +131,7 @@ export function OrganizationProfile({ organizationId, defaultSection = 'general'
           {activeSection === 'members' && <MembersSection organization={organization} userId={user.id} canManage={canManage} onChanged={load} />}
           {activeSection === 'teams' && (
             <React.Suspense fallback={null}>
-              <TeamsSection organization={organization} canManage={canManage} />
+              <TeamsSection organization={organization} membership={membership} />
             </React.Suspense>
           )}
           {activeSection === 'invitations' && <InvitationsSection organization={organization} onChanged={load} />}

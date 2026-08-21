@@ -38,7 +38,6 @@ export function useOrganizationListResource<T>({
       setError(null);
       return;
     }
-    setData(null);
     setError(null);
     try {
       const result = await requestFn.current();
@@ -54,11 +53,13 @@ export function useOrganizationListResource<T>({
   }, [enabled, fallback, inactiveData, resourceKey, toServerError]);
 
   React.useEffect(() => {
+    setData(enabled && resourceKey ? null : inactiveData);
+    setError(null);
     void refresh();
     return () => {
       requestToken.current += 1;
     };
-  }, [refresh]);
+  }, [enabled, inactiveData, refresh, resourceKey]);
 
   return { data, isLoading: data === null && error === null, error, refresh };
 }

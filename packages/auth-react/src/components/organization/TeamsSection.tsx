@@ -1,25 +1,29 @@
 'use client';
 import * as React from 'react';
-import type { OrganizationDetails, OrganizationTeam } from '@authowl/core';
+import type { OrganizationDetails, OrganizationMember, OrganizationTeam } from '@authowl/core';
 import { useAuthClient } from '../../hooks';
 import { useT } from '../../i18n';
 import { FormError } from '../FormError';
 import { Busy } from '../Spinner';
 import { useSubmitAction } from '../use-submit-action';
 import { TeamMembersPanel } from './TeamMembersPanel';
+import { teamManagementCapabilities } from './model';
+import { useOrganizationRoles } from './use-organization-roles';
 import { useTeamsResource } from './use-team-resources';
 
 export default function TeamsSection({
   organization,
-  canManage,
+  membership,
 }: {
   organization: OrganizationDetails;
-  canManage: boolean;
+  membership: OrganizationMember;
 }) {
   const t = useT();
   const api = useAuthClient().organization;
   const { pending, error: actionError, run } = useSubmitAction();
   const { teams, error: teamsError, reload } = useTeamsResource(organization.id);
+  const { dynamicRoles } = useOrganizationRoles(organization.id);
+  const capabilities = teamManagementCapabilities(membership, dynamicRoles);
   const [name, setName] = React.useState('');
   const [selectedTeamId, setSelectedTeamId] = React.useState<string | null>(null);
   const [editingTeamId, setEditingTeamId] = React.useState<string | null>(null);
@@ -93,7 +97,7 @@ export default function TeamsSection({
         <h3 className="ba-title">{t('organization.profile.teams.title')}</h3>
         <p className="ba-muted">{t('organization.profile.teams.description')}</p>
       </header>
-      {canManage ? (
+      {capabilities.createTeam ? (
         <form method="post" className="ba-organization-invite-form" onSubmit={create}>
           <label className="ba-label">
             {t('organization.profile.teams.create')}
@@ -105,16 +109,13 @@ export default function TeamsSection({
         </form>
       ) : null}
       <FormError>{actionError}</FormError>
-      {teamsError ? (
+      {teamsError && (
         <div className="ba-inline-error">
           <FormError>{teamsError}</FormError>
           <button className="ba-link-button" type="button" onClick={() => void reload()}>{t('organization.retry')}</button>
         </div>
-      ) : teams === null ? (
-        <div className="ba-skeleton" aria-label={t('common.loading')} />
-      ) : teams.length === 0 ? (
-        <p className="ba-muted">{t('organization.profile.teams.empty')}</p>
-      ) : (
+      )}
+      {teams?.length ? (
         <ul className="ba-organization-list">
           {teams.map((team) => (
             <li key={team.id} className="ba-organization-member">
@@ -135,11 +136,11 @@ export default function TeamsSection({
                     <button className="ba-link-button" type="button" disabled={pending} aria-expanded={selectedTeamId === team.id} onClick={() => setSelectedTeamId(selectedTeamId === team.id ? null : team.id)}>
                       {t('organization.profile.teams.manageMembers')}
                     </button>
-                    {canManage && (
-                      <>
-                        <button className="ba-link-button" type="button" disabled={pending} onClick={() => beginRename(team)}>{t('organization.profile.teams.rename')}</button>
-                        <button className="ba-link-button ba-danger" type="button" disabled={pending} onClick={() => remove(team)}>{t('organization.profile.teams.removeTeam')}</button>
-                      </>
+                    {capabilities.updateTeam && (
+                      <button className="ba-link-button" type="button" disabled={pending} onClick={() => beginRename(team)}>{t('organization.profile.teams.rename')}</button>
+                    )}
+                    {capabilities.deleteTeam && (
+                      <button className="ba-link-button ba-danger" type="button" disabled={pending} onClick={() => remove(team)}>{t('organization.profile.teams.removeTeam')}</button>
                     )}
                   </span>
                 </>
@@ -147,8 +148,19 @@ export default function TeamsSection({
             </li>
           ))}
         </ul>
+      ) : teamsError ? null : teams === null ? (
+        <div className="ba-skeleton" aria-label={t('common.loading')} />
+      ) : teams.length === 0 ? (
+        <p className="ba-muted">{t('organization.profile.teams.empty')}</p>
+      ) : null}
+      {selectedTeam && (
+        <TeamMembersPanel
+          organization={organization}
+          team={selectedTeam}
+          canAdd={capabilities.addTeamMember}
+          canRemove={capabilities.removeTeamMember}
+        />
       )}
-      {selectedTeam && <TeamMembersPanel organization={organization} team={selectedTeam} canManage={canManage} />}
     </section>
   );
 }

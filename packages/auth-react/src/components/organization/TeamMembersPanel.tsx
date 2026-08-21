@@ -10,11 +10,13 @@ import { useTeamMembersResource } from './use-team-resources';
 export function TeamMembersPanel({
   organization,
   team,
-  canManage,
+  canAdd,
+  canRemove,
 }: {
   organization: OrganizationDetails;
   team: OrganizationTeam;
-  canManage: boolean;
+  canAdd: boolean;
+  canRemove: boolean;
 }) {
   const t = useT();
   const api = useAuthClient().organization;
@@ -66,7 +68,7 @@ export function TeamMembersPanel({
   return (
     <div className="ba-organization-user-invitations">
       <h4>{t('organization.profile.teams.manageMembers')}</h4>
-      {canManage && availableMembers.length > 0 && members !== null && !error && (
+      {canAdd && availableMembers.length > 0 && members !== null && (
         <form method="post" className="ba-organization-invite-form" onSubmit={addMember}>
           <label className="ba-label">
             {t('organization.profile.teams.addMember')}
@@ -80,16 +82,13 @@ export function TeamMembersPanel({
         </form>
       )}
       <FormError>{actionError}</FormError>
-      {error ? (
+      {error && (
         <div className="ba-inline-error">
           <FormError>{error}</FormError>
           <button className="ba-link-button" type="button" onClick={() => void reload()}>{t('organization.retry')}</button>
         </div>
-      ) : members === null ? (
-        <div className="ba-skeleton" aria-label={t('common.loading')} />
-      ) : members.length === 0 ? (
-        <p className="ba-muted">{t('organization.profile.teams.membersEmpty')}</p>
-      ) : (
+      )}
+      {members?.length ? (
         <ul className="ba-organization-list">
           {members.map((member) => {
             const organizationMember = organization.members.find((entry) => entry.userId === member.userId);
@@ -100,7 +99,7 @@ export function TeamMembersPanel({
                   <strong>{displayName}</strong>
                   {organizationMember?.user.email && <small><Bidi>{organizationMember.user.email}</Bidi></small>}
                 </span>
-                {canManage && (
+                {canRemove && (
                   <button className="ba-link-button ba-danger" type="button" disabled={pending} onClick={() => removeMember(member)}>
                     {t('organization.profile.teams.removeMember')}
                   </button>
@@ -109,7 +108,11 @@ export function TeamMembersPanel({
             );
           })}
         </ul>
-      )}
+      ) : error ? null : members === null ? (
+        <div className="ba-skeleton" aria-label={t('common.loading')} />
+      ) : members.length === 0 ? (
+        <p className="ba-muted">{t('organization.profile.teams.membersEmpty')}</p>
+      ) : null}
     </div>
   );
 }
