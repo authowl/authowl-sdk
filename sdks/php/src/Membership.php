@@ -14,7 +14,7 @@ namespace AuthOwl;
 final class Membership
 {
     /**
-     * @param string        $role        Canonical role key (owner/admin/member, or a project role).
+     * @param string        $role        Primary role key (owner/admin/member, or a project role).
      * @param list<string>  $permissions Effective permission ids: `org:sys_*` system claims
      *                                   plus custom `org:<feature>:<action>` ids.
      * @param list<string>|null $teams   Team ids held in the ACTIVE organization.
@@ -22,12 +22,27 @@ final class Membership
      *                                   `teams` claim at all, which is what a token minted
      *                                   before teams shipped looks like. An absent claim is
      *                                   never read as "any team".
+     * @param list<string>|null $roles   Every role the member holds. NULL (not an empty list)
+     *                                   when the token carries no `roles` claim, which is what
+     *                                   an older AuthOwl token looks like. Role checks then fall
+     *                                   back to the primary role.
      */
     public function __construct(
         public readonly string $role = '',
         public readonly array $permissions = [],
         public readonly ?array $teams = null,
+        public readonly ?array $roles = null,
     ) {
+    }
+
+    /** Whether the member holds $role as one of their roles. */
+    public function hasRole(string $role): bool
+    {
+        if ($this->roles === null) {
+            return $this->role === $role;
+        }
+
+        return in_array($role, $this->roles, true);
     }
 
     /** Whether the permission claim includes $permission. Exact match only. */
@@ -65,7 +80,7 @@ final class Membership
         if ($role === null && $permission === null && $teamId === null) {
             return false;
         }
-        if ($role !== null && $this->role !== $role) {
+        if ($role !== null && !$this->hasRole($role)) {
             return false;
         }
         if ($permission !== null && !$this->hasPermission($permission)) {
@@ -88,15 +103,21 @@ final class Membership
 
         $role = isset($claim['role']) && is_string($claim['role']) ? $claim['role'] : '';
         $permissions = self::stringList($claim['permissions'] ?? null) ?? [];
-        // Absent stays null so has(teamId:) can never be satisfied by a claim
-        // that never mentioned teams.
+        // Absent stays null so teams cannot match a claim that never mentioned
+        // them, and roles can fall back to the primary only for older tokens.
         $teams = self::stringList($claim['teams'] ?? null);
+        $roles = self::stringList($claim['roles'] ?? null);
 
-        if ($role === '' && $permissions === [] && ($teams === null || $teams === [])) {
+        if (
+            $role === ''
+            && $permissions === []
+            && ($teams === null || $teams === [])
+            && ($roles === null || $roles === [])
+        ) {
             return null;
         }
 
-        return new self($role, $permissions, $teams);
+        return new self(role: $role, permissions: $permissions, teams: $teams, roles: $roles);
     }
 
     /**

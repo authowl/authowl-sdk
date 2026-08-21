@@ -152,6 +152,35 @@ jwtCase(
 );
 
 jwtCase(
+  'valid token carrying every role the member holds',
+  makeToken({
+    claims: baseClaims({
+      membership: {
+        role: 'admin',
+        roles: ['admin', 'editor'],
+        permissions: ['org:sys_members:manage', 'org:billing:read'],
+        teams: ['team_alpha'],
+      },
+    }),
+  }),
+  {
+    ok: true,
+    sub: 'user_2p9xKq',
+    // `roles` must SURVIVE decoding. This is its own case because a reader can
+    // gate correctly and still drop the field on the way in - which is exactly
+    // what shipped once: the evaluator honoured `roles` while both decoders
+    // discarded it, so the fix was inert and every gate silently fell back to
+    // the primary role.
+    membership: {
+      role: 'admin',
+      roles: ['admin', 'editor'],
+      permissions: ['org:sys_members:manage', 'org:billing:read'],
+      teams: ['team_alpha'],
+    },
+  },
+);
+
+jwtCase(
   'valid token with aud as an array containing the audience',
   makeToken({ claims: baseClaims({ aud: ['someone-else', AUDIENCE] }) }),
   { ok: true, sub: 'user_2p9xKq', membership: null },
@@ -638,6 +667,13 @@ const admin = {
   teams: ['team_alpha'],
 };
 const legacy = { role: 'member', permissions: ['org:sys_members:read'] };
+// A member holding more than one role. `roles` is sorted, as the engine emits it.
+const multiRole = {
+  role: 'admin',
+  roles: ['admin', 'editor'],
+  permissions: ['org:sys_members:manage', 'org:billing:read'],
+  teams: ['team_alpha'],
+};
 
 const membershipCases = [
   { name: 'no membership denies everything', membership: null, params: { role: 'admin' }, expect: false },
@@ -649,6 +685,44 @@ const membershipCases = [
     expect: false,
   },
   { name: 'matching role', membership: admin, params: { role: 'admin' }, expect: true },
+  {
+    // `member.role` is a comma-separated SET server-side, so `admin,editor` is an
+    // ordinary membership. Gating on the primary alone made every other role the
+    // member holds invisible.
+    name: 'a secondary role the member holds is matched',
+    membership: multiRole,
+    params: { role: 'editor' },
+    expect: true,
+  },
+  {
+    name: 'the primary role is still matched when roles is present',
+    membership: multiRole,
+    params: { role: 'admin' },
+    expect: true,
+  },
+  {
+    // THE DISCRIMINATING CASE. When `roles` is present it is the ONLY thing
+    // consulted - the primary is not checked separately. An implementation that
+    // ORs the primary with the set passes every case above and diverges here.
+    name: 'roles alone decides when present, the primary is not consulted',
+    membership: { ...multiRole, roles: ['editor'] },
+    params: { role: 'admin' },
+    expect: false,
+  },
+  {
+    name: 'a role the member does not hold is still refused',
+    membership: multiRole,
+    params: { role: 'owner' },
+    expect: false,
+  },
+  {
+    // A token minted by an older AuthOwl carries no `roles`. Readers must fall
+    // back to the primary rather than report the member holds nothing.
+    name: 'an absent roles set falls back to the primary role',
+    membership: admin,
+    params: { role: 'admin' },
+    expect: true,
+  },
   { name: 'mismatched role', membership: admin, params: { role: 'owner' }, expect: false },
   { name: 'held system permission', membership: admin, params: { permission: 'org:sys_members:manage' }, expect: true },
   { name: 'held custom permission', membership: admin, params: { permission: 'org:billing:read' }, expect: true },

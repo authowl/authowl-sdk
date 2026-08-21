@@ -69,6 +69,11 @@ def test_token_verification(case: dict[str, Any]) -> None:
     else:
         assert verified.membership is not None
         assert verified.membership.role == expected["membership"]["role"]
+        expected_roles = expected["membership"].get("roles")
+        actual_roles = (
+            None if verified.membership.roles is None else list(verified.membership.roles)
+        )
+        assert actual_roles == expected_roles
         assert list(verified.membership.permissions) == expected["membership"]["permissions"]
         expected_teams = expected["membership"].get("teams")
         actual_teams = (
@@ -141,10 +146,12 @@ def to_membership(raw: Any) -> Membership | None:
     if raw is None:
         return None
     teams = raw.get("teams")
+    roles = raw.get("roles")
     return Membership(
         role=raw.get("role", ""),
         permissions=tuple(raw.get("permissions", ())),
         teams=None if teams is None else tuple(teams),
+        roles=None if roles is None else tuple(roles),
     )
 
 

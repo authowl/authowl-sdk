@@ -7,10 +7,22 @@ library;
 
 /// The active-organization membership carried by a verified token.
 class Membership {
-  const Membership({this.role = '', this.permissions = const [], this.teams});
+  const Membership({
+    this.role = '',
+    this.roles,
+    this.permissions = const [],
+    this.teams,
+  });
 
-  /// Canonical role key (`owner`/`admin`/`member`, or a project role).
+  /// Primary role key (`owner`/`admin`/`member`, or a project role).
   final String role;
+
+  /// Every role the member holds.
+  ///
+  /// `null` (not an empty list) when the token carries no `roles` claim, which
+  /// is what an older AuthOwl token looks like. Role checks then fall back to
+  /// the primary [role] rather than reporting no role held.
+  final List<String>? roles;
 
   /// Effective permission ids: `org:sys_*` system claims plus the operator's
   /// custom `org:<feature>:<action>` ids.
@@ -22,6 +34,13 @@ class Membership {
   /// which is what a token minted before teams shipped looks like. An absent
   /// claim is never read as "any team".
   final List<String>? teams;
+
+  /// Whether the member holds [role] as one of their roles.
+  bool hasRole(String role) {
+    final heldRoles = roles;
+    if (heldRoles == null) return this.role == role;
+    return heldRoles.contains(role);
+  }
 
   /// Whether the permission claim includes [permission]. Exact match only.
   bool hasPermission(String permission) {
@@ -43,7 +62,7 @@ class Membership {
   /// Asking nothing grants nothing: a query with no criteria returns false.
   bool has({String? role, String? permission, String? teamId}) {
     if (role == null && permission == null && teamId == null) return false;
-    if (role != null && this.role != role) return false;
+    if (role != null && !hasRole(role)) return false;
     if (permission != null && !hasPermission(permission)) return false;
     if (teamId != null && !hasTeam(teamId)) return false;
     return true;
@@ -55,16 +74,23 @@ class Membership {
 
     final role = raw['role'] is String ? raw['role'] as String : '';
     final permissions = _stringList(raw['permissions']) ?? const <String>[];
-    // Absent stays null so has(teamId:) can never be satisfied by a claim that
-    // never mentioned teams.
+    // Absent stays null so teams cannot match a claim that never mentioned
+    // them, and roles can fall back to the primary only for older tokens.
     final teams = _stringList(raw['teams']);
+    final roles = _stringList(raw['roles']);
 
     if (role.isEmpty &&
         permissions.isEmpty &&
-        (teams == null || teams.isEmpty)) {
+        (teams == null || teams.isEmpty) &&
+        (roles == null || roles.isEmpty)) {
       return null;
     }
-    return Membership(role: role, permissions: permissions, teams: teams);
+    return Membership(
+      role: role,
+      roles: roles,
+      permissions: permissions,
+      teams: teams,
+    );
   }
 
   /// Non-string entries are DROPPED rather than failing the whole claim, so one
@@ -76,5 +102,5 @@ class Membership {
 
   @override
   String toString() =>
-      'Membership(role: $role, permissions: $permissions, teams: $teams)';
+      'Membership(role: $role, roles: $roles, permissions: $permissions, teams: $teams)';
 }

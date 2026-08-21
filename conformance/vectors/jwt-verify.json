@@ -30,7 +30,7 @@
   "cases": [
     {
       "name": "valid minimal token",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.6Tdh3N44vdOgPhNCjzOVVR-TpLoRJuRHGyPBWMooU-XVId-qAHGUWRftBvxfi6-vA12-RzKbkgB2wzJMU1Op6g",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.EdREgFGFBsCDzLBFaAA7zo8K5E-fcoBeMuwh2g3sMs7w9SmiSifmaPk8StXlBV_RrcOWk8I-CBBhWu3kzHnHTw",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -40,7 +40,7 @@
     },
     {
       "name": "valid token carrying a full membership claim",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InJvbGUiOiJhZG1pbiIsInBlcm1pc3Npb25zIjpbIm9yZzpzeXNfbWVtYmVyczptYW5hZ2UiLCJvcmc6YmlsbGluZzpyZWFkIl0sInRlYW1zIjpbInRlYW1fYWxwaGEiLCJ0ZWFtX2JldGEiXX19.vdbvl6qKUTcylnO3ZYkXPB26iyaOMgXhz5wLdVjuI3Q_Mq5iO6kEjAWUDYgXYFEBV-_vYrd_3FbuCrel3G3q9g",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InJvbGUiOiJhZG1pbiIsInBlcm1pc3Npb25zIjpbIm9yZzpzeXNfbWVtYmVyczptYW5hZ2UiLCJvcmc6YmlsbGluZzpyZWFkIl0sInRlYW1zIjpbInRlYW1fYWxwaGEiLCJ0ZWFtX2JldGEiXX19.Hx4ex0m-WT8dafra7gpunrgwwoLDdJJhhXoYSDX_d5_e-azUCKConoDwwdP7hx59GEdVbHkPHIW7EApSFgfejQ",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -59,8 +59,31 @@
       }
     },
     {
+      "name": "valid token carrying every role the member holds",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InJvbGUiOiJhZG1pbiIsInJvbGVzIjpbImFkbWluIiwiZWRpdG9yIl0sInBlcm1pc3Npb25zIjpbIm9yZzpzeXNfbWVtYmVyczptYW5hZ2UiLCJvcmc6YmlsbGluZzpyZWFkIl0sInRlYW1zIjpbInRlYW1fYWxwaGEiXX19.PnZV8JsryqqCnBtMdjyKJztb3MCD91L_Svk5-3GsiRTPE8WD73IASXftj49hAhUs_Pdgju-NJmN3fxB_FzWxAQ",
+      "now": 1767225600,
+      "expect": {
+        "ok": true,
+        "sub": "user_2p9xKq",
+        "membership": {
+          "role": "admin",
+          "roles": [
+            "admin",
+            "editor"
+          ],
+          "permissions": [
+            "org:sys_members:manage",
+            "org:billing:read"
+          ],
+          "teams": [
+            "team_alpha"
+          ]
+        }
+      }
+    },
+    {
       "name": "valid token with aud as an array containing the audience",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6WyJzb21lb25lLWVsc2UiLCIyZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAiXSwiZXhwIjoxNzY3MjI5MjAwLCJpYXQiOjE3NjcyMjU1NDB9.y9mDm6mUfWqiUHdjwI1bkUUVJZxQtDEji3okDdfDw7rakqG9p8ghLvXIDZYk8rkbqkVKC0xh6KC4TCjaf12Bzg",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6WyJzb21lb25lLWVsc2UiLCIyZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAiXSwiZXhwIjoxNzY3MjI5MjAwLCJpYXQiOjE3NjcyMjU1NDB9.U4duvLLFt5hsUURrNfVjS5IpIM49NRoTESt41npAXrR_Q7-oqhhw559DGa5vr80nXJ-Rhqsfa-LwhdbNA1s36w",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -70,7 +93,7 @@
     },
     {
       "name": "valid token without a sub claim yields a null subject",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJpc3MiOiJodHRwczovL2FwaS5hdXRob3dsLmRldi9hcGkvcHJvamVjdHMvMmYxYzlhODQtNmIzZC00ZTU3LTlhMTAtNWM4ZDdlMmI0ZjYwL2F1dGgiLCJhdWQiOiIyZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAiLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU0MH0.OCatQuWamGtU6_gSkia36UCOPvGlfoLeei4W955XOMwiTgMxiF8nuhIvUJjFNoO_a1sBKGXVOrTQEUlf2gt3XQ",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJpc3MiOiJodHRwczovL2FwaS5hdXRob3dsLmRldi9hcGkvcHJvamVjdHMvMmYxYzlhODQtNmIzZC00ZTU3LTlhMTAtNWM4ZDdlMmI0ZjYwL2F1dGgiLCJhdWQiOiIyZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAiLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU0MH0.Y8oJ3qTzMb_p2ySrl6LfgMDTVgTN8i_o8G3WbOJWFqIXWLk2i33-sQ1wTM5gPmfbValrOrk9CI9IcHfF7viFmA",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -80,7 +103,7 @@
     },
     {
       "name": "non-string sub is normalized to null rather than coerced",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOjEyMzQ1LCJpc3MiOiJodHRwczovL2FwaS5hdXRob3dsLmRldi9hcGkvcHJvamVjdHMvMmYxYzlhODQtNmIzZC00ZTU3LTlhMTAtNWM4ZDdlMmI0ZjYwL2F1dGgiLCJhdWQiOiIyZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAiLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU0MH0.qjqk50EAQDnVbZG7hl4sK4ydBQGs4ratgjccSb7OWsE0oNBaAawdtEWfdMpKiQkmndf-q_cSI8gEXCFtdQI34g",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOjEyMzQ1LCJpc3MiOiJodHRwczovL2FwaS5hdXRob3dsLmRldi9hcGkvcHJvamVjdHMvMmYxYzlhODQtNmIzZC00ZTU3LTlhMTAtNWM4ZDdlMmI0ZjYwL2F1dGgiLCJhdWQiOiIyZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAiLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU0MH0.luPsYpPJxxObyyrieptNmCDB3riZLxxIwhT1YSwkDIvBwQN2Mx--W84ApDWciPI94wK5OmgvImri-HPbjDjFSQ",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -90,7 +113,7 @@
     },
     {
       "name": "expired within the clock tolerance is still accepted",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyNTU3MCwiaWF0IjoxNzY3MjI1NTQwfQ.-L2gOWosrqOpRtyBt1ch9D0sPb2AKr72ZKrt1UohT5Ta5Ou2QCegkbPmz3GRGhgy2AaXA5N7AjkJuIZ4fFj8Wg",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyNTU3MCwiaWF0IjoxNzY3MjI1NTQwfQ.fWMUrB-R5fiPsMrJsu2Xhn_lkN7kSGbhdgpmoYHjIJG0ag1aONopDGANy1TsltNvBj-baoK9c6jGtkhT0GUFtA",
       "now": 1767225600,
       "clockToleranceSeconds": 60,
       "expect": {
@@ -101,7 +124,7 @@
     },
     {
       "name": "nbf in the near future within tolerance is accepted",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJuYmYiOjE3NjcyMjU2MzB9.1GLO05AaW4payQyLv8Gc3L_gRCeywINRPWnjLApcfGb4tycF9uyMxjJX4Ll8j-5lEp3lSsPCvkV_ri-5DBCUAw",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJuYmYiOjE3NjcyMjU2MzB9.eDnMbXuv1MeQh5V2VNElyXpvNR5WCF5yiT7nN7j9N4lN7PZxTrJ7g8HGh_vtWEDPhS0p0ZC6lbFXNywdo2NhFQ",
       "now": 1767225600,
       "clockToleranceSeconds": 60,
       "expect": {
@@ -112,7 +135,7 @@
     },
     {
       "name": "membership with only teams is still a membership",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InRlYW1zIjpbInRlYW1fYWxwaGEiXX19.kela6wvOpoviQXpvhgr7B0Z1ub30sGAFP8I1UM5982_tBmrREfaWMfzy3X0DkU0iekjzBuQARx_YY6e-tUkZGw",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InRlYW1zIjpbInRlYW1fYWxwaGEiXX19.OJ40wsG-rYSyyHt7lCVewyVkT1TJk2t9OIIvLdqoKrdp5H8lbNhqds_72PyhVK0kKk4FzHTAD_Jtvz5bnJzj1w",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -128,7 +151,7 @@
     },
     {
       "name": "membership with no role, permissions, or teams decodes to null",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InJvbGUiOiIiLCJwZXJtaXNzaW9ucyI6W119fQ.we4_XHwfAwY1j77ImZXMdhtNgPwc9W8GoQvlpUKRqOqUpzCwwaPA67l4Dep735XGGonsKTaSkvMtGsqKdMYgXQ",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InJvbGUiOiIiLCJwZXJtaXNzaW9ucyI6W119fQ.FWBr-OtWHhkfzNtqjR2F8zjNKqFH1OWmqCAgXN1yHTTKZPJuIRnf_zI9-hkjti7t433o3R8RlXWiSf3f7K-c3w",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -138,7 +161,7 @@
     },
     {
       "name": "membership drops non-string entries from permissions and teams",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InJvbGUiOiJtZW1iZXIiLCJwZXJtaXNzaW9ucyI6WyJvcmc6YTpiIiw0MixudWxsXSwidGVhbXMiOlsidDEiLHt9XX19.SbbABv4z1H6d6faMmd2MNjeHlYLSc-VlBelHl2JbcVBbD5Matw4POXpNqf7BXCYc9B_hjtv0Xuy8WgKkL_xRKQ",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InJvbGUiOiJtZW1iZXIiLCJwZXJtaXNzaW9ucyI6WyJvcmc6YTpiIiw0MixudWxsXSwidGVhbXMiOlsidDEiLHt9XX19.gqpzfmHUnuqS0chqul6WQ34zDCJoQKGhC8k-5ndT9_owAgcJIxPhX6m-mRB_RTNOrHtowFxcBX6JB6iB_llvcQ",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -156,7 +179,7 @@
     },
     {
       "name": "membership without a teams claim omits teams entirely",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InJvbGUiOiJvd25lciIsInBlcm1pc3Npb25zIjpbXX19.MOWCXVL8RSSDI-lxdwCogZUmvrvL-gseoYU5Vti90cIXiFYCB9chLEp6W_uPT-HBTdbLIlG1-FisXaHb1fKEFQ",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJtZW1iZXJzaGlwIjp7InJvbGUiOiJvd25lciIsInBlcm1pc3Npb25zIjpbXX19.fDsqTDfrvxwnvt1EFnJROwrljsP7nCr-kKBoRDFlE4fMcWZccNkA-5bIecOJW__B6-T4fJcEODNLRCtSjEohPA",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -169,7 +192,7 @@
     },
     {
       "name": "a second published key is selected by kid",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMiJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.Zi4nB-OYI1NxIJwVKA-G5QLTXsyH8UXJv5x1Fl3yCeOYcAhDgf6FCaphfvYj2Hcel6fs5s0SrPQwfEzVqKMtZg",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMiJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.RPfMpz2ILdPKAF833-g5HG22OmcWATnuDRI946i6IIcrGuHKdchcanY6NgtHsWKfCgsYHQqElphjrsFJzuBtFw",
       "now": 1767225600,
       "expect": {
         "ok": true,
@@ -260,7 +283,7 @@
     },
     {
       "name": "unknown kid resolves to no key",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImtpZC10aGF0LXdhcy1uZXZlci1wdWJsaXNoZWQifQ.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.t6ZBsm8CKLND7_Qu_IG30xgvSNFk7eqjbX73mJ-yisev4PzyzOP-RuTh8ca-72VSDCly5ZmrGgnsSSjZTkP8oQ",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImtpZC10aGF0LXdhcy1uZXZlci1wdWJsaXNoZWQifQ.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.g798s9vMZTEWQV7XQv3unMXk22q9KvlxZ7xDvads651xZXkPlZBL_w2Btx3qCXaO01uMSSSTDRTx-B1yXuLTMg",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -269,7 +292,7 @@
     },
     {
       "name": "tampered payload with the original signature",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyX2F0dGFja2VyIiwiaXNzIjoiaHR0cHM6Ly9hcGkuYXV0aG93bC5kZXYvYXBpL3Byb2plY3RzLzJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MC9hdXRoIiwiYXVkIjoiMmYxYzlhODQtNmIzZC00ZTU3LTlhMTAtNWM4ZDdlMmI0ZjYwIiwiZXhwIjoxNzY3MjI5MjAwLCJpYXQiOjE3NjcyMjU1NDB9.Xz7ffVXyMCXvLyPPd_YbBbs4Wy0UzdWa7l1pDMniA_Et1OD3usY3Tpg68IB13j5FlXu4LKTL6QkJCfM-Ip1kCw",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyX2F0dGFja2VyIiwiaXNzIjoiaHR0cHM6Ly9hcGkuYXV0aG93bC5kZXYvYXBpL3Byb2plY3RzLzJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MC9hdXRoIiwiYXVkIjoiMmYxYzlhODQtNmIzZC00ZTU3LTlhMTAtNWM4ZDdlMmI0ZjYwIiwiZXhwIjoxNzY3MjI5MjAwLCJpYXQiOjE3NjcyMjU1NDB9.gZW1_k0khEto6qjgHj7EK0m1RkahlDIsx42LEMe9Cg3shTRwzJBkWrl9krGHY9H_L-AhZX2QiOT3v_gfsa84Sw",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -278,7 +301,7 @@
     },
     {
       "name": "signed by a key that is not the one named in kid",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.nCiCK8WnphhrIA6UEikrHl2aurweSwpThTuWiUf29zyyi8kqDZ02cyl9nAvUej7wLO5aLJ3RvfA7tQOvvzhl9Q",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.l9CsTHMuR4QiNLQrrhE2zv03RYMQ8EvWsMGIwqSlTzVD_F1Q9JcaB5KFUDXEOcnBeTcwnL0tvo0dJbx-263ecg",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -287,7 +310,7 @@
     },
     {
       "name": "bad signature is reported before the expired claim",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NjIyNTYwMSwiaWF0IjoxNzY3MjI1NTQwfQ.aMnctxuxxr6MvC6EzVPYPjeLPGiXn_WshjvG7PlgTlbhjMfr1RLGH5XMdDvzyL_Zqf_gUFWSP1pBQhbXb2u1SQ",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NjIyNTYwMSwiaWF0IjoxNzY3MjI1NTQwfQ._1YlNlVdTlWMHbUKwUu4Ce85QjboGpOhmi0-8hZcxZpdciNrfEoDO0Q1cCUcCN0yFS8AEcLXKl0vhX_mTGF0pQ",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -314,7 +337,7 @@
     },
     {
       "name": "validly signed but unparseable payload segment",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.!!!not-base64url!!!.6jL6NMQl6vWqSz7PyWxj-zPLyyelVoUtEpz6vHE9N4cfQZjuYJQe277m2HVEe0s3Y7wGIPXw5GRAm1mzzV293w",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.!!!not-base64url!!!.xVwXxOhHiBnYOncSXZttXY_QXwpbBjcUFgekYcZ6GydjoyvWEt_CgiQvkKnOKhvqtvOvzAawYhUPPR4KYPaG2g",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -323,7 +346,7 @@
     },
     {
       "name": "expired beyond the clock tolerance",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyMjAwMCwiaWF0IjoxNzY3MjI1NTQwfQ.VcuUHUkjltAFxxuaL2O3GEyQ-NFd8OK6zzYOB3PiqGRNIOZvB3FwLPss_JbBp1q7XDjrKCr1ZnMxjKj2fz73Rg",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyMjAwMCwiaWF0IjoxNzY3MjI1NTQwfQ.p0Xx3k-b5MWWxLcRPQjkUn_vfF8m20K8U0_4ukUZP7jjQy-HolXgkQpMpIELfSKITVrfKamCFd9cSpjNDvbYTw",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -332,7 +355,7 @@
     },
     {
       "name": "missing exp is refused rather than treated as non-expiring",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImlhdCI6MTc2NzIyNTU0MH0.LR6TlpIC3CqfXsSSPjW3hiwxndauinSRyvOQCHxHS13wY2S8zd5ccfXfmQZEtXd4yXRmfd1kc_rVThTZKZVusw",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImlhdCI6MTc2NzIyNTU0MH0.G7Wn0mjLODMO8DSesABNNKyZQ7OUmMUGzt9aKFgJKDjs1OdrGh21E73HDMv4vQX52VLZ0LyDEh4zebcVya0KDA",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -341,7 +364,7 @@
     },
     {
       "name": "non-numeric exp is refused",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6Ijk5OTk5OTk5OTkiLCJpYXQiOjE3NjcyMjU1NDB9.sO-TVxn_8SfyB3wYQdFeZQwjY0PiDn8PyEIZaFFGXzvm4qDOZ1pvq_0DhE0G2f-JJkwvv_QXtxjuH21AqvJyKQ",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6Ijk5OTk5OTk5OTkiLCJpYXQiOjE3NjcyMjU1NDB9.CZJ5EHUQpMbOgss0HhAgSKqzxqUkmxToWPpJDCIa24WEbgTcev73wsLoZWnpdgP8MN2Wko2PPYja5CkOJOydHw",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -350,7 +373,7 @@
     },
     {
       "name": "nbf beyond the clock tolerance",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJuYmYiOjE3NjcyMjkyMDB9.iWOR2blmyQpaYCPM_xQX_aAvB7F1iNMmV8dF-xAsu2qGk3QXbui2i7qKFgdSDGzvAjTZ-ifTurtepVLeguE1_A",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwLCJuYmYiOjE3NjcyMjkyMDB9.yzJdsK1B5_hupI5nNRbEX94YKfsGh2z4SY1cB0W4sSFL8hTr2iAG5Zzss1dCv3hDGlqM1VCMS-17xyda_XJ7wg",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -359,7 +382,7 @@
     },
     {
       "name": "mismatched issuer",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vZXZpbC5leGFtcGxlLmNvbS9hdXRoIiwiYXVkIjoiMmYxYzlhODQtNmIzZC00ZTU3LTlhMTAtNWM4ZDdlMmI0ZjYwIiwiZXhwIjoxNzY3MjI5MjAwLCJpYXQiOjE3NjcyMjU1NDB9.rlg33Y1ODlPspZnFFxo6Y_Y1swdpwOFNx2t5FJB2Hm0znw585iAPHfF6hRVTAWFS-juloDFn6YyjG8Ym13cDKg",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vZXZpbC5leGFtcGxlLmNvbS9hdXRoIiwiYXVkIjoiMmYxYzlhODQtNmIzZC00ZTU3LTlhMTAtNWM4ZDdlMmI0ZjYwIiwiZXhwIjoxNzY3MjI5MjAwLCJpYXQiOjE3NjcyMjU1NDB9.-u-RWR9JEemv11dR8NmNvicHg14KLD7oQ7pLenH4_dmnYgesmxr8JVKr8WJPkJRIojFgyQoyPa8Lhn2IambEFA",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -368,7 +391,7 @@
     },
     {
       "name": "missing issuer",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.fsiSVHaHc3GgjIOFz2IY0xh4HYhGUfbrYExDQIfIWmyQl28fmeZ6TYRd1YnWFxcYlFRi913LA3UYiDMbgRZd0w",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImF1ZCI6IjJmMWM5YTg0LTZiM2QtNGU1Ny05YTEwLTVjOGQ3ZTJiNGY2MCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.dLAZIytwALFFJ1YwvZnkSrD7TZrPqAqs0KUqyfxev6Qlad-Q5fM64UXahqlG6kpfWcaMvHJRJpXuefugtSb7Og",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -377,7 +400,7 @@
     },
     {
       "name": "issuer differing only by a trailing slash",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aC8iLCJhdWQiOiIyZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAiLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU0MH0.VTiVo2bM7QFl_yroSbWeJE1HN_FVyTKUR8YZSr6IyqEzhMqP7BicXzZJsZa5CdBgZ8JEttrUnOKZzaJ0-VCt_w",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aC8iLCJhdWQiOiIyZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAiLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU0MH0.PucQKK_osVCWXZQwn5K2W_7osJz7TVhgujr3N8GIM-eLYMw8m8bMlrwzUpiQS5RuQw__2ml8CdkmBO7uLqlu2w",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -386,7 +409,7 @@
     },
     {
       "name": "mismatched audience",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6InNvbWUtb3RoZXItcHJvamVjdCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.BQ3Hu_g1RMgH6crVl1L3Abvo6NLHBxBj9fYDJ8DV3cv953nlTNC5184ZHV4L3sXXGqP2EYEsr0jNw23HLgPMpg",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6InNvbWUtb3RoZXItcHJvamVjdCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.W0JI6vxzcSGn5quKC73_xEPVLPb7KzX7zXu0xwtz42aPYp591qpFd1vHrRrXOuVc06tM2KXHMKLurdm0WKm5Ig",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -395,7 +418,7 @@
     },
     {
       "name": "missing audience",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.JUtfnv6f06Wcl2i2PqH070yGabBB9EbA7mQ1Ck18ShxflGzCDpqxC9jDNyCfFkK68S39FJAnOgSK_JQixodqSA",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTQwfQ.grWbjl3NvZqe0Y4O_khcbxaco_o5ONDTc6UAikmIWU9TTu_YZoPGOaJgwm9hKctIRztbKpPC1ohoazAiRc9Z6w",
       "now": 1767225600,
       "expect": {
         "ok": false,
@@ -404,7 +427,7 @@
     },
     {
       "name": "audience array not containing the expected audience",
-      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6WyJhIiwiYiJdLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU0MH0.4dj3Ox7Y8MY1I-0T73H0XTg1WtOwflOFE9C8rgKeFcNOLDZFtXDBBn4ChxMnkUeDN4dW8bi9jjaF6YyzuRZ5Dg",
+      "token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImF1dGhvd2wtdGVzdC1rZXktMSJ9.eyJzdWIiOiJ1c2VyXzJwOXhLcSIsImlzcyI6Imh0dHBzOi8vYXBpLmF1dGhvd2wuZGV2L2FwaS9wcm9qZWN0cy8yZjFjOWE4NC02YjNkLTRlNTctOWExMC01YzhkN2UyYjRmNjAvYXV0aCIsImF1ZCI6WyJhIiwiYiJdLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU0MH0.YB2eYaK1isa0f-4XPC-M8_HdNG5paqjxLUBIPbEuy_2DzKq6MmCCrl044JB50IiW21BULuJt4G6TY1CkU5x6dw",
       "now": 1767225600,
       "expect": {
         "ok": false,

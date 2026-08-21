@@ -140,15 +140,21 @@ func readMembership(claims map[string]any) *Membership {
 		permissions = []string{}
 	}
 	// Absent stays nil rather than becoming an empty slice, so Has({TeamID}) can
-	// never be satisfied by a claim that never mentioned teams.
+	// never be satisfied by a claim that never mentioned teams. `roles` follows
+	// the same rule for the same reason: nil means the token never said, and
+	// HasRole falls back to the primary instead of reporting nothing held.
 	teams, hasTeams := stringSlice(raw["teams"])
 	if !hasTeams {
 		teams = nil
 	}
-	if role == "" && len(permissions) == 0 && len(teams) == 0 {
+	roles, hasRoles := stringSlice(raw["roles"])
+	if !hasRoles {
+		roles = nil
+	}
+	if role == "" && len(permissions) == 0 && len(teams) == 0 && len(roles) == 0 {
 		return nil
 	}
-	return &Membership{Role: role, Permissions: permissions, Teams: teams}
+	return &Membership{Role: role, Roles: roles, Permissions: permissions, Teams: teams}
 }
 
 // Verify checks a project JWT and returns its subject, membership, and claims.
