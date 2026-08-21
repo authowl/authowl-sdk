@@ -1,7 +1,7 @@
 # Dependabot for the pnpm workspace and pinned GitHub Actions.
 version: 2
 updates:
-  # ---- npm (the root owns the complete pnpm workspace lockfile) ----
+  # npm: the root owns the complete pnpm workspace lockfile.
   - package-ecosystem: npm
     directory: "/"
     schedule:
@@ -9,7 +9,7 @@ updates:
       day: monday
       timezone: Africa/Cairo
     open-pull-requests-limit: 10
-    # Let a freshly-published version bake before we pull it — cheap insurance
+    # Let a freshly-published version bake before we pull it - cheap insurance
     # against a compromised release. Security advisories bypass the cooldown.
     cooldown:
       default-days: 7
@@ -25,7 +25,7 @@ updates:
       dev-dependencies:
         dependency-type: development
 
-  # ---- github actions (keeps SHA-pinned actions fresh once ci.yml lands, 0.5) ----
+  # GitHub Actions: keep SHA-pinned actions fresh.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
