@@ -9,8 +9,8 @@
     "metadata-client.ts",
     "session-handoff.ts"
   ],
-  "operationCount": 71,
-  "nativeOperationCount": 65,
+  "operationCount": 72,
+  "nativeOperationCount": 66,
   "operations": [
     {
       "id": "changeEmail",
@@ -145,6 +145,14 @@
       "method": "GET",
       "path": "/organization/get-invitation",
       "decoder": "decodeInvitationDetails",
+      "native": true,
+      "source": "organization-client.ts"
+    },
+    {
+      "id": "organization.invitationRecipientHint",
+      "method": "GET",
+      "path": "/organization/invitation-recipient-hint",
+      "decoder": "decodeInvitationRecipientHint",
       "native": true,
       "source": "organization-client.ts"
     },
