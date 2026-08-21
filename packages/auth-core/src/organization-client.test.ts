@@ -306,6 +306,46 @@ describe('organization client', () => {
     });
   });
 
+  it('carries a custom role\'s permission keys through the decoder', async () => {
+    // THE POINT OF THIS FIX. A decoder that gates correctly and still drops the
+    // field ships an inert change - which is exactly what happened once with
+    // membership.roles, where the evaluator honoured a claim both decoders
+    // discarded. Assert the field SURVIVES, not merely that the type allows it.
+    const fetchImpl = vi.fn(async () => Response.json([
+      {
+        organizationId: 'org-1',
+        role: 'editor',
+        permission: {},
+        customPermissionKeys: ['org:documents:create', 'org:documents:publish'],
+      },
+      { organizationId: 'org-1', role: 'owner', permission: { member: ['create'] } },
+    ])) as unknown as typeof fetch;
+    const organization = clientWith(fetchImpl).organization;
+
+    const result = await organization.listRoles({ organizationId: 'org-1' });
+
+    expect(result.data).toEqual([
+      {
+        role: 'editor',
+        permission: {},
+        customPermissionKeys: ['org:documents:create', 'org:documents:publish'],
+      },
+      // A role the server said nothing about keeps NO key, rather than gaining
+      // an empty array that would read as "told, and it grants none".
+      { role: 'owner', permission: { member: ['create'] } },
+    ]);
+  });
+
+  it('leaves roles untouched when the server does not report custom keys', async () => {
+    // An older AuthOwl sends no such field anywhere. Absent must stay absent.
+    const fetchImpl = vi.fn(async () => Response.json([
+      { organizationId: 'org-1', role: 'auditor', permission: {} },
+    ])) as unknown as typeof fetch;
+    const result = await clientWith(fetchImpl).organization.listRoles({ organizationId: 'org-1' });
+    expect(result.data).toEqual([{ role: 'auditor', permission: {} }]);
+    expect(result.data?.[0] ?? {}).not.toHaveProperty('customPermissionKeys');
+  });
+
   it('routes listRoles to the engine list-roles endpoint with the org selector', async () => {
     const fetchImpl = vi.fn(async () => Response.json([
       {

@@ -311,6 +311,19 @@ export interface OrganizationRoleSummary {
   role: string;
   /** The role's ⊆14 system-statement document (engine shape); advisory here. */
   permission?: unknown;
+  /**
+   * The custom `org:<feature>:<action>` permission ids this role grants.
+   *
+   * These cannot appear in `permission`: that is the engine's own document, and
+   * a custom id does not fit its shape - so a custom role reads as an empty
+   * document there while genuinely granting these. This is the field a role
+   * picker needs to show what a custom role does.
+   *
+   * Absent when the role grants none, and absent from any AuthOwl that does not
+   * report them, so an empty array is never confused with "not told". Advisory,
+   * like everything else on this type: the boundary is server-side.
+   */
+  customPermissionKeys?: string[];
 }
 
 export interface OrganizationClient {

@@ -17,6 +17,7 @@ import type {
   RemoveOrganizationMemberData,
 } from './organization-client';
 import {
+  asStringArray,
   asDate,
   asRecord,
   asString as asWireString,
@@ -285,6 +286,12 @@ export function decodeOrganizationRoles(
         ...optionalField(
           'permission',
           row.permission === undefined ? undefined : decodePermission(row.permission),
+        ),
+        ...optionalField(
+          'customPermissionKeys',
+          row.customPermissionKeys === undefined
+            ? undefined
+            : asStringArray(row.customPermissionKeys),
         ),
       },
     };
