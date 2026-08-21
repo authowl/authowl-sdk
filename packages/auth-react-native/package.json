@@ -1,6 +1,6 @@
 {
   "name": "@authowl/react-native",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "description": "React Native provider, hooks, and secure session storage for AuthOwl, the multi-tenant auth SaaS.",
   "license": "MIT",
   "publishConfig": {
