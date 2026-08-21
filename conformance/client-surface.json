@@ -9,8 +9,8 @@
     "metadata-client.ts",
     "session-handoff.ts"
   ],
-  "operationCount": 64,
-  "nativeOperationCount": 58,
+  "operationCount": 71,
+  "nativeOperationCount": 65,
   "operations": [
     {
       "id": "changeEmail",
@@ -93,6 +93,14 @@
       "source": "organization-client.ts"
     },
     {
+      "id": "organization.addTeamMember",
+      "method": "POST",
+      "path": "/organization/add-team-member",
+      "decoder": "decodeOrganizationTeamMember",
+      "native": true,
+      "source": "organization-client.ts"
+    },
+    {
       "id": "organization.cancelInvitation",
       "method": "POST",
       "path": "/organization/cancel-invitation",
@@ -105,6 +113,14 @@
       "method": "POST",
       "path": "/organization/create",
       "decoder": "decodeOrganization",
+      "native": true,
+      "source": "organization-client.ts"
+    },
+    {
+      "id": "organization.createTeam",
+      "method": "POST",
+      "path": "/organization/create-team",
+      "decoder": "decodeOrganizationTeam",
       "native": true,
       "source": "organization-client.ts"
     },
@@ -181,6 +197,14 @@
       "source": "organization-client.ts"
     },
     {
+      "id": "organization.listTeamMembers",
+      "method": "GET",
+      "path": "/organization/list-team-members",
+      "decoder": "decodeOrganizationTeamMembers",
+      "native": true,
+      "source": "organization-client.ts"
+    },
+    {
       "id": "organization.listTeams",
       "method": "GET",
       "path": "/organization/list-teams",
@@ -197,6 +221,14 @@
       "source": "organization-client.ts"
     },
     {
+      "id": "organization.listUserTeams",
+      "method": "GET",
+      "path": "/organization/list-user-teams",
+      "decoder": "decodeOrganizationTeams",
+      "native": true,
+      "source": "organization-client.ts"
+    },
+    {
       "id": "organization.rejectInvitation",
       "method": "POST",
       "path": "/organization/reject-invitation",
@@ -209,6 +241,22 @@
       "method": "POST",
       "path": "/organization/remove-member",
       "decoder": "decodeRemoveMember",
+      "native": true,
+      "source": "organization-client.ts"
+    },
+    {
+      "id": "organization.removeTeam",
+      "method": "POST",
+      "path": "/organization/remove-team",
+      "decoder": "decodeMutationMessage",
+      "native": true,
+      "source": "organization-client.ts"
+    },
+    {
+      "id": "organization.removeTeamMember",
+      "method": "POST",
+      "path": "/organization/remove-team-member",
+      "decoder": "decodeMutationMessage",
       "native": true,
       "source": "organization-client.ts"
     },
@@ -241,6 +289,14 @@
       "method": "POST",
       "path": "/organization/update-member-role",
       "decoder": "decodeMember",
+      "native": true,
+      "source": "organization-client.ts"
+    },
+    {
+      "id": "organization.updateTeam",
+      "method": "POST",
+      "path": "/organization/update-team",
+      "decoder": "decodeOrganizationTeam",
       "native": true,
       "source": "organization-client.ts"
     },

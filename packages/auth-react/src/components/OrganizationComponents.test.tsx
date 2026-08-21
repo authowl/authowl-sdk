@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import * as React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => {
   const currentUser = {
@@ -59,6 +59,18 @@ const mocks = vi.hoisted(() => {
   };
   const userInvitation = { ...pendingInvitation, id: 'invitation-user', organizationName: 'Alexandria Labs' };
   const mutationListeners = new Set<() => void>();
+  const team = {
+    id: 'team-core',
+    name: 'Core',
+    organizationId: 'org-cairo',
+    createdAt: new Date('2026-07-14T10:00:00.000Z'),
+  };
+  const teamMember = {
+    id: 'team-member-owner',
+    teamId: team.id,
+    userId: currentUser.id,
+    createdAt: new Date('2026-07-14T10:05:00.000Z'),
+  };
   const organization = {
     subscribe: (listener: () => void) => {
       mutationListeners.add(listener);
@@ -71,6 +83,16 @@ const mocks = vi.hoisted(() => {
     list: vi.fn(async () => ({ data: [cairo, delta], error: null })),
     get: vi.fn(async () => ({ data: cairo, error: null })),
     setActive: vi.fn(async () => ({ data: cairo, error: null })),
+    createTeam: vi.fn(async () => ({ data: team, error: null })),
+    listTeams: vi.fn(async () => ({ data: [team], error: null })),
+    updateTeam: vi.fn(async () => ({ data: { ...team, name: 'Platform' }, error: null })),
+    removeTeam: vi.fn(async () => ({ data: { message: 'Team removed successfully.' }, error: null })),
+    listUserTeams: vi.fn(),
+    listTeamMembers: vi.fn(async () => ({ data: [teamMember], error: null })),
+    addTeamMember: vi.fn(async () => ({ data: { ...teamMember, id: 'team-member-teammate', userId: teammate.userId }, error: null })),
+    removeTeamMember: vi.fn(async () => ({ data: { message: 'Team member removed successfully.' }, error: null })),
+    setActiveTeam: vi.fn(),
+    listRoles: vi.fn(async () => ({ data: [], error: null })),
     update: vi.fn(async () => ({ data: cairo, error: null })),
     delete: vi.fn(async () => ({ data: cairo, error: null })),
     listMembers: vi.fn(),
@@ -90,6 +112,8 @@ const mocks = vi.hoisted(() => {
     currentMember,
     cairo,
     delta,
+    team,
+    teamMember,
     organization,
     config: { organizations: true },
     session: { activeOrganizationId: 'org-cairo' as string | null },
@@ -298,5 +322,136 @@ describe('organization components', () => {
     fireEvent.click(screen.getByRole('button', { name: 'organization.profile.nav.danger' }));
     expect(screen.queryByRole('button', { name: 'organization.profile.danger.delete' })).toBeNull();
     expect(screen.getByRole('button', { name: 'organization.profile.danger.leave' })).toBeTruthy();
+  });
+
+  it('creates, renames, removes, and manages members in profile teams', async () => {
+    const productTeam = { ...mocks.team, id: 'team-product', name: 'Product' };
+    const renamedTeam = { ...mocks.team, name: 'Platform' };
+    const teammateTeamMember = {
+      ...mocks.teamMember,
+      id: 'team-member-teammate',
+      userId: 'user-teammate',
+    };
+    mocks.organization.listTeams
+      .mockResolvedValueOnce({ data: [mocks.team], error: null })
+      .mockResolvedValueOnce({ data: [mocks.team, productTeam], error: null })
+      .mockResolvedValueOnce({ data: [renamedTeam, productTeam], error: null })
+      .mockResolvedValueOnce({ data: [productTeam], error: null });
+    mocks.organization.listTeamMembers
+      .mockResolvedValueOnce({ data: [mocks.teamMember], error: null })
+      .mockResolvedValueOnce({ data: [mocks.teamMember, teammateTeamMember], error: null })
+      .mockResolvedValueOnce({ data: [teammateTeamMember], error: null });
+    render(<OrganizationProfile organizationId="org-cairo" defaultSection="teams" />);
+
+    await screen.findByRole('heading', { name: 'organization.profile.teams.title' });
+    await waitFor(() => expect(mocks.organization.listTeams).toHaveBeenCalledWith({ organizationId: 'org-cairo' }));
+
+    fireEvent.change(screen.getByLabelText('organization.profile.teams.create'), { target: { value: 'Product' } });
+    fireEvent.click(screen.getByRole('button', { name: 'organization.profile.teams.create' }));
+    await waitFor(() => expect(mocks.organization.createTeam).toHaveBeenCalledWith({ organizationId: 'org-cairo', name: 'Product' }));
+    await screen.findByText('Product');
+
+    const coreRow = screen.getByText('Core').closest('li')!;
+    fireEvent.click(within(coreRow).getByRole('button', { name: 'organization.profile.teams.rename' }));
+    fireEvent.change(screen.getByLabelText('organization.profile.teams.rename'), { target: { value: 'Platform' } });
+    fireEvent.click(within(coreRow).getByRole('button', { name: 'organization.profile.teams.rename' }));
+    await waitFor(() => expect(mocks.organization.updateTeam).toHaveBeenCalledWith({
+      teamId: 'team-core',
+      data: { name: 'Platform', organizationId: 'org-cairo' },
+    }));
+    await screen.findByText('Platform');
+
+    const platformRow = screen.getByText('Platform').closest('li')!;
+    fireEvent.click(within(platformRow).getByRole('button', { name: 'organization.profile.teams.manageMembers' }));
+    await waitFor(() => expect(mocks.organization.listTeamMembers).toHaveBeenCalledWith({ teamId: 'team-core' }));
+    fireEvent.click(screen.getByRole('button', { name: 'organization.profile.teams.addMember' }));
+    await waitFor(() => expect(mocks.organization.addTeamMember).toHaveBeenCalledWith({
+      teamId: 'team-core',
+      userId: 'user-teammate',
+      organizationId: 'org-cairo',
+    }));
+    await waitFor(() => expect(screen.getByText('Youssef Ali').closest('li')).not.toBeNull());
+
+    const ownerRow = screen.getByText('Owner Mona').closest('li')!;
+    fireEvent.click(within(ownerRow).getByRole('button', { name: 'organization.profile.teams.removeMember' }));
+    await waitFor(() => expect(mocks.organization.removeTeamMember).toHaveBeenCalledWith({
+      teamId: 'team-core',
+      userId: 'user-owner',
+      organizationId: 'org-cairo',
+    }));
+    await waitFor(() => expect(ownerRow.isConnected).toBe(false));
+
+    fireEvent.click(within(platformRow).getByRole('button', { name: 'organization.profile.teams.removeTeam' }));
+    await waitFor(() => expect(mocks.organization.removeTeam).toHaveBeenCalledWith({ teamId: 'team-core', organizationId: 'org-cairo' }));
+    await waitFor(() => expect(screen.queryByText('Platform')).toBeNull());
+    expect(screen.getByText('Product')).toBeTruthy();
+  });
+
+  it('keeps team writes gated for a regular organization member', async () => {
+    mocks.currentMember.role = 'member';
+    render(<OrganizationProfile organizationId="org-cairo" defaultSection="teams" />);
+
+    await screen.findByRole('heading', { name: 'organization.profile.teams.title' });
+    expect(screen.queryByLabelText('organization.profile.teams.create')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'organization.profile.teams.rename' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'organization.profile.teams.removeTeam' })).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'organization.profile.teams.manageMembers' }));
+    await waitFor(() => expect(mocks.organization.listTeamMembers).toHaveBeenCalledWith({ teamId: 'team-core' }));
+    expect(screen.queryByRole('button', { name: 'organization.profile.teams.addMember' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'organization.profile.teams.removeMember' })).toBeNull();
+  });
+
+  it('gates each team action from custom-role permissions instead of role names', async () => {
+    mocks.currentMember.role = 'team_builder';
+    mocks.organization.listRoles.mockResolvedValueOnce({
+      data: [{
+        role: 'team_builder',
+        permission: { team: ['create', 'update'], member: ['update'] },
+      }],
+      error: null,
+    } as never);
+    render(<OrganizationProfile organizationId="org-cairo" defaultSection="teams" />);
+
+    await screen.findByRole('heading', { name: 'organization.profile.teams.title' });
+    await waitFor(() => expect(mocks.organization.listRoles).toHaveBeenCalledWith({ organizationId: 'org-cairo' }));
+    expect(screen.getByLabelText('organization.profile.teams.create')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'organization.profile.teams.rename' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'organization.profile.teams.removeTeam' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'organization.profile.teams.manageMembers' }));
+    await screen.findByRole('button', { name: 'organization.profile.teams.addMember' });
+    expect(screen.queryByRole('button', { name: 'organization.profile.teams.removeMember' })).toBeNull();
+  });
+
+  it('keeps the last good team list visible when a post-mutation refresh fails', async () => {
+    mocks.organization.listTeams
+      .mockResolvedValueOnce({ data: [mocks.team], error: null })
+      .mockResolvedValueOnce({ data: null, error: { code: 'INTERNAL_ERROR', message: 'nope' } } as never);
+    render(<OrganizationProfile organizationId="org-cairo" defaultSection="teams" />);
+
+    await screen.findByText('Core');
+    fireEvent.change(screen.getByLabelText('organization.profile.teams.create'), { target: { value: 'Product' } });
+    fireEvent.click(screen.getByRole('button', { name: 'organization.profile.teams.create' }));
+
+    await screen.findByText('organization.profile.loadError');
+    expect(screen.getByText('Core')).toBeTruthy();
+  });
+
+  it('distinguishes a team load failure from an empty team list and retries', async () => {
+    let resolveRetry!: (result: { data: never[]; error: null }) => void;
+    mocks.organization.listTeams
+      .mockResolvedValueOnce({ data: null, error: { code: 'INTERNAL_ERROR', message: 'nope' } } as never)
+      .mockReturnValueOnce(new Promise((resolve) => {
+        resolveRetry = resolve;
+      }));
+    render(<OrganizationProfile organizationId="org-cairo" defaultSection="teams" />);
+
+    await screen.findByText('organization.profile.loadError');
+    fireEvent.click(screen.getByRole('button', { name: 'organization.retry' }));
+    expect(screen.getByLabelText('common.loading')).toBeTruthy();
+    expect(screen.queryByText('organization.profile.teams.empty')).toBeNull();
+    resolveRetry({ data: [], error: null });
+    await screen.findByText('organization.profile.teams.empty');
+    expect(mocks.organization.listTeams).toHaveBeenCalledTimes(2);
   });
 });

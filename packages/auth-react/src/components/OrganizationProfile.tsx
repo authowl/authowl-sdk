@@ -21,9 +21,12 @@ export type OrganizationProfileProps = {
 const SECTION_KEYS: Record<OrganizationProfileSection, MessageKey> = {
   general: 'organization.profile.nav.general',
   members: 'organization.profile.nav.members',
+  teams: 'organization.profile.nav.teams',
   invitations: 'organization.profile.nav.invitations',
   danger: 'organization.profile.nav.danger',
 };
+
+const TeamsSection = React.lazy(() => import('./organization/TeamsSection'));
 
 export function OrganizationProfile({ organizationId, defaultSection = 'general', onDeleted, onLeft }: OrganizationProfileProps = {}) {
   const t = useT();
@@ -93,8 +96,8 @@ export function OrganizationProfile({ organizationId, defaultSection = 'general'
   if (!membership) return <p className="ba-muted">{t('organization.profile.notMember')}</p>;
   const canManage = canManageOrganization(membership);
   const visibleSections: OrganizationProfileSection[] = canManage
-    ? ['general', 'members', 'invitations', 'danger']
-    : ['general', 'members', 'danger'];
+    ? ['general', 'members', 'teams', 'invitations', 'danger']
+    : ['general', 'members', 'teams', 'danger'];
   const activeSection = visibleSections.includes(section) ? section : 'general';
 
   const handleRemoval = (callback: OrganizationProfileProps['onDeleted'] | OrganizationProfileProps['onLeft']) => (removedOrganization: OrganizationDetails) => {
@@ -126,6 +129,11 @@ export function OrganizationProfile({ organizationId, defaultSection = 'general'
         <div className="ba-organization-profile-content">
           {activeSection === 'general' && <GeneralSection organization={organization} canManage={canManage} onChanged={load} />}
           {activeSection === 'members' && <MembersSection organization={organization} userId={user.id} canManage={canManage} onChanged={load} />}
+          {activeSection === 'teams' && (
+            <React.Suspense fallback={null}>
+              <TeamsSection organization={organization} membership={membership} />
+            </React.Suspense>
+          )}
           {activeSection === 'invitations' && <InvitationsSection organization={organization} onChanged={load} />}
           {activeSection === 'danger' && (
             <DangerSection

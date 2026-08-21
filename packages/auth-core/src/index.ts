@@ -121,6 +121,8 @@ export type {
 } from './metadata-client';
 export type {
   AcceptOrganizationInvitationData,
+  AddOrganizationTeamMemberOptions,
+  CreateOrganizationTeamOptions,
   CreateOrganizationOptions,
   DeleteOrganizationOptions,
   GetOrganizationInvitationOptions,
@@ -129,6 +131,7 @@ export type {
   LeaveOrganizationOptions,
   ListOrganizationInvitationsOptions,
   ListOrganizationMembersOptions,
+  ListOrganizationTeamMembersOptions,
   Organization,
   OrganizationClient,
   OrganizationDetails,
@@ -148,11 +151,17 @@ export type {
   RejectOrganizationInvitationData,
   RemoveOrganizationMemberData,
   RemoveOrganizationMemberOptions,
+  RemoveOrganizationTeamData,
+  RemoveOrganizationTeamMemberData,
+  RemoveOrganizationTeamMemberOptions,
+  RemoveOrganizationTeamOptions,
   SetActiveOrganizationOptions,
   SetActiveTeamOptions,
   OrganizationTeam,
+  OrganizationTeamMember,
   ListOrganizationTeamsOptions,
   UpdateOrganizationMemberRoleOptions,
+  UpdateOrganizationTeamOptions,
   UpdateOrganizationOptions,
 } from './organization-client';
 export {

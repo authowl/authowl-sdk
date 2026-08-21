@@ -55,6 +55,13 @@ const teamWire = () => ({
   createdAt: CREATED_AT,
 });
 
+const teamMemberWire = (userId = 'user-1') => ({
+  id: `team-member-${userId}`,
+  teamId: 'team-1',
+  userId,
+  createdAt: CREATED_AT,
+});
+
 function clientWith(fetchImpl: typeof fetch) {
   return createAuthOwlClient(
     resolveConfig({
@@ -80,7 +87,21 @@ describe('organization client', () => {
       if (path.endsWith('/list-members')) {
         return Response.json({ members: [memberWire(true)], total: 1 });
       }
+      if (path.endsWith('/create-team') || path.endsWith('/update-team')) {
+        return Response.json(teamWire());
+      }
+      if (path.endsWith('/remove-team')) {
+        return Response.json({ message: 'Team removed successfully.' });
+      }
       if (path.endsWith('/list-teams')) return Response.json([teamWire()]);
+      if (path.endsWith('/list-user-teams')) {
+        return Response.json([teamWire(), { ...teamWire(), id: 'team-2', organizationId: 'org-2' }]);
+      }
+      if (path.endsWith('/list-team-members')) return Response.json([teamMemberWire()]);
+      if (path.endsWith('/add-team-member')) return Response.json(teamMemberWire());
+      if (path.endsWith('/remove-team-member')) {
+        return Response.json({ message: 'Team member removed successfully.' });
+      }
       if (path.endsWith('/set-active-team')) return Response.json(teamWire());
       if (path.endsWith('/list-invitations')) return Response.json([invitationWire()]);
       if (path.endsWith('/list-user-invitations')) {
@@ -128,7 +149,14 @@ describe('organization client', () => {
     results.push(await organization.list());
     results.push(await organization.get({ organizationSlug: 'acme', membersLimit: 25 }, options));
     results.push(await organization.setActive({ organizationId: 'org-1' }, options));
+    results.push(await organization.createTeam({ organizationId: 'org-1', name: 'Core' }, options));
     results.push(await organization.listTeams({ organizationId: 'org-1' }, options));
+    results.push(await organization.updateTeam({ teamId: 'team-1', data: { name: 'Platform', organizationId: 'org-1' } }, options));
+    results.push(await organization.removeTeam({ teamId: 'team-1', organizationId: 'org-1' }, options));
+    results.push(await organization.listUserTeams(options));
+    results.push(await organization.listTeamMembers({ teamId: 'team-1' }, options));
+    results.push(await organization.addTeamMember({ teamId: 'team-1', userId: 'user-1', organizationId: 'org-1' }, options));
+    results.push(await organization.removeTeamMember({ teamId: 'team-1', userId: 'user-1', organizationId: 'org-1' }, options));
     results.push(await organization.setActiveTeam({ teamId: 'team-1' }, options));
     results.push(await organization.update(
       { organizationId: 'org-1', data: { name: 'Acme Egypt' } },
@@ -168,7 +196,14 @@ describe('organization client', () => {
       'list',
       'get',
       'setActive',
+      'createTeam',
       'listTeams',
+      'updateTeam',
+      'removeTeam',
+      'listUserTeams',
+      'listTeamMembers',
+      'addTeamMember',
+      'removeTeamMember',
       'setActiveTeam',
       'update',
       'delete',
@@ -189,7 +224,21 @@ describe('organization client', () => {
       error: result.error?.code ?? null,
     }))).toEqual(resultNames.map((name) => ({ name, error: null })));
     expect(results[0]?.data).toMatchObject({ createdAt: expect.any(Date) });
-    expect(mutationListener).toHaveBeenCalledTimes(12);
+    expect(results[resultNames.indexOf('createTeam')]?.data).toEqual({
+      ...teamWire(),
+      createdAt: new Date(CREATED_AT),
+    });
+    expect(results[resultNames.indexOf('listUserTeams')]?.data).toEqual([
+      { ...teamWire(), createdAt: new Date(CREATED_AT) },
+      { ...teamWire(), id: 'team-2', organizationId: 'org-2', createdAt: new Date(CREATED_AT) },
+    ]);
+    expect(results[resultNames.indexOf('listTeamMembers')]?.data).toEqual([
+      { ...teamMemberWire(), createdAt: new Date(CREATED_AT) },
+    ]);
+    expect(results[resultNames.indexOf('removeTeamMember')]?.data).toEqual({
+      message: 'Team member removed successfully.',
+    });
+    expect(mutationListener).toHaveBeenCalledTimes(17);
     unsubscribe();
     const calls = (
       fetchImpl as unknown as { mock: { calls: [string | URL, RequestInit][] } }
@@ -200,7 +249,14 @@ describe('organization client', () => {
         `GET ${AUTH_PATH}/organization/list`,
         `GET ${AUTH_PATH}/organization/get-full-organization`,
         `POST ${AUTH_PATH}/organization/set-active`,
+        `POST ${AUTH_PATH}/organization/create-team`,
         `GET ${AUTH_PATH}/organization/list-teams`,
+        `POST ${AUTH_PATH}/organization/update-team`,
+        `POST ${AUTH_PATH}/organization/remove-team`,
+        `GET ${AUTH_PATH}/organization/list-user-teams`,
+        `GET ${AUTH_PATH}/organization/list-team-members`,
+        `POST ${AUTH_PATH}/organization/add-team-member`,
+        `POST ${AUTH_PATH}/organization/remove-team-member`,
         `POST ${AUTH_PATH}/organization/set-active-team`,
         `POST ${AUTH_PATH}/organization/update`,
         `POST ${AUTH_PATH}/organization/delete`,
@@ -229,6 +285,25 @@ describe('organization client', () => {
     expect(queryFor('/list-invitations').get('organizationId')).toBe('org-1');
     expect(queryFor('/get-invitation').get('id')).toBe('invitation-1');
     expect(queryFor('/list-teams').get('organizationId')).toBe('org-1');
+    expect(queryFor('/list-team-members').get('teamId')).toBe('team-1');
+
+    const bodyFor = (suffix: string) => {
+      const call = calls.find(([url]) => new URL(String(url)).pathname.endsWith(suffix));
+      if (!call) throw new Error(`no request to ${suffix}`);
+      return JSON.parse(String(call[1].body)) as unknown;
+    };
+    expect(bodyFor('/create-team')).toEqual({ organizationId: 'org-1', name: 'Core' });
+    expect(bodyFor('/update-team')).toEqual({
+      teamId: 'team-1',
+      data: { name: 'Platform', organizationId: 'org-1' },
+    });
+    expect(bodyFor('/remove-team')).toEqual({ teamId: 'team-1', organizationId: 'org-1' });
+    expect(bodyFor('/add-team-member')).toEqual({
+      teamId: 'team-1', userId: 'user-1', organizationId: 'org-1',
+    });
+    expect(bodyFor('/remove-team-member')).toEqual({
+      teamId: 'team-1', userId: 'user-1', organizationId: 'org-1',
+    });
   });
 
   it('routes listRoles to the engine list-roles endpoint with the org selector', async () => {
@@ -496,6 +571,7 @@ describe('organization client', () => {
   it('rejects malformed mutation payloads before success hooks for every route', async () => {
     const cases: Array<{
       name: string;
+      response?: unknown;
       invoke: (
         organization: ReturnType<typeof clientWith>['organization'],
         hooks: ActionFetchOptions,
@@ -510,6 +586,44 @@ describe('organization client', () => {
         name: 'setActive',
         invoke: (organization, hooks) =>
           organization.setActive({ organizationId: 'org-1' }, hooks),
+      },
+      {
+        name: 'createTeam',
+        invoke: (organization, hooks) =>
+          organization.createTeam({ organizationId: 'org-1', name: 'Core' }, hooks),
+      },
+      {
+        name: 'updateTeam',
+        invoke: (organization, hooks) =>
+          organization.updateTeam({
+            teamId: 'team-1',
+            data: { name: 'Platform', organizationId: 'org-1' },
+          }, hooks),
+      },
+      {
+        name: 'removeTeam',
+        response: [],
+        invoke: (organization, hooks) =>
+          organization.removeTeam({ teamId: 'team-1', organizationId: 'org-1' }, hooks),
+      },
+      {
+        name: 'addTeamMember',
+        invoke: (organization, hooks) =>
+          organization.addTeamMember({
+            teamId: 'team-1',
+            userId: 'user-1',
+            organizationId: 'org-1',
+          }, hooks),
+      },
+      {
+        name: 'removeTeamMember',
+        response: [],
+        invoke: (organization, hooks) =>
+          organization.removeTeamMember({
+            teamId: 'team-1',
+            userId: 'user-1',
+            organizationId: 'org-1',
+          }, hooks),
       },
       {
         name: 'setActiveTeam',
@@ -575,7 +689,7 @@ describe('organization client', () => {
     ];
 
     for (const testCase of cases) {
-      const fetchImpl = vi.fn(async () => Response.json({})) as unknown as typeof fetch;
+      const fetchImpl = vi.fn(async () => Response.json(testCase.response ?? {})) as unknown as typeof fetch;
       const onSuccess = vi.fn();
       const onError = vi.fn();
       const hooks: ActionFetchOptions = {
@@ -594,6 +708,36 @@ describe('organization client', () => {
       expect(onError, testCase.name).toHaveBeenCalledWith(
         expect.objectContaining({ failure: 'invalid_response' }),
       );
+    }
+  });
+
+  it('accepts empty and absent display messages in destructive mutation receipts', async () => {
+    const cases = [
+      {
+        name: 'removeTeam with an empty message',
+        response: { message: '' },
+        invoke: (organization: ReturnType<typeof clientWith>['organization'], hooks: ActionFetchOptions) =>
+          organization.removeTeam({ teamId: 'team-1', organizationId: 'org-1' }, hooks),
+      },
+      {
+        name: 'removeTeamMember with an absent message',
+        response: {},
+        invoke: (organization: ReturnType<typeof clientWith>['organization'], hooks: ActionFetchOptions) =>
+          organization.removeTeamMember({
+            teamId: 'team-1',
+            userId: 'user-1',
+            organizationId: 'org-1',
+          }, hooks),
+      },
+    ];
+
+    for (const testCase of cases) {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(Response.json(testCase.response));
+      const onSuccess = vi.fn();
+      const result = await testCase.invoke(clientWith(fetchImpl).organization, { onSuccess });
+
+      expect(result, testCase.name).toEqual({ data: { message: '' }, error: null });
+      expect(onSuccess, testCase.name).toHaveBeenCalledOnce();
     }
   });
 
