@@ -252,6 +252,8 @@ export interface OrganizationRoleSummary {
 }
 
 export interface OrganizationClient {
+  /** @internal Subscribe to successful organization mutations. Used by framework bindings. */
+  subscribe(listener: () => void): () => void;
   create(
     params: CreateOrganizationOptions,
     fetchOptions?: ActionFetchOptions,
@@ -367,6 +369,17 @@ export function createOrganizationClient(
   getMembership: () => OrganizationMembership | null = () => null,
 ): OrganizationClient {
   const { post, mutation: sendMutation } = createAuthActionHelpers(http, notifyMutation);
+  const mutationListeners = new Set<() => void>();
+  const notifyMutationListeners = (): void => {
+    for (const listener of mutationListeners) {
+      try {
+        listener();
+      } catch {
+        // A subscriber is an invalidation hint, not part of the committed write.
+        // Its failure must neither hide success nor prevent other subscribers.
+      }
+    }
+  };
   /**
    * Reads of the same thing that are open AT THE SAME TIME, joined.
    *
@@ -405,9 +418,18 @@ export function createOrganizationClient(
    * committed would answer with the state the write just replaced, and a caller
    * refreshing straight after its own mutation must not be handed that.
    */
-  const mutation = <T>(action: Promise<AuthActionResult<T>>): Promise<AuthActionResult<T>> =>
-    sendMutation(action).finally(() => inFlightReads.clear());
+  const mutation = async <T>(
+    action: Promise<AuthActionResult<T>>,
+  ): Promise<AuthActionResult<T>> => {
+    const result = await sendMutation(action).finally(() => inFlightReads.clear());
+    if (result.error === null) notifyMutationListeners();
+    return result;
+  };
   return {
+    subscribe(listener) {
+      mutationListeners.add(listener);
+      return () => mutationListeners.delete(listener);
+    },
     create: (params, fetchOptions) =>
       mutation(post('/organization/create', params, fetchOptions, decodeOrganization)),
     list: (fetchOptions) =>

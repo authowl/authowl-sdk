@@ -15,28 +15,47 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * wrong-account refusal, which is this same defect one layer up.
  */
 
-const mocks = vi.hoisted(() => ({
-  session: {
-    data: {
-      session: {
-        id: 's1',
-        userId: 'user-1',
-        activeOrganizationId: null as string | null,
-        activeTeamId: null as string | null,
-        membership: null as unknown,
+const mocks = vi.hoisted(() => {
+  const getInvitation = vi.fn();
+  const acceptInvitation = vi.fn();
+  const listOrganizations = vi.fn();
+  const setActive = vi.fn(async () => ({ data: {}, error: null }));
+  const mutationListeners = new Set<() => void>();
+  return {
+    session: {
+      data: {
+        session: {
+          id: 's1',
+          userId: 'user-1',
+          activeOrganizationId: null as string | null,
+          activeTeamId: null as string | null,
+          membership: null as unknown,
+        },
+        user: { id: 'user-1' as string | null },
       },
-      user: { id: 'user-1' as string | null },
+      isPending: false,
+      isRefetching: false,
+      error: null,
+      refetch: vi.fn(),
     },
-    isPending: false,
-    isRefetching: false,
-    error: null,
-    refetch: vi.fn(),
-  },
-  getInvitation: vi.fn(),
-  acceptInvitation: vi.fn(),
-  setActive: vi.fn(async () => ({ data: {}, error: null })),
-  signOut: vi.fn(async () => ({ data: {}, error: null })),
-}));
+    getInvitation,
+    acceptInvitation,
+    listOrganizations,
+    setActive,
+    notifyOrganizationMutation: () => mutationListeners.forEach((listener) => listener()),
+    organization: {
+      subscribe: (listener: () => void) => {
+        mutationListeners.add(listener);
+        return () => mutationListeners.delete(listener);
+      },
+      getInvitation,
+      acceptInvitation,
+      list: listOrganizations,
+      setActive,
+    },
+    signOut: vi.fn(async () => ({ data: {}, error: null })),
+  };
+});
 
 vi.mock('./provider', () => ({
   useAuthOwlContext: () => ({
@@ -45,11 +64,7 @@ vi.mock('./provider', () => ({
         subscribe: () => () => undefined,
         getSnapshot: () => mocks.session,
       },
-      organization: {
-        getInvitation: mocks.getInvitation,
-        acceptInvitation: mocks.acceptInvitation,
-        setActive: mocks.setActive,
-      },
+      organization: mocks.organization,
       signOut: mocks.signOut,
     },
     config: { organizations: true },
@@ -57,17 +72,14 @@ vi.mock('./provider', () => ({
     locale: 'en',
   }),
   useAuthClient: () => ({
-    organization: {
-      getInvitation: mocks.getInvitation,
-      acceptInvitation: mocks.acceptInvitation,
-      setActive: mocks.setActive,
-    },
+    organization: mocks.organization,
     signOut: mocks.signOut,
   }),
 }));
 
 import { captureInvitationClaim, readInvitationClaim } from '@authowl/core';
 import { InvitationPrompt } from './components/InvitationPrompt';
+import { OrganizationSwitcher } from './components/OrganizationSwitcher';
 
 const invitationDetails = {
   id: 'inv_1',
@@ -82,6 +94,13 @@ const invitationDetails = {
   expiresAt: new Date('2030-01-01T00:00:00.000Z'),
 };
 
+const joinedOrganization = {
+  id: 'org-1',
+  name: 'Acme Inc',
+  slug: 'acme',
+  createdAt: new Date('2029-01-01T00:00:00.000Z'),
+};
+
 function stash(id = 'inv_1'): void {
   window.history.replaceState({}, '', `/team?authowl_invitation=${id}`);
   captureInvitationClaim();
@@ -94,6 +113,8 @@ beforeEach(() => {
   mocks.session.data.session.activeOrganizationId = null;
   mocks.getInvitation.mockReset();
   mocks.acceptInvitation.mockReset();
+  mocks.listOrganizations.mockReset();
+  mocks.listOrganizations.mockResolvedValue({ data: [], error: null });
   mocks.setActive.mockReset();
   mocks.setActive.mockResolvedValue({ data: {}, error: null });
 });
@@ -137,6 +158,29 @@ describe('InvitationPrompt', () => {
     (await screen.findByRole('button', { name: 'Join organization' })).click();
     await waitFor(() => expect(mocks.acceptInvitation).toHaveBeenCalled());
     expect(mocks.setActive).not.toHaveBeenCalled();
+  });
+
+  it('makes the joined organization observable to a mounted switcher', async () => {
+    stash();
+    mocks.getInvitation.mockResolvedValue({ data: invitationDetails, error: null });
+    mocks.listOrganizations
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [joinedOrganization], error: null });
+    mocks.acceptInvitation.mockImplementation(async () => {
+      mocks.session.data.session.activeOrganizationId = joinedOrganization.id;
+      mocks.notifyOrganizationMutation();
+      return {
+        data: { invitation: invitationDetails, member: { id: 'm1', organizationId: 'org-1' } },
+        error: null,
+      };
+    });
+    render(<><OrganizationSwitcher /><InvitationPrompt /></>);
+
+    await screen.findByRole('button', { name: /Personal account/ });
+    (await screen.findByRole('button', { name: 'Join organization' })).click();
+
+    await screen.findByRole('button', { name: /Acme Inc/ });
+    expect(mocks.listOrganizations).toHaveBeenCalledTimes(2);
   });
 
   it('explains a wrong-account refusal without naming the invited address', async () => {

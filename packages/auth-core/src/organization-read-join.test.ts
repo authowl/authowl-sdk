@@ -70,22 +70,58 @@ describe('organization reads open at the same time', () => {
     resolvers.forEach((resolve) => resolve({ data: null, error: null }));
   });
 
-  it('never lets a read that started before a write be joined after it', async () => {
+  it('notifies subscribers only after a write has ended older joins', async () => {
     const resolvers: ((value: unknown) => void)[] = [];
     const request = vi.fn((path: string) =>
       path === '/organization/update'
         ? Promise.resolve({ data: null, error: null })
         : new Promise((resolve) => resolvers.push(resolve)));
     const organization = clientWith(request as unknown as ReturnType<typeof vi.fn>);
+    const listener = vi.fn(() => {
+      void organization.get({ organizationId: 'org-1' });
+    });
+    organization.subscribe(listener);
 
     void organization.get({ organizationId: 'org-1' });
     expect(request).toHaveBeenCalledTimes(1);
 
     await organization.update({ organizationId: 'org-1', data: { name: 'Renamed' } });
-    void organization.get({ organizationId: 'org-1' });
 
-    // The pre-write read is still open; this reader must not be handed it.
+    // The subscriber's read must not be handed the still-open pre-write read.
+    expect(listener).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledTimes(3);
     resolvers.forEach((resolve) => resolve({ data: null, error: null }));
+  });
+
+  it('does not notify subscribers for reads or failed writes', async () => {
+    const request = vi.fn(async (path: string) => path === '/organization/update'
+      ? { data: null, error: { code: 'UPDATE_FAILED', message: 'nope' } }
+      : { data: [], error: null });
+    const organization = clientWith(request as unknown as ReturnType<typeof vi.fn>);
+    const listener = vi.fn();
+    organization.subscribe(listener);
+
+    await organization.list();
+    await organization.update({ organizationId: 'org-1', data: { name: 'Renamed' } });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('keeps a committed mutation successful when a subscriber throws', async () => {
+    const request = vi.fn(async () => ({
+      data: { id: 'org-1', name: 'Renamed', slug: 'renamed', createdAt: new Date() },
+      error: null,
+    }));
+    const organization = clientWith(request as unknown as ReturnType<typeof vi.fn>);
+    const healthyListener = vi.fn();
+    organization.subscribe(() => {
+      throw new Error('consumer listener failed');
+    });
+    organization.subscribe(healthyListener);
+
+    await expect(
+      organization.update({ organizationId: 'org-1', data: { name: 'Renamed' } }),
+    ).resolves.toMatchObject({ error: null });
+    expect(healthyListener).toHaveBeenCalledTimes(1);
   });
 });
