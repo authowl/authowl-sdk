@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import * as React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
   const getInvitation = vi.fn();
+  const getInvitationRecipientHint = vi.fn();
   const acceptInvitation = vi.fn();
   const listOrganizations = vi.fn();
   const setActive = vi.fn(async () => ({ data: {}, error: null }));
@@ -39,6 +40,7 @@ const mocks = vi.hoisted(() => {
       refetch: vi.fn(),
     },
     getInvitation,
+    getInvitationRecipientHint,
     acceptInvitation,
     listOrganizations,
     setActive,
@@ -49,6 +51,7 @@ const mocks = vi.hoisted(() => {
         return () => mutationListeners.delete(listener);
       },
       getInvitation,
+      getInvitationRecipientHint,
       acceptInvitation,
       list: listOrganizations,
       setActive,
@@ -78,6 +81,7 @@ vi.mock('./provider', () => ({
 }));
 
 import { captureInvitationClaim, readInvitationClaim } from '@authowl/core';
+import { useInvitationRecipientHint } from './hooks';
 import { InvitationPrompt } from './components/InvitationPrompt';
 import { OrganizationSwitcher } from './components/OrganizationSwitcher';
 
@@ -106,12 +110,23 @@ function stash(id = 'inv_1'): void {
   captureInvitationClaim();
 }
 
+function RecipientHintProbe(): React.ReactNode {
+  const { recipientHint, isLoaded } = useInvitationRecipientHint();
+  return (
+    <div>
+      <span data-testid="hint-loaded">{String(isLoaded)}</span>
+      <span data-testid="hint-value">{recipientHint ?? 'none'}</span>
+    </div>
+  );
+}
+
 beforeEach(() => {
   localStorage.clear();
   window.history.replaceState({}, '', '/team');
   mocks.session.data.user.id = 'user-1';
   mocks.session.data.session.activeOrganizationId = null;
   mocks.getInvitation.mockReset();
+  mocks.getInvitationRecipientHint.mockReset();
   mocks.acceptInvitation.mockReset();
   mocks.listOrganizations.mockReset();
   mocks.listOrganizations.mockResolvedValue({ data: [], error: null });
@@ -120,6 +135,38 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+describe('useInvitationRecipientHint', () => {
+  it('keeps loading distinct from a settled null and resolves from the opaque id', async () => {
+    stash();
+    let resolveHint!: (value: {
+      data: { recipientHint: 'new_user' };
+      error: null;
+    }) => void;
+    mocks.getInvitationRecipientHint.mockImplementation(() => new Promise((resolve) => {
+      resolveHint = resolve;
+    }));
+
+    render(<RecipientHintProbe />);
+    expect(screen.getByTestId('hint-loaded').textContent).toBe('false');
+    expect(screen.getByTestId('hint-value').textContent).toBe('none');
+    expect(mocks.getInvitationRecipientHint).toHaveBeenCalledWith({ invitationId: 'inv_1' });
+
+    await act(async () => {
+      resolveHint({ data: { recipientHint: 'new_user' }, error: null });
+    });
+    expect(screen.getByTestId('hint-loaded').textContent).toBe('true');
+    expect(screen.getByTestId('hint-value').textContent).toBe('new_user');
+  });
+
+  it('settles to an explicit loaded null when there is no invitation claim', async () => {
+    render(<RecipientHintProbe />);
+
+    await waitFor(() => expect(screen.getByTestId('hint-loaded').textContent).toBe('true'));
+    expect(screen.getByTestId('hint-value').textContent).toBe('none');
+    expect(mocks.getInvitationRecipientHint).not.toHaveBeenCalled();
+  });
+});
 
 describe('InvitationPrompt', () => {
   it('offers the organization by name and joins on confirmation', async () => {
