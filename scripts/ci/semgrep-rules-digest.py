@@ -72,6 +72,12 @@ def semantic_digest(raw_yaml: str) -> str:
     return hashlib.sha256(canonical_bytes(raw_yaml)).hexdigest()
 
 
+def digest_is_expected(actual: str, expected_digests: list[str]) -> bool:
+    return any(
+        hmac.compare_digest(actual, expected) for expected in expected_digests
+    )
+
+
 def self_test() -> None:
     first = """
 rules:
@@ -97,6 +103,9 @@ rules:
 
     assert semantic_digest(first) == semantic_digest(reordered)
     assert semantic_digest(first) != semantic_digest(changed)
+    first_digest = semantic_digest(first)
+    assert digest_is_expected(first_digest, ["0" * 64, first_digest])
+    assert not digest_is_expected(first_digest, ["0" * 64, "1" * 64])
     for rejected in (duplicate_id, duplicate_key, alias):
         try:
             semantic_digest(rejected)
@@ -111,16 +120,19 @@ def main(arguments: list[str]) -> int:
         print("semgrep-rules-digest: self-test passed.")
         return 0
 
-    if len(arguments) != 2:
+    if len(arguments) < 2:
         print(
-            "Usage: semgrep-rules-digest.py <rules.yml> <expected-sha256>",
+            "Usage: semgrep-rules-digest.py <rules.yml> <expected-sha256>...",
             file=sys.stderr,
         )
         return 2
 
     rules_path = Path(arguments[0])
-    expected = arguments[1]
-    if SHA256_PATTERN.fullmatch(expected) is None:
+    expected_digests = arguments[1:]
+    if any(
+        SHA256_PATTERN.fullmatch(expected) is None
+        for expected in expected_digests
+    ):
         print("semgrep-rules-digest: invalid expected digest.", file=sys.stderr)
         return 2
 
@@ -130,8 +142,11 @@ def main(arguments: list[str]) -> int:
         print("semgrep-rules-digest: invalid rules document.", file=sys.stderr)
         return 1
 
-    if not hmac.compare_digest(actual, expected):
-        print("semgrep-rules-digest: policy digest mismatch.", file=sys.stderr)
+    if not digest_is_expected(actual, expected_digests):
+        print(
+            f"semgrep-rules-digest: policy digest mismatch; received {actual}.",
+            file=sys.stderr,
+        )
         return 1
 
     print(f"{rules_path.name}: canonical policy digest OK.")
