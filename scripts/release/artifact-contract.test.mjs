@@ -19,7 +19,11 @@ import {
 } from './artifact-contract.mjs';
 import { supportsTrustedPublishing } from './npm-publisher.mjs';
 import { parseArguments } from './release.mjs';
-import { assertScaffoldPinCoupling, isReleaseVersion } from './sdk-manifest.mjs';
+import {
+  assertScaffoldPinCoupling,
+  isReleaseVersion,
+  releaseUnits,
+} from './sdk-manifest.mjs';
 import { stripDelimitedSections } from '../notice-text.mjs';
 
 const fixtureRoot = mkdtempSync(join(tmpdir(), 'authowl-release-contract.'));
@@ -152,6 +156,10 @@ try {
   for (const version of ['1.2', '1.2.3-alpha+build+extra', '1.2.3/../../tag']) {
     assert.equal(isReleaseVersion(version), false, version);
   }
+  const goUnit = releaseUnits().find((unit) => unit.ecosystem === 'go');
+  assert.equal(goUnit?.version, '0.2.0');
+  assert.equal(goUnit?.tag, 'sdks/go/v0.2.0');
+  assert.equal(goUnit?.publishable, true);
   assert.equal(stripDelimitedSections('Devcoat <<script>>', '<', '>'), 'Devcoat ');
   assert.equal(stripDelimitedSections('Devcoat ((website))', '(', ')'), 'Devcoat ');
   assert.equal(stripDelimitedSections('Devcoat <unfinished', '<', '>'), 'Devcoat ');
