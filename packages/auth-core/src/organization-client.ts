@@ -312,7 +312,7 @@ export interface OrganizationRoleSummary {
   /** The role's ⊆14 system-statement document (engine shape); advisory here. */
   permission?: unknown;
   /**
-   * The custom `org:<feature>:<action>` permission ids this role grants.
+   * The custom `org:<feature>:<action>` permission keys this role grants.
    *
    * These cannot appear in `permission`: that is the engine's own document, and
    * a custom id does not fit its shape - so a custom role reads as an empty
