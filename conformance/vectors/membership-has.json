@@ -60,6 +60,106 @@
       "expect": true
     },
     {
+      "name": "a secondary role the member holds is matched",
+      "membership": {
+        "role": "admin",
+        "roles": [
+          "admin",
+          "editor"
+        ],
+        "permissions": [
+          "org:sys_members:manage",
+          "org:billing:read"
+        ],
+        "teams": [
+          "team_alpha"
+        ]
+      },
+      "params": {
+        "role": "editor"
+      },
+      "expect": true
+    },
+    {
+      "name": "the primary role is still matched when roles is present",
+      "membership": {
+        "role": "admin",
+        "roles": [
+          "admin",
+          "editor"
+        ],
+        "permissions": [
+          "org:sys_members:manage",
+          "org:billing:read"
+        ],
+        "teams": [
+          "team_alpha"
+        ]
+      },
+      "params": {
+        "role": "admin"
+      },
+      "expect": true
+    },
+    {
+      "name": "roles alone decides when present, the primary is not consulted",
+      "membership": {
+        "role": "admin",
+        "roles": [
+          "editor"
+        ],
+        "permissions": [
+          "org:sys_members:manage",
+          "org:billing:read"
+        ],
+        "teams": [
+          "team_alpha"
+        ]
+      },
+      "params": {
+        "role": "admin"
+      },
+      "expect": false
+    },
+    {
+      "name": "a role the member does not hold is still refused",
+      "membership": {
+        "role": "admin",
+        "roles": [
+          "admin",
+          "editor"
+        ],
+        "permissions": [
+          "org:sys_members:manage",
+          "org:billing:read"
+        ],
+        "teams": [
+          "team_alpha"
+        ]
+      },
+      "params": {
+        "role": "owner"
+      },
+      "expect": false
+    },
+    {
+      "name": "an absent roles set falls back to the primary role",
+      "membership": {
+        "role": "admin",
+        "permissions": [
+          "org:sys_members:manage",
+          "org:billing:read"
+        ],
+        "teams": [
+          "team_alpha"
+        ]
+      },
+      "params": {
+        "role": "admin"
+      },
+      "expect": true
+    },
+    {
       "name": "mismatched role",
       "membership": {
         "role": "admin",

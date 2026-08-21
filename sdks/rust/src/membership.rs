@@ -10,9 +10,16 @@ use serde_json::Value;
 /// The active-organization membership carried by a verified token.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct Membership {
-    /// Canonical role key (`owner`/`admin`/`member`, or a project role).
+    /// Primary role key (`owner`/`admin`/`member`, or a project role).
     #[serde(default)]
     pub role: String,
+    /// Every role the member holds.
+    ///
+    /// `None` (not an empty vec) when the token carries no `roles` claim, which
+    /// is what an older AuthOwl token looks like. Role checks then fall back to
+    /// the primary [`Membership::role`] rather than reporting no role held.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub roles: Option<Vec<String>>,
     /// Effective permission ids: `org:sys_*` system claims plus the operator's
     /// custom `org:<feature>:<action>` ids.
     #[serde(default)]
@@ -73,6 +80,14 @@ impl<'a> Query<'a> {
 }
 
 impl Membership {
+    /// Whether the member holds `role` as one of their roles.
+    pub fn has_role(&self, role: &str) -> bool {
+        match &self.roles {
+            Some(roles) => roles.iter().any(|held| held == role),
+            None => self.role == role,
+        }
+    }
+
     /// Whether the permission claim includes `permission`. Exact match only.
     pub fn has_permission(&self, permission: &str) -> bool {
         if permission.is_empty() {
@@ -103,7 +118,7 @@ impl Membership {
             return false;
         }
         if let Some(role) = query.role {
-            if self.role != role {
+            if !self.has_role(role) {
                 return false;
             }
         }
@@ -130,16 +145,19 @@ impl Membership {
             .unwrap_or_default()
             .to_owned();
         let permissions = string_list(object.get("permissions")).unwrap_or_default();
-        // Absent stays None so `has(team_id)` can never be satisfied by a claim
-        // that never mentioned teams.
+        // Absent stays None so teams cannot match a claim that never mentioned
+        // them, and roles can fall back to the primary only for older tokens.
         let teams = string_list(object.get("teams"));
+        let roles = string_list(object.get("roles"));
 
         let teams_empty = teams.as_ref().map_or(true, Vec::is_empty);
-        if role.is_empty() && permissions.is_empty() && teams_empty {
+        let roles_empty = roles.as_ref().map_or(true, Vec::is_empty);
+        if role.is_empty() && permissions.is_empty() && teams_empty && roles_empty {
             return None;
         }
         Some(Self {
             role,
+            roles,
             permissions,
             teams,
         })

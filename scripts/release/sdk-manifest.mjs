@@ -8,7 +8,6 @@
 //
 // Usage:
 //   node scripts/release/sdk-manifest.mjs
-//   node scripts/release/sdk-manifest.mjs --go-version 0.1.0
 //   node scripts/release/sdk-manifest.mjs --registry-state
 //   node scripts/release/sdk-manifest.mjs --registry-state --summary-file FILE
 //
@@ -29,8 +28,8 @@ const GO_MODULE = 'github.com/authowl/authowl-sdk/sdks/go';
 // Dart allows. Everything here becomes a Git tag, so it is validated once.
 const VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
-export function releaseUnits({ goVersion } = {}) {
-  return [...npmUnits(), ...sdkUnits(goVersion)];
+export function releaseUnits() {
+  return [...npmUnits(), ...sdkUnits()];
 }
 
 export function isReleaseVersion(value) {
@@ -60,7 +59,7 @@ function npmUnits() {
   });
 }
 
-function sdkUnits(goVersion) {
+function sdkUnits() {
   const python = requireVersion(
     tomlValue(readText('sdks/python/pyproject.toml'), 'project', 'version'),
     'sdks/python',
@@ -73,7 +72,7 @@ function sdkUnits(goVersion) {
     yamlRootValue(readText('sdks/flutter/pubspec.yaml'), 'version'),
     'sdks/flutter',
   );
-  const go = goVersion ? requireVersion(goVersion, 'sdks/go') : null;
+  const go = requireVersion(readText('sdks/go/VERSION').trim(), 'sdks/go');
 
   return [
     {
@@ -123,15 +122,13 @@ function sdkUnits(goVersion) {
       directory: 'sdks/go',
       // Go has no registry: consumers resolve the module straight out of this
       // repository, and a subdirectory module must be tagged with its path.
-      tag: go ? `sdks/go/v${go}` : null,
-      url: go ? `https://pkg.go.dev/${GO_MODULE}@v${go}` : null,
+      tag: `sdks/go/v${go}`,
+      url: `https://pkg.go.dev/${GO_MODULE}@v${go}`,
       // Deliberately unprobed: asking the module proxy about a version before
       // its tag exists teaches the proxy to cache the miss.
       probe: null,
-      publishable: Boolean(go),
-      note: go
-        ? 'the tag is the release'
-        : 'set the go_version deploy input to cut a Go module tag',
+      publishable: true,
+      note: 'the tag is the release',
     },
     {
       id: 'packagist:authowl/authowl',
@@ -314,18 +311,13 @@ function readText(relativePath) {
 
 export function parseArguments(argv) {
   const parsed = {
-    goVersion: undefined,
     only: undefined,
     registryState: false,
     summaryFile: undefined,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === '--go-version') {
-      parsed.goVersion = argv[index + 1];
-      index += 1;
-      if (!parsed.goVersion) throw new Error('sdk manifest: --go-version requires a version');
-    } else if (argument === '--only') {
+    if (argument === '--only') {
       parsed.only = argv[index + 1];
       index += 1;
       if (!parsed.only) throw new Error('sdk manifest: --only requires a unit id');
@@ -347,7 +339,7 @@ export function parseArguments(argv) {
 
 export async function main(argv = process.argv.slice(2)) {
   const options = parseArguments(argv);
-  let units = releaseUnits({ goVersion: options.goVersion });
+  let units = releaseUnits();
   if (options.only) {
     // Narrowing before the probes matters: a workflow that only ships one SDK
     // should not fail because an unrelated registry is having a bad day.

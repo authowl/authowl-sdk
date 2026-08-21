@@ -66,7 +66,7 @@ fn token_verification() {
         }
         checked += 1;
     }
-    assert_eq!(checked, 38, "unexpected token vector count");
+    assert_eq!(checked, 39, "unexpected token vector count");
 }
 
 #[test]

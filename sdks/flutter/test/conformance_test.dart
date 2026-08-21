@@ -9,16 +9,16 @@
 ///
 /// Covers the vectors this package has an implementation for. `jwt-verify`,
 /// `jwks-parse` and `webhook-verify` are server-side primitives this client SDK
-/// does not implement; `membership-has` is implemented here and remains
-/// uncovered, which is a known remaining gap rather than a statement that it
-/// agrees.
+/// does not implement.
 library;
 
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:authowl/authowl.dart';
 import 'package:authowl/src/cookie.dart';
+import 'package:authowl/src/errors.dart';
+import 'package:authowl/src/membership.dart';
+import 'package:authowl/src/publishable_key.dart';
 import 'package:test/test.dart';
 
 Map<String, Object?> _vectors(String name) =>
@@ -73,12 +73,47 @@ void main() {
         // fix for a leaked secret key is to rotate it, not correct a typo.
         expect(
           () => decodePublishableKey(key),
-          throwsA(isA<PublishableKeyException>().having(
-            (e) => e.reason,
-            'reason',
-            reasons[expected['reason']],
-          )),
+          throwsA(
+            isA<PublishableKeyException>().having(
+              (e) => e.reason,
+              'reason',
+              reasons[expected['reason']],
+            ),
+          ),
         );
+      });
+    }
+  });
+
+  group('conformance: membership evaluation', () {
+    final vectors = _vectors('membership-has.json');
+    final hasCases =
+        (vectors['hasCases']! as List).cast<Map<String, Object?>>();
+
+    for (final testCase in hasCases) {
+      test(testCase['name'] as String, () {
+        final membership = Membership.fromClaim(testCase['membership']);
+        final params = testCase['params']! as Map<String, Object?>;
+        final actual = membership?.has(
+              role: params['role'] as String?,
+              permission: params['permission'] as String?,
+              teamId: params['teamId'] as String?,
+            ) ??
+            false;
+        expect(actual, testCase['expect']! as bool);
+      });
+    }
+
+    final permissionCases =
+        (vectors['hasPermissionCases']! as List).cast<Map<String, Object?>>();
+    for (final testCase in permissionCases) {
+      test(testCase['name'] as String, () {
+        final membership = Membership.fromClaim(testCase['membership']);
+        final actual = membership?.hasPermission(
+              testCase['permission']! as String,
+            ) ??
+            false;
+        expect(actual, testCase['expect']! as bool);
       });
     }
   });

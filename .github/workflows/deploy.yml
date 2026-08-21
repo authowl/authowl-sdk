@@ -55,10 +55,6 @@ on:
         description: 'pub.dev: sdks/flutter (pushes the tag that publishes it)'
         type: boolean
         default: true
-      go_version:
-        description: 'Go module version to tag, e.g. 0.1.0 (empty skips the Go SDK)'
-        type: string
-        default: ''
       dist_tag:
         description: 'npm dist-tag'
         type: string
@@ -102,19 +98,10 @@ jobs:
 
       - name: Resolve versions and registry state
         id: plan
-        env:
-          GO_VERSION: ${{ inputs.go_version }}
-          TAGS: ${{ inputs.tags }}
         run: |
           set -euo pipefail
           arguments=(--registry-state --summary-file "$GITHUB_STEP_SUMMARY")
-          if [ -n "$GO_VERSION" ]; then
-            arguments+=(--go-version "$GO_VERSION")
-          fi
           plan=$(node scripts/release/sdk-manifest.mjs "${arguments[@]}")
-          if [ -n "$GO_VERSION" ] && [ "$TAGS" != 'true' ]; then
-            echo '::warning::go_version is set but tags are off - the tag IS the Go release, so nothing will ship'
-          fi
           {
             printf 'plan=%s\n' "$plan"
             printf '%s' "$plan" | jq -r '

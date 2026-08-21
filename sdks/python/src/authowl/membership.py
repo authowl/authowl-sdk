@@ -15,7 +15,7 @@ from typing import Any, Mapping, Sequence
 class Membership:
     """The active-organization membership carried by a verified token."""
 
-    #: The member's canonical role key (owner/admin/member, or a project role).
+    #: The member's primary role key (owner/admin/member, or a project role).
     role: str = ""
     #: Effective permission ids: ``org:sys_*`` system claims plus the operator's
     #: custom ``org:<feature>:<action>`` ids.
@@ -26,6 +26,22 @@ class Membership:
     #: all, which is what a token minted before teams shipped looks like. An
     #: absent claim is never read as "any team".
     teams: tuple[str, ...] | None = None
+    #: Every role the member holds.
+    #:
+    #: ``None`` (not an empty tuple) when the token carries no ``roles`` claim,
+    #: which is what an older AuthOwl token looks like. Role checks then fall
+    #: back to the primary ``role`` rather than reporting no role held.
+    roles: tuple[str, ...] | None = None
+
+    def has_role(self, role: str) -> bool:
+        """Whether the member holds ``role`` as one of their roles.
+
+        When ``roles`` is present it is the only claim consulted. The primary
+        role is used only for tokens minted before the roles claim shipped.
+        """
+        if self.roles is None:
+            return self.role == role
+        return role in self.roles
 
     def has_permission(self, permission: str) -> bool:
         """Whether the permission claim includes ``permission``. Exact match only."""
@@ -56,7 +72,7 @@ class Membership:
         """
         if role is None and permission is None and team_id is None:
             return False
-        if role is not None and self.role != role:
+        if role is not None and not self.has_role(role):
             return False
         if permission is not None and not self.has_permission(permission):
             return False
@@ -82,10 +98,14 @@ class Membership:
         teams: tuple[str, ...] | None = None
         if isinstance(raw_teams, Sequence) and not isinstance(raw_teams, (str, bytes)):
             teams = tuple(entry for entry in raw_teams if isinstance(entry, str))
+        raw_roles = raw.get("roles")
+        roles: tuple[str, ...] | None = None
+        if isinstance(raw_roles, Sequence) and not isinstance(raw_roles, (str, bytes)):
+            roles = tuple(entry for entry in raw_roles if isinstance(entry, str))
 
-        if not role and not permissions and not teams:
+        if not role and not permissions and not teams and not roles:
             return None
-        return cls(role=role, permissions=permissions, teams=teams)
+        return cls(role=role, permissions=permissions, teams=teams, roles=roles)
 
 
 def _as_sequence(value: Any) -> Sequence[Any]:

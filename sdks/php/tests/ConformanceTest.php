@@ -89,6 +89,8 @@ final class ConformanceTest extends TestCase
         }
         self::assertNotNull($verified->membership);
         self::assertSame($case->expect->membership->role, $verified->membership->role);
+        $expectedRoles = $case->expect->membership->roles ?? null;
+        self::assertSame($expectedRoles, $verified->membership->roles);
         self::assertSame($case->expect->membership->permissions, $verified->membership->permissions);
         $expectedTeams = $case->expect->membership->teams ?? null;
         self::assertSame($expectedTeams, $verified->membership->teams);
@@ -181,9 +183,10 @@ final class ConformanceTest extends TestCase
         }
 
         return new Membership(
-            $raw->role ?? '',
-            $raw->permissions ?? [],
-            $raw->teams ?? null,
+            role: $raw->role ?? '',
+            permissions: $raw->permissions ?? [],
+            teams: $raw->teams ?? null,
+            roles: $raw->roles ?? null,
         );
     }
 
