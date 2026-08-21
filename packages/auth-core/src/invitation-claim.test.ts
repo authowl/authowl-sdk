@@ -37,6 +37,41 @@ describe('captureInvitationClaim', () => {
     expect(readInvitationClaim(1_000)).toEqual({ id: 'inv_123', capturedAt: 1_000 });
   });
 
+  it('captures the new-user hint and strips it with the id', () => {
+    visit('?authowl_invitation=inv_123&authowl_hint=new_user&page=2');
+    const claim = captureInvitationClaim();
+    expect(claim).toMatchObject({ id: 'inv_123', recipientHint: 'new_user' });
+    expect(window.location.search).toBe('?page=2');
+  });
+
+  it('ignores a hint value it does not understand', () => {
+    // The parameter is attacker-reachable. Only the one value we defined counts;
+    // anything else is not a hint, and is still stripped rather than left in the
+    // tenant's URL.
+    visit('?authowl_invitation=inv_123&authowl_hint=existing_user');
+    const claim = captureInvitationClaim();
+    expect(claim?.id).toBe('inv_123');
+    expect(claim).not.toHaveProperty('recipientHint');
+    expect(window.location.search).toBe('');
+  });
+
+  it('strips a stray hint that arrived without an invitation', () => {
+    visit('?authowl_hint=new_user&page=2');
+    expect(captureInvitationClaim()).toBeNull();
+    expect(window.location.search).toBe('?page=2');
+  });
+
+  it('reads back a claim stashed before the hint existed', () => {
+    // Absence is a valid claim, not a corrupt one - it must not be discarded.
+    window.localStorage.setItem(
+      'authowl.invitation-claim',
+      JSON.stringify({ id: 'inv_old', capturedAt: Date.now() }),
+    );
+    const claim = readInvitationClaim();
+    expect(claim?.id).toBe('inv_old');
+    expect(claim).not.toHaveProperty('recipientHint');
+  });
+
   it('returns the stashed claim when the URL carries no parameter', () => {
     visit('?authowl_invitation=inv_stashed');
     captureInvitationClaim(1_000);

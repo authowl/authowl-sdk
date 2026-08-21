@@ -10,6 +10,7 @@ import {
   type ConsentStatus,
   type HasParams,
   type InvitationClaim,
+  type InvitationRecipientHint,
   type OrganizationDetails,
   type OrganizationInvitationDetails,
   type OrganizationMembership,
@@ -238,6 +239,31 @@ export type UseOrganizationInvitationResult = {
  * organization's name is available to the person invited and to nobody else,
  * and no pre-authentication call can leak it.
  */
+/**
+ * Whether the invitation this browser is carrying was sent to an address that had
+ * no account, so an operator can land the invitee on sign-UP instead of sign-in.
+ *
+ * Readable BEFORE there is a session, which is the whole point: an invitee
+ * usually has no account, and `getInvitation` is recipient-only so nothing else
+ * can tell you anything about them until they have authenticated.
+ *
+ * `null` means "not told" and never "they have an account" - it covers an
+ * existing account, an AuthOwl that does not send the hint, and an account
+ * created between the invitation and the click. Treat it as a default, not a
+ * fact: sending the invitee to the wrong screen is recoverable, and both screens
+ * already explain that an invitation is pending.
+ *
+ * Read after mount, never during render: the claim lives in `localStorage`,
+ * which does not exist on the server.
+ */
+export function useInvitationRecipientHint(): InvitationRecipientHint | null {
+  const [hint, setHint] = React.useState<InvitationRecipientHint | null>(null);
+  React.useEffect(() => {
+    setHint(readInvitationClaim()?.recipientHint ?? null);
+  }, []);
+  return hint;
+}
+
 export function useOrganizationInvitation(): UseOrganizationInvitationResult {
   const client = useAuthClient();
   const apiRef = React.useRef(client.organization);

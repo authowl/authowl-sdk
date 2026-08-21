@@ -18,6 +18,16 @@ import { localStore, readFrom, writeTo } from './web-storage';
  */
 
 export const INVITATION_QUERY_PARAM = 'authowl_invitation';
+/**
+ * The one hint the engine is allowed to put in an invitation link.
+ *
+ * It exists because the invitee usually has NO account, and the emailed link
+ * lands them on the sign-in screen - the one screen they cannot use. The SDK
+ * cannot work this out for itself: `getInvitation` is recipient-only, so the
+ * invited address is unknowable until there is a session. The engine knows it at
+ * send time, and says only this much.
+ */
+export const INVITATION_HINT_QUERY_PARAM = 'authowl_hint';
 const CLAIM_KEY = 'authowl.invitation-claim';
 
 /**
@@ -28,10 +38,23 @@ const CLAIM_KEY = 'authowl.invitation-claim';
  */
 const CLAIM_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
+/**
+ * The only hint value that exists. There is deliberately no `existing_user`:
+ * absence has to stay ambiguous across an existing account, an older AuthOwl,
+ * and an account created between the invite and the click - so it can never be
+ * read as proof that an address IS registered.
+ */
+export type InvitationRecipientHint = 'new_user';
+
 export type InvitationClaim = {
   id: string;
   /** Epoch milliseconds, for age display and for expiring a forgotten claim. */
   capturedAt: number;
+  /**
+   * Present only when the engine said the invited address had no account. Use it
+   * to land the invitee on sign-UP; never treat its absence as the opposite.
+   */
+  recipientHint?: InvitationRecipientHint;
 };
 
 /** Claims older than this are dropped unread: a month-old link is not a pending intent. */
@@ -54,7 +77,21 @@ export function captureInvitationClaim(now: number = Date.now()): InvitationClai
     return readInvitationClaim(now);
   }
   const requested = url.searchParams.get(INVITATION_QUERY_PARAM);
-  if (requested === null) return readInvitationClaim(now);
+  // The hint is ours and is stripped whether or not it arrived with an id, for
+  // the same reason the id is: leaving our parameters in the tenant's URL is
+  // litter, and one that survives into their analytics or a shared link is worse.
+  const hinted = url.searchParams.get(INVITATION_HINT_QUERY_PARAM);
+  if (hinted !== null) url.searchParams.delete(INVITATION_HINT_QUERY_PARAM);
+  if (requested === null) {
+    if (hinted !== null) {
+      try {
+        window.history.replaceState(window.history.state, '', url.toString());
+      } catch {
+        // Same tolerance as below: a page that refuses history rewriting still works.
+      }
+    }
+    return readInvitationClaim(now);
+  }
   url.searchParams.delete(INVITATION_QUERY_PARAM);
   try {
     window.history.replaceState(window.history.state, '', url.toString());
@@ -62,7 +99,13 @@ export function captureInvitationClaim(now: number = Date.now()): InvitationClai
     // A page that refuses history rewriting still gets the claim below.
   }
   if (!CLAIM_ID_PATTERN.test(requested)) return readInvitationClaim(now);
-  const claim: InvitationClaim = { id: requested, capturedAt: now };
+  // Exact match, not a cast: the parameter is attacker-reachable, and anything
+  // that is not the one value we understand is simply not a hint.
+  const claim: InvitationClaim = {
+    id: requested,
+    capturedAt: now,
+    ...(hinted === 'new_user' ? { recipientHint: 'new_user' as const } : {}),
+  };
   writeTo(localStore(), CLAIM_KEY, JSON.stringify(claim));
   return claim;
 }
@@ -82,7 +125,7 @@ export function readInvitationClaim(now: number = Date.now()): InvitationClaim |
     clearInvitationClaim();
     return null;
   }
-  const { id, capturedAt } = parsed as Partial<InvitationClaim>;
+  const { id, capturedAt, recipientHint } = parsed as Partial<InvitationClaim>;
   if (typeof id !== 'string' || !CLAIM_ID_PATTERN.test(id) || typeof capturedAt !== 'number') {
     clearInvitationClaim();
     return null;
@@ -93,7 +136,14 @@ export function readInvitationClaim(now: number = Date.now()): InvitationClaim |
     clearInvitationClaim();
     return null;
   }
-  return { id, capturedAt };
+  // A claim stashed before the hint existed simply has none - that is a valid
+  // claim, not a corrupt one, so it must not be discarded here.
+  // Anything other than the one value we understand is not a hint. A claim
+  // stashed before the hint existed has none at all, which is a valid claim
+  // rather than a corrupt one, so it must not be discarded here.
+  return recipientHint === 'new_user'
+    ? { id, capturedAt, recipientHint }
+    : { id, capturedAt };
 }
 
 export function clearInvitationClaim(): void {

@@ -18,6 +18,7 @@ export {
   useSession,
   useUser,
   useOrganization,
+  useInvitationRecipientHint,
   useOrganizationInvitation,
   useSignIn,
   useSignUp,
