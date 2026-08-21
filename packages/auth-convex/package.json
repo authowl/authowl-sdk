@@ -1,6 +1,6 @@
 {
   "name": "@authowl/convex",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Convex integration for AuthOwl: ConvexProviderWithAuthOwl, a drop-in replacement for ConvexProviderWithClerk.",
   "license": "MIT",
   "publishConfig": {
