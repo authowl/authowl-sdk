@@ -174,11 +174,24 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // Third raise on the React row in two days. The size sweep queued on 2026-08-07
 // is now well overdue, and this entry is the strongest argument yet for doing
 // it: the row has grown 75->80 while the sweep stayed queued.
+//
+// React payload sweep (2026-08-22) lowers React 80->72. A source-level esbuild
+// metafile showed qrcode-generator as the largest avoidable item in the initial
+// entry: 20.4kb minified before gzip, even though it is used only after a user
+// starts TOTP enrollment. QrCode now loads that package-owned encoder chunk on
+// demand. The otpauth value is still processed entirely in the browser and the
+// manual key remains visible while the chunk loads or if it fails.
+//
+// The measured initial payload drops from 78.8kb to 71.1kb gzip. The 72kb row
+// keeps roughly 0.9kb of explicit headroom and pays back every increase since
+// the original 73kb ceiling. The on-demand QR chunk is intentionally outside
+// this initial-payload row, just like Shield and TeamsSection; esbuild still
+// builds and resolves it, so the dependency cannot disappear unnoticed.
 
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 80,
+    maxGzipKb: 72,
     label: '@authowl/react (provider + hooks + components)',
   },
   {
