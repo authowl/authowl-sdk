@@ -10,14 +10,21 @@ verifies AuthOwl's JWTs statelessly against your project's published JWKS and
 makes **zero** AuthOwl calls at request time.
 
 ```bash
-pnpm add @authowl/convex @authowl/react convex
+pnpm add @authowl/convex@^0.1.5 @authowl/react@^0.21.1 convex
 ```
+
+These minimum AuthOwl versions include the React StrictMode session-remount fix.
 
 ## 1. Enable the JWT issuer and create the Convex template
 
-In the project dashboard, enable the JWT issuer, then open **Sessions → JWT
-templates** and create the `convex` preset. The AuthOwl adapter requests this
-named template and keeps its cache separate from every other backend token.
+In the project dashboard, open **Configure -> JWT templates**, enable the
+environment's JWT issuer, and create the **Convex** preset with the template
+name `convex`. The AuthOwl adapter requests this exact name and keeps its cache
+separate from every other backend token.
+
+Under **Configure -> Domains**, allow the exact application origin. The
+publishable key must come from the same AuthOwl project whose issuer and
+audience you configure in Convex.
 
 Your project's public config carries the verifier values in its `jwtIssuer`
 block: `{ issuer, jwksUrl, aud }`.
@@ -61,6 +68,10 @@ Convex functions then see the AuthOwl user:
 const identity = await ctx.auth.getUserIdentity();
 // identity.subject = AuthOwl user id; identity.email, identity.name, …
 ```
+
+On a fresh Convex deployment, link it first, set `AUTHOWL_ISSUER_URL` and
+`AUTHOWL_PROJECT_ID`, then deploy the functions again. The first deployment may
+stop after linking because those server variables do not exist yet.
 
 Migrating from Clerk? Replace `ConvexProviderWithClerk` with
 `ConvexProviderWithAuthOwl` and Clerk's `useAuth` with `@authowl/react`'s —

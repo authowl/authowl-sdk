@@ -11,10 +11,12 @@ export function UserButton() {
   const { signOut } = useSignOut();
   const [open, setOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
+  const [failedImage, setFailedImage] = React.useState<string | null>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   if (!isLoaded || !user) return null;
   const identity = user.email ?? user.phoneNumber ?? user.name ?? '?';
+  const image = user.image ?? null;
 
   return (
     <div className="ba-user-button" data-testid="user-button">
@@ -24,8 +26,14 @@ export function UserButton() {
         aria-label={t('userButton.openMenuAria')}
         onClick={() => setOpen((v) => !v)}
       >
-        {user.image ? (
-          <img className="ba-avatar" src={user.image} alt="" />
+        {image && failedImage !== image ? (
+          <img
+            className="ba-avatar"
+            src={image}
+            alt=""
+            referrerPolicy="no-referrer"
+            onError={() => setFailedImage(image)}
+          />
         ) : (
           <span className="ba-avatar ba-avatar-fallback">{identity[0]?.toUpperCase()}</span>
         )}

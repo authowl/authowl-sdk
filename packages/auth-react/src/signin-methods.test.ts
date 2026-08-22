@@ -9,7 +9,7 @@ function cfg(partial: Partial<PublicConfig>): PublicConfig {
 }
 
 describe('resolveSignInMethods', () => {
-  it('falls back to password when config is unavailable (null)', () => {
+  it('provides a structural password default before config is available', () => {
     const plan = resolveSignInMethods(null);
     expect(plan.password).toBe(true);
     expect(plan.magicLink).toBe(false);

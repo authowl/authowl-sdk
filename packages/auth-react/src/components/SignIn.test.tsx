@@ -28,6 +28,8 @@ const mocks = vi.hoisted(() => ({
     }> => ({ data: { redirect: true, url: 'https://idp.test/auth' }, error: null }),
   ),
   serverError: vi.fn((_error: unknown, fallback: string) => fallback),
+  configError: false,
+  retryPublicConfig: vi.fn(),
   needsMfaEnrollment: false,
   // What the uncached confirmation read returns. `pendingMfaEnrollment: true`
   // is the genuine required-MFA hold; false is the stale-cookie case.
@@ -46,7 +48,12 @@ vi.mock('../hooks', () => ({
   }),
   useSession: () => ({ refetch: vi.fn() }),
   useUser: () => ({ needsMfaEnrollment: mocks.needsMfaEnrollment }),
-  usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
+  usePublicConfig: () => ({
+    config: mocks.config,
+    isLoading: false,
+    isError: mocks.configError,
+    retry: mocks.retryPublicConfig,
+  }),
   useSignIn: () => ({
     signIn: vi.fn(),
     signInUsername: mocks.signInUsername,
@@ -80,6 +87,7 @@ import { SignIn } from './SignIn';
 describe('SignIn under required MFA', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.configError = false;
     mocks.needsMfaEnrollment = false;
     mocks.getSession.mockResolvedValue({
       data: { session: { pendingMfaEnrollment: true } },
@@ -95,6 +103,18 @@ describe('SignIn under required MFA', () => {
   });
 
   afterEach(cleanup);
+
+  it('refuses to invent a password form when public config is unavailable', () => {
+    mocks.configError = true;
+    render(<SignIn />);
+
+    expect(screen.getByTestId('authowl-config-error')).toBeTruthy();
+    expect(screen.queryByTestId('signin-form')).toBeNull();
+    expect(screen.queryByLabelText('common.passwordLabel')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'publicConfig.retry' }));
+    expect(mocks.retryPublicConfig).toHaveBeenCalledOnce();
+  });
 
   // The lockout this branch exists to end: on a project with "Require MFA for
   // everyone" the sign-in SUCCEEDS but the session is held at enrolment, which
