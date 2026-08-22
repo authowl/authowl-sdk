@@ -813,6 +813,45 @@ describe('organization client', () => {
     }
   });
 
+  it('pins the member user name and email contract', async () => {
+    const detailsWith = (user: Record<string, unknown>) => ({
+      ...organizationWire(),
+      members: [{ ...memberWire(), user }],
+      invitations: [],
+    });
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json(detailsWith({
+        id: 'user-1',
+        name: 'Phone member',
+        email: null,
+      })))
+      .mockResolvedValueOnce(Response.json(detailsWith({
+        id: 'user-1',
+        name: '',
+        email: 'member@example.test',
+      })));
+    const organization = clientWith(fetchImpl).organization;
+
+    const withheld = await organization.get({ organizationId: 'org-1' });
+    const disclosed = await organization.get({ organizationId: 'org-1' });
+
+    expect(withheld.error).toBeNull();
+    expect(withheld.data?.members[0]?.user?.email).toBeNull();
+    expect(disclosed.error).toBeNull();
+    expect(disclosed.data?.members[0]?.user).toMatchObject({
+      name: '',
+      email: 'member@example.test',
+    });
+
+    const decodedEmail = withheld.data!.members[0]!.user!.email;
+    const nullableEmail: string | null = decodedEmail;
+    void nullableEmail;
+    // @ts-expect-error A member's email can be withheld by the server.
+    const requiredEmail: string = decodedEmail;
+    void requiredEmail;
+  });
+
   it('accepts the empty, null, and absent display strings the platform emits', async () => {
     // The SDK is its OWN producer of the empty display name: <SignUp> posts
     // `name: ''` under the default capability config, and the store column is
