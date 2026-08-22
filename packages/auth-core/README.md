@@ -19,13 +19,9 @@ pnpm add @authowl/core
 ### 2026-08-22 — organization member email is nullable
 
 `OrganizationMemberUser.email` is `string | null`. It was widened from `string`
-in **0.16.0**, a minor release.
-
-The type deliberately runs ahead of the wire. A phone-only user has a synthetic
-address, and the session response already redacts it to `null` — but the
-organization endpoints do not redact yet, so today they still return the
-synthetic string. Code written against `string` will therefore compile against
-`null` the moment that redaction reaches them.
+in **0.16.0**, a minor release, so servers can withhold internal placeholder
+addresses without breaking decoding. Do not assume every organization member's
+address is visible to the current caller.
 
 Before using the field as a string, provide a fallback
 (`const email = user.email ?? '';`) or guard against `null`.
