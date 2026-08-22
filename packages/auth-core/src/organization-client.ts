@@ -261,7 +261,9 @@ export interface ListOrganizationInvitationsOptions {
   organizationId?: string;
 }
 
+/** Options for resolving an invitation addressed to the signed-in session's own email. */
 export interface GetOrganizationInvitationOptions {
+  /** Invitation id, resolved only when the signed-in session's own email is the recipient. */
   id: string;
 }
 
@@ -427,6 +429,17 @@ export interface OrganizationClient {
   listUserInvitations(
     fetchOptions?: ActionFetchOptions,
   ): Promise<AuthActionResult<OrganizationUserInvitation[]>>;
+  /**
+   * Resolves an invitation only when its recipient is the signed-in session's own email.
+   *
+   * This recipient-only behaviour is a deliberate access control, not a bug. An inviter
+   * listing invitations they sent should call `listInvitations({ organizationId })`
+   * instead - `getInvitation` will not resolve one for them, because they are not its
+   * recipient.
+   *
+   * Depending on the project's email-verification policy, being the recipient may not be
+   * sufficient on its own.
+   */
   getInvitation(
     params: GetOrganizationInvitationOptions,
     fetchOptions?: ActionFetchOptions,
