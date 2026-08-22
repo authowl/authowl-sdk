@@ -21,6 +21,10 @@ export const en = {
   'common.continue': 'Continue',
   'common.error.passwordTooShort': 'Password must be at least {min} characters.',
 
+  'publicConfig.error.title': 'Authentication is temporarily unavailable',
+  'publicConfig.error.description': "We couldn't load this app's sign-in settings. Check your connection and try again.",
+  'publicConfig.retry': 'Try again',
+
   'signIn.title': 'Sign in',
   'signIn.forgotTitle': 'Reset your password',
   'signIn.submit': 'Sign in',

@@ -35,15 +35,18 @@ export type UsePublicConfigResult = {
   config: PublicConfig | null;
   isLoading: boolean;
   isError: boolean;
+  /** Retry the project configuration request without remounting the provider. */
+  retry: () => void;
 };
 
 /** The project's fetched public config (enabled methods, social providers, branding). */
 export function usePublicConfig(): UsePublicConfigResult {
-  const { config, configState } = useAuthOwlContext();
+  const { config, configState, retryPublicConfig } = useAuthOwlContext();
   return {
     config,
     isLoading: configState === 'loading',
     isError: configState === 'error',
+    retry: retryPublicConfig,
   };
 }
 

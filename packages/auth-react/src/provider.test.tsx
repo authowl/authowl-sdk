@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import * as React from 'react';
 import { renderToString } from 'react-dom/server';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthOwlProvider } from './provider';
-import { useSession } from './hooks';
+import { usePublicConfig, useSession } from './hooks';
+import { makePublicConfig } from './test-fixtures';
 
 const PK = 'pk_live_11111111-1111-1111-1111-111111111111_abcdefghij0123456789';
 const API_URL = 'https://auth.example.com';
@@ -59,5 +60,49 @@ describe('AuthOwlProvider brand ramp emission', () => {
     );
     expect(html).toContain('<span>pending</span>');
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('lets a failed public-config request be retried without remounting the provider', async () => {
+    const projectId = '11111111-1111-1111-1111-111111111111';
+    const config = makePublicConfig({
+      environmentId: projectId,
+      environmentType: 'production',
+      authBaseUrl: `${API_URL}/api/projects/${projectId}/auth`,
+    });
+    let publicConfigCalls = 0;
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      if (!String(input).endsWith('/public-config')) {
+        return new Response(JSON.stringify(null), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      publicConfigCalls += 1;
+      if (publicConfigCalls === 1) throw new TypeError('network unavailable');
+      return new Response(JSON.stringify(config), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+
+    function ConfigProbe() {
+      const { config: loaded, isLoading, isError, retry } = usePublicConfig();
+      if (isLoading) return <span>loading</span>;
+      if (isError) return <button onClick={retry}>retry</button>;
+      return <span>{loaded?.environmentId}</span>;
+    }
+
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    render(
+      <AuthOwlProvider publishableKey={PK} apiUrl={API_URL} fetch={fetchSpy}>
+        <ConfigProbe />
+      </AuthOwlProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'retry' })).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'retry' }));
+    await waitFor(() => expect(screen.getByText(projectId)).toBeTruthy());
+    expect(publicConfigCalls).toBe(2);
+    warning.mockRestore();
   });
 });

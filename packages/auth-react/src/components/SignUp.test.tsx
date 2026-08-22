@@ -51,13 +51,16 @@ const mocks = vi.hoisted(() => ({
   joinWaitlist: vi.fn(async () => ({ data: { accepted: true }, error: null })),
   sendVerificationCode: vi.fn(async () => ({ data: { success: true }, error: null })),
   verifyEmailCode: vi.fn(async () => ({ data: { status: true, user: {} }, error: null })),
+  configError: false,
+  retryPublicConfig: vi.fn(),
 }));
 
 vi.mock('../hooks', () => ({
   usePublicConfig: () => ({
     config: mocks.config,
     isLoading: false,
-    isError: false,
+    isError: mocks.configError,
+    retry: mocks.retryPublicConfig,
   }),
   useSignUp: () => ({ signUp: mocks.signUp }),
   useWaitlist: () => ({ join: mocks.joinWaitlist }),
@@ -85,6 +88,7 @@ import { SignUp } from './SignUp';
 describe('SignUp passwordless passkey flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.configError = false;
     mocks.signUp.mockResolvedValue({
       data: { sessionCreated: true },
       error: null,
@@ -104,6 +108,17 @@ describe('SignUp passwordless passkey flow', () => {
   });
 
   afterEach(cleanup);
+
+  it('refuses to render a guessed sign-up flow when public config is unavailable', () => {
+    mocks.configError = true;
+    render(<SignUp />);
+
+    expect(screen.getByTestId('authowl-config-error')).toBeTruthy();
+    expect(screen.queryByTestId('signup-form')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'publicConfig.retry' }));
+    expect(mocks.retryPublicConfig).toHaveBeenCalledOnce();
+  });
 
   it('proves the email, creates the passwordless session, and enrolls a passkey', async () => {
     const onSignedUp = vi.fn();

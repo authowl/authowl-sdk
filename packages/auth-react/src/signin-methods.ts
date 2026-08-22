@@ -76,9 +76,9 @@ export function emailAutocomplete(isPasskeyHost: boolean): string {
 }
 
 /**
- * Resolve the sign-in surfaces from a project's public config. On a config error
- * (`config` null) fall back to password - the safe default that always renders -
- * rather than showing nothing.
+ * Resolve the sign-in surfaces from a project's public config. A null config
+ * gets a structural password default for callers that resolve before the fetch
+ * settles; the drop-in components fail closed when the fetch itself errors.
  */
 /**
  * Can a WebAuthn ceremony started on `pageHost` even reach this project's auth

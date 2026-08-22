@@ -15,6 +15,7 @@ import { Waitlist } from './Waitlist';
 import { resolveProjectCapabilities } from '../project-capabilities';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { InvitationBanner } from './InvitationBanner';
+import { PublicConfigError } from './PublicConfigError';
 
 export type SignUpProps = {
   redirectTo?: string;
@@ -47,7 +48,7 @@ export function SignUp({
   const t = useT();
   const toServerError = useServerError();
   const { signUp } = useSignUp();
-  const { config, isLoading } = usePublicConfig();
+  const { config, isLoading, isError } = usePublicConfig();
   const authChallenge = useAuthChallenge();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -142,6 +143,10 @@ export function SignUp({
         <div className="ba-skeleton" />
       </div>
     );
+  }
+
+  if (isError) {
+    return <PublicConfigError showBadge={showBadge} showBranding={showBranding} />;
   }
 
   if (config?.signUp?.mode === 'waitlist') {

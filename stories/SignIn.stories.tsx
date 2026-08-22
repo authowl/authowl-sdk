@@ -33,6 +33,16 @@ export const Default: Story = {
   },
 };
 
+export const ConfigurationUnavailable: Story = {
+  parameters: { authowl: { signedIn: false, configUnavailable: true } },
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    const canvas = within(canvasElement);
+    await expect(canvas.findByTestId('authowl-config-error')).resolves.toBeTruthy();
+    expect(canvas.queryByTestId('signin-form')).toBeNull();
+  },
+};
+
 // Inline "forgot password" step: reachable once a reset page is configured. The
 // switch is pure client state (no network), so it renders deterministically.
 export const ForgotPassword: Story = {

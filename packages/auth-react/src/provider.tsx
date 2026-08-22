@@ -16,13 +16,11 @@ import {
 import { resolveAppearance } from './appearance';
 import { InvitationPrompt } from './components/InvitationPrompt';
 
-// Dev-only, once-per-project warning for the silent config-failure fallback.
-// When public-config can't be fetched, the drop-ins degrade to a password-only
-// form regardless of the project's real methods (signin-methods.ts), which
-// dead-ends if password sign-in isn't actually enabled. There was previously no
-// signal at all. The `process.env.NODE_ENV` guard is inlined at the call site so
-// consumer bundlers (Next/Vite/webpack) dead-code-eliminate this entirely from
-// production - zero bytes, zero noise. The Set dedupes repeated mounts/retries.
+// Dev-only, once-per-project warning for public-config failures. The drop-ins
+// fail closed with retry UI because inventing a password form can advertise a
+// method the project disabled. The `process.env.NODE_ENV` guard is inlined at
+// the call site so consumer bundlers dead-code-eliminate the diagnostic from
+// production. The Set dedupes repeated mounts/retries.
 const warnedConfigProjects = new Set<string>();
 function warnPublicConfigFailed(resolved: ResolvedAuthConfig, error: unknown): void {
   let origin = resolved.apiUrl;
@@ -37,11 +35,10 @@ function warnPublicConfigFailed(resolved: ResolvedAuthConfig, error: unknown): v
   const reason = error instanceof Error ? error.message : String(error);
   console.warn(
     `[AuthOwl] Could not load this project's public config from ${origin} (${reason}). ` +
-      'Falling back to a password-only sign-in form, regardless of the methods this ' +
-      'project actually enabled. Likely causes: the API is unreachable, `apiUrl` is ' +
-      'wrong, or the publishable key points at a missing/mismatched project. If password ' +
-      'sign-in is not enabled for this project, the form will dead-end at submit - check ' +
-      '`apiUrl` and `publishableKey` on <AuthOwlProvider>. (This warning is dev-only.)',
+      'Authentication UI is unavailable until the request succeeds. Likely causes: the ' +
+      'API is unreachable, `apiUrl` is wrong, or the publishable key points at a ' +
+      'missing/mismatched project. Check `apiUrl` and `publishableKey` on ' +
+      '<AuthOwlProvider>. (This warning is dev-only.)',
   );
 }
 
@@ -60,6 +57,7 @@ type Ctx = {
   /** Project public config (methods, social providers, branding). */
   config: PublicConfig | null;
   configState: ConfigState;
+  retryPublicConfig: () => void;
   /** Resolved component locale (drives every t() call and the dir attribute). */
   locale: Locale;
 };
@@ -143,10 +141,12 @@ export function AuthOwlProvider({
 
   const [config, setConfig] = React.useState<PublicConfig | null>(null);
   const [configState, setConfigState] = React.useState<ConfigState>('loading');
+  const [configAttempt, setConfigAttempt] = React.useState(0);
+  const retryPublicConfig = React.useCallback(() => setConfigAttempt((attempt) => attempt + 1), []);
 
-  // Fetch the project's public config once per resolved config. On failure the
-  // components fall back to a sensible default (password), so a config hiccup
-  // never bricks sign-in.
+  // Fetch the project's public config once per resolved config or explicit
+  // retry. Authentication surfaces fail closed while this request is in error:
+  // no guessed method is safe because it may not be enabled for the project.
   React.useEffect(() => {
     let active = true;
     setConfigState('loading');
@@ -165,7 +165,7 @@ export function AuthOwlProvider({
     return () => {
       active = false;
     };
-  }, [resolved]);
+  }, [resolved, configAttempt]);
 
   const merged = resolveAppearance(appearance, config);
 
@@ -189,8 +189,8 @@ export function AuthOwlProvider({
   }, []);
 
   const ctxValue = React.useMemo<Ctx>(
-    () => ({ client, appearance, config, configState, locale }),
-    [client, appearance, config, configState, locale],
+    () => ({ client, appearance, config, configState, retryPublicConfig, locale }),
+    [client, appearance, config, configState, retryPublicConfig, locale],
   );
 
   return (

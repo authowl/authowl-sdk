@@ -20,6 +20,7 @@ import { AUTH_CHALLENGE_ACTIONS, useAuthChallenge } from './AuthChallenge';
 import { FormError } from './FormError';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { InvitationBanner } from './InvitationBanner';
+import { PublicConfigError } from './PublicConfigError';
 
 export type SignInProps = {
   redirectTo?: string;
@@ -84,8 +85,9 @@ export function SignIn({
   const mfaEnrolment = useConfirmedMfaPending('clear');
   const emailRef = React.useRef<HTMLInputElement>(null);
 
-  // Zero-config: render exactly what the project enabled (falls back to password
-  // on a config error, the safe default). Resolution is a pure, tested helper.
+  // Zero-config: render exactly what the project enabled. Resolution is a pure,
+  // tested helper. A failed request returns the fail-closed UI below, so this
+  // structural null default is never presented as real project configuration.
   // The page host decides whether a passkey ceremony is reachable at all (see
   // `passkeyReachableFrom`), so it has to come from the render environment.
   const plan = resolveSignInMethods(
@@ -111,6 +113,10 @@ export function SignIn({
         <div className="ba-skeleton" />
       </div>
     );
+  }
+
+  if (isError) {
+    return <PublicConfigError showBadge={showBadge} showBranding={showBranding} />;
   }
 
   // Required-MFA enrolment, the OTHER way a password sign-in can succeed without
@@ -314,17 +320,6 @@ export function SignIn({
       {branding}
       <h2 className="ba-title">{t('signIn.title')}</h2>
       <InvitationBanner />
-      {/* Dev-only: make the silent config-failure fallback visible in the UI too
-          (not just the console warning), so a developer isn't left wondering why
-          they see a bare password form. Stripped from production bundles via the
-          NODE_ENV guard, so it's never shown to end users. */}
-      {process.env.NODE_ENV !== 'production' && isError && (
-        <p className="ba-muted" data-testid="signin-dev-config-notice">
-          AuthOwl (dev): couldn&apos;t load this project&apos;s config, so this is a
-          password-only fallback that may not match the project&apos;s enabled sign-in
-          methods. Check apiUrl / publishableKey; see the console for details.
-        </p>
-      )}
       <SocialButtons providers={plan.social} callbackURL={redirectTo} />
       {showDivider && <div className="ba-divider">{t('common.orDivider')}</div>}
       {hasCredentialForm && (

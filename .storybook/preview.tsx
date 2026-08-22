@@ -37,6 +37,7 @@ const preview: Preview = {
       const dark = context.globals.theme === 'dark';
       const signedIn = context.parameters.authowl?.signedIn !== false;
       const consentRequired = context.parameters.authowl?.consentRequired === true;
+      const configUnavailable = context.parameters.authowl?.configUnavailable === true;
       const primaryColor = typeof context.parameters.authowl?.primaryColor === 'string'
         ? context.parameters.authowl.primaryColor
         : undefined;
@@ -46,6 +47,7 @@ const preview: Preview = {
           dark={dark}
           signedIn={signedIn}
           consentRequired={consentRequired}
+          configUnavailable={configUnavailable}
           primaryColor={primaryColor}
         >
           <main

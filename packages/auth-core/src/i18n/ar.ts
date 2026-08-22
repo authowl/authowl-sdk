@@ -21,6 +21,10 @@ export const ar: Record<keyof typeof en, string> = {
   'common.continue': 'متابعة',
   'common.error.passwordTooShort': 'يجب ألا تقل كلمة المرور عن {min} أحرف.',
 
+  'publicConfig.error.title': 'المصادقة غير متاحة مؤقتًا',
+  'publicConfig.error.description': 'تعذر تحميل إعدادات تسجيل الدخول لهذا التطبيق. تحقق من اتصالك وحاول مرة أخرى.',
+  'publicConfig.retry': 'حاول مرة أخرى',
+
   'signIn.title': 'تسجيل الدخول',
   'signIn.forgotTitle': 'إعادة تعيين كلمة المرور',
   'signIn.submit': 'تسجيل الدخول',

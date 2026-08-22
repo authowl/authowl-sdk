@@ -60,11 +60,13 @@ function createPreviewFetch(
   signedIn: boolean,
   consentRequired: boolean,
   primaryColor: string,
+  configUnavailable: boolean,
 ): typeof fetch {
   return async (input: RequestInfo | URL): Promise<Response> => {
     const url = new URL(String(input));
     const path = url.pathname;
     if (path.endsWith('/public-config')) {
+      if (configUnavailable) throw new TypeError('preview public config unavailable');
       return Response.json({
         applicationId: '22222222-2222-4222-8222-222222222222',
         environmentId: '11111111-1111-1111-1111-111111111111',
@@ -128,10 +130,10 @@ function createPreviewFetch(
   };
 }
 
-export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; children: React.ReactNode }) {
+export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; children: React.ReactNode }) {
   const previewFetch = React.useMemo(
-    () => createPreviewFetch(signedIn, consentRequired, primaryColor),
-    [consentRequired, primaryColor, signedIn],
+    () => createPreviewFetch(signedIn, consentRequired, primaryColor, configUnavailable),
+    [configUnavailable, consentRequired, primaryColor, signedIn],
   );
   return (
     <AuthOwlProvider
