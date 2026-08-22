@@ -1,6 +1,6 @@
 {
   "name": "authowl",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "AuthOwl CLI for browser login and safe application detection.",
   "license": "MIT",
   "publishConfig": {

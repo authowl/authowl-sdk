@@ -1,6 +1,6 @@
 {
   "name": "@authowl/next",
-  "version": "0.2.21",
+  "version": "0.2.22",
   "description": "Next.js (App Router) server helpers for AuthOwl, the multi-tenant auth SaaS.",
   "license": "MIT",
   "publishConfig": {
