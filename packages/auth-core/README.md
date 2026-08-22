@@ -14,6 +14,18 @@ directly.
 pnpm add @authowl/core
 ```
 
+## Upgrade notes
+
+### 2026-08-22 — organization member email is nullable
+
+`OrganizationMemberUser.email` is `string | null`. It was widened from `string`
+in **0.16.0**, a minor release, so servers can withhold internal placeholder
+addresses without breaking decoding. Do not assume every organization member's
+address is visible to the current caller.
+
+Before using the field as a string, provide a fallback
+(`const email = user.email ?? '';`) or guard against `null`.
+
 ## Framework-neutral session state
 
 Core has no React dependency. It exposes a standard external store for custom
