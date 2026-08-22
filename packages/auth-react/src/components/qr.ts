@@ -9,9 +9,9 @@ export type QrMatrix = {
 
 /**
  * Encode `value` as a QR matrix and flatten the dark modules into one SVG path.
- * Pure (the encoder is bundled, so nothing is fetched - the TOTP secret never
- * leaves the page). Returns null if the value can't be encoded (e.g. too long),
- * so the caller can fall back to manual entry.
+ * Pure once its on-demand module has loaded: the TOTP secret is encoded locally
+ * and never leaves the page. Returns null if the value cannot be encoded (for
+ * example, when it is too long), so the caller can fall back to manual entry.
  */
 export function qrPath(value: string): QrMatrix | null {
   if (!value) return null;
