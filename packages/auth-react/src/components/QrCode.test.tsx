@@ -11,14 +11,12 @@ import { QrCode } from './QrCode';
 
 afterEach(cleanup);
 
+const totpUri =
+  'otpauth://totp/Acme:a@b.co?secret=JBSWY3DPEHPK3PXP&issuer=Acme';
+
 describe('QrCode', () => {
   it('loads the local encoder on demand and renders an accessible SVG', async () => {
-    render(
-      <QrCode
-        value="otpauth://totp/Acme:a@b.co?secret=JBSWY3DPEHPK3PXP&issuer=Acme"
-        size={180}
-      />,
-    );
+    render(<QrCode value={totpUri} size={180} />);
 
     expect(screen.queryByRole('img')).toBeNull();
     const image = await screen.findByRole('img', { name: 'qr.ariaLabel' });
@@ -28,9 +26,7 @@ describe('QrCode', () => {
   });
 
   it('stays empty for a value the encoder cannot render', async () => {
-    const { container, rerender } = render(
-      <QrCode value="otpauth://totp/Acme:a@b.co?secret=JBSWY3DPEHPK3PXP&issuer=Acme" />,
-    );
+    const { container, rerender } = render(<QrCode value={totpUri} />);
     await screen.findByRole('img');
     rerender(<QrCode value="" />);
 
