@@ -184,9 +184,13 @@ describe('useAuthChallenge', () => {
 
     render(<Harness action="auth_signin" request={request} />);
 
-    expect(screen.getByTestId('auth-challenge').querySelector('[role="status"]')?.textContent).toBe(
+    // Visible, not announced-only: an unrenderable provider is permanent for this
+    // deployment, so a sighted user must see which one rather than being told to
+    // "try again" at a condition no retry can fix.
+    expect(screen.getByTestId('auth-challenge-unsupported').textContent).toBe(
       'authChallenge.error.unsupportedProvider:future-captcha',
     );
+    expect(screen.getByTestId('auth-challenge-unsupported').getAttribute('role')).toBe('alert');
     fireEvent.click(screen.getByRole('button', { name: 'run' }));
 
     await waitFor(() => expect(screen.getByText('BOT_CHALLENGE_FAILED')).toBeTruthy());

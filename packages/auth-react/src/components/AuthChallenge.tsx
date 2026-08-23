@@ -4,6 +4,7 @@ import type { ActionFetchOptions, AuthActionResult, AuthClientError } from '@aut
 import { usePublicConfig } from '../hooks';
 import { useT } from '../i18n';
 import { loadCaptcha } from './captcha-loader';
+import { FormError } from './FormError';
 import {
   captchaAdapterFor,
   type CaptchaAdapter,
@@ -159,15 +160,27 @@ export function useAuthChallenge() {
   const control = captcha ? (
     <div className="ba-auth-challenge" data-testid="auth-challenge">
       {adapter ? <div className="ba-turnstile" ref={container} /> : null}
-      <p className="ba-sr-only" role="status" aria-live="polite">
-        {unavailableProvider
-          ? t('authChallenge.error.unsupportedProvider', { provider: unavailableProvider })
-          : status === 'checking'
-          ? t('authChallenge.checking')
-          : status === 'failed'
-            ? t('authChallenge.error.failed')
-            : ''}
-      </p>
+      {/*
+        A provider this build cannot render is PERMANENT for this deployment, so
+        it is shown rather than announced only to assistive technology. The
+        generic failure below stays visually hidden because it accompanies a
+        retryable submit error the form already displays - telling a sighted user
+        to "try again" for a condition no retry can fix would be worse than
+        saying nothing.
+      */}
+      {unavailableProvider ? (
+        <FormError data-testid="auth-challenge-unsupported">
+          {t('authChallenge.error.unsupportedProvider', { provider: unavailableProvider })}
+        </FormError>
+      ) : (
+        <p className="ba-sr-only" role="status" aria-live="polite">
+          {status === 'checking'
+            ? t('authChallenge.checking')
+            : status === 'failed'
+              ? t('authChallenge.error.failed')
+              : ''}
+        </p>
+      )}
     </div>
   ) : null;
 

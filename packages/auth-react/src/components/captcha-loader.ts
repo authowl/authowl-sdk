@@ -6,8 +6,24 @@ const GLOBAL_POLL_INTERVAL_MS = 25;
 
 const loaders = new Map<string, Promise<CaptchaApi>>();
 
+/**
+ * The provider's API, but only once it can actually be used.
+ *
+ * Presence of the global is NOT readiness. reCAPTCHA's `api.js` is a small shim
+ * that synchronously publishes `window.grecaptcha = { ready }` and then fetches
+ * the real implementation from another host - so at the script's load event the
+ * global exists, is truthy, and has no `render`. Resolving on presence hands the
+ * caller that stub, `render` throws, and the first challenge of every page load
+ * fails while a retry succeeds because the object has since been filled in.
+ *
+ * `render` is the method every adapter calls first, so its presence is the
+ * readiness signal. Checked here rather than at the poll alone: this is also the
+ * fast path at the top of `loadCaptcha`, and a retry would otherwise take it and
+ * skip polling entirely.
+ */
 function providerGlobal(adapter: CaptchaAdapter): CaptchaApi | undefined {
-  return (window as unknown as Record<string, CaptchaApi | undefined>)[adapter.globalName];
+  const api = (window as unknown as Record<string, CaptchaApi | undefined>)[adapter.globalName];
+  return typeof api?.render === 'function' ? api : undefined;
 }
 
 /** Load one provider script once, with a retryable cache scoped to its URL. */

@@ -61,6 +61,14 @@ export type CaptchaAdapter = {
   teardown(api: CaptchaApi, widgetId: CaptchaWidgetId): void;
 };
 
+/** Resolve Turnstile's 'auto' for providers that only understand light|dark. */
+function preferredTheme(): 'light' | 'dark' {
+  return typeof window !== 'undefined'
+    && window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
+}
+
 function teardown(api: CaptchaApi, widgetId: CaptchaWidgetId): void {
   if (api.remove) {
     try {
@@ -99,7 +107,10 @@ export const CAPTCHA_ADAPTERS: Record<CaptchaProviderId, CaptchaAdapter> = {
     label: 'hCaptcha',
     invisibleRenderOptions: ({ siteKey, theme }) => ({
       sitekey: siteKey,
-      theme,
+      // 'auto' is Turnstile vocabulary. hCaptcha and reCAPTCHA take light|dark
+      // only and silently fall back to light on anything else, which reads badly
+      // in a dark application.
+      theme: theme === 'auto' ? preferredTheme() : theme,
       size: 'invisible',
     }),
     teardown,
@@ -110,7 +121,10 @@ export const CAPTCHA_ADAPTERS: Record<CaptchaProviderId, CaptchaAdapter> = {
     label: 'reCAPTCHA',
     invisibleRenderOptions: ({ siteKey, theme }) => ({
       sitekey: siteKey,
-      theme,
+      // 'auto' is Turnstile vocabulary. hCaptcha and reCAPTCHA take light|dark
+      // only and silently fall back to light on anything else, which reads badly
+      // in a dark application.
+      theme: theme === 'auto' ? preferredTheme() : theme,
       size: 'invisible',
     }),
     teardown,

@@ -7,6 +7,7 @@ afterEach(() => {
   document.head.replaceChildren();
   Reflect.deleteProperty(window, 'turnstile');
   Reflect.deleteProperty(window, 'hcaptcha');
+  Reflect.deleteProperty(window, 'grecaptcha');
   vi.resetModules();
 });
 
@@ -58,5 +59,39 @@ describe('captcha loader', () => {
     Object.defineProperty(window, 'hcaptcha', { configurable: true, value: api });
 
     await expect(loading).resolves.toBe(api);
+  });
+
+  it('does not resolve with a global that exists but cannot render yet', async () => {
+    // reCAPTCHA's api.js synchronously publishes `window.grecaptcha = { ready }`
+    // and fetches the real implementation from another host. Presence of the
+    // global is therefore NOT readiness: resolving on it hands the caller a stub
+    // whose `render` is undefined, and the first challenge of every page load
+    // throws while a retry succeeds. Every other test here stubs a COMPLETE api,
+    // which is exactly why none of them catch it.
+    const { loadCaptcha } = await import('./captcha-loader');
+    const { CAPTCHA_ADAPTERS } = await import('./captcha-providers');
+    const adapter = CAPTCHA_ADAPTERS['recaptcha-v2'];
+
+    const stub = { ready: vi.fn() } as unknown as Record<string, unknown>;
+    Object.defineProperty(window, 'grecaptcha', { configurable: true, value: stub });
+
+    const loading = loadCaptcha(adapter);
+    const provider = document.querySelector<HTMLScriptElement>(
+      `script[src="${adapter.scriptUrl}"]`,
+    )!;
+    provider.dispatchEvent(new Event('load'));
+
+    // The stub is still all that exists; the loader must keep waiting.
+    let settled = false;
+    void loading.then(() => { settled = true; }, () => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    // gstatic fills in the same object a moment later, as it does in a browser.
+    stub.render = vi.fn();
+    stub.execute = vi.fn();
+    stub.reset = vi.fn();
+
+    await expect(loading).resolves.toBe(stub);
   });
 });
