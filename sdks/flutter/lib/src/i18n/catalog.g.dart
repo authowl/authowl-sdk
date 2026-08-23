@@ -13,6 +13,7 @@ const Map<String, Map<String, String>> authOwlCatalogs = <String, Map<String, St
   'ar': <String, String>{
     'authChallenge.checking': 'جارٍ التحقق من أنك شخص حقيقي…',
     'authChallenge.error.failed': 'فشل التحقق البشري. حاول مرة أخرى.',
+    'authChallenge.error.unsupportedProvider': 'يتطلب موفّر التحقق البشري «{provider}» إصدارًا أحدث من حزمة التطوير.',
     'backupCodes.error.failed': 'تعذر إنشاء رموز احتياط جديدة.',
     'backupCodes.hint': 'أنشئ مجموعة جديدة من رموز الاحتياط أحادية الاستخدام. تتوقف رموزك الحالية عن العمل فورًا.',
     'backupCodes.pending': 'جارٍ الإنشاء…',
@@ -449,6 +450,7 @@ const Map<String, Map<String, String>> authOwlCatalogs = <String, Map<String, St
   'en': <String, String>{
     'authChallenge.checking': 'Checking that you are human…',
     'authChallenge.error.failed': 'Human verification failed. Try again.',
+    'authChallenge.error.unsupportedProvider': 'Human verification provider “{provider}” requires a newer version of the SDK.',
     'backupCodes.error.failed': 'Could not generate new backup codes.',
     'backupCodes.hint': 'Generate a fresh set of single-use backup codes. Your current codes stop working immediately.',
     'backupCodes.pending': 'Generating…',
