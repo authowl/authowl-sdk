@@ -59,7 +59,7 @@ function captchaTheme(
  * minted for another server action.
  */
 export function useAuthChallenge() {
-  const { config, isLoading } = usePublicConfig();
+  const { config, isLoading, retry } = usePublicConfig();
   const t = useT();
   const container = React.useRef<HTMLDivElement>(null);
   const active = React.useRef<ActiveWidget | null>(null);
@@ -67,6 +67,27 @@ export function useAuthChallenge() {
   const captcha = config?.captcha ?? null;
   const adapter = captcha ? captchaAdapterFor(captcha.provider) : null;
   const unavailableProvider = captcha && !adapter ? captcha.provider : null;
+
+  /**
+   * Whether a stale-config refetch has already been spent for THIS config.
+   *
+   * A challenge failure is the only signal a browser gets that the project's
+   * credential changed under it: a tab holds the config it loaded, so after a
+   * provider or key change it keeps minting tokens the server will not accept,
+   * and no amount of retrying fixes it. Refetching repairs that - but a real bot
+   * failing the challenge produces the same signal, so an unguarded refetch
+   * would let anyone hammering a sign-in form drive a request per attempt.
+   *
+   * Keyed on the config OBJECT so one incident costs exactly one refetch, and a
+   * genuinely new config re-arms it for the next one.
+   */
+  const refetched = React.useRef<object | null>(null);
+
+  const refetchIfConfigMayBeStale = React.useCallback(() => {
+    if (!config || refetched.current === config) return;
+    refetched.current = config;
+    retry();
+  }, [config, retry]);
 
   const removeActive = React.useCallback((reason?: Error) => {
     const current = active.current;
@@ -145,16 +166,24 @@ export function useAuthChallenge() {
       }
       try {
         const token = await tokenFor(action);
-        return await request(token ? { authChallengeToken: token } : undefined);
+        const result = await request(token ? { authChallengeToken: token } : undefined);
+        // The server rejecting a token this widget just minted means the
+        // credential it was minted against is no longer the one being verified.
+        if (result?.error?.code === challengeError.code) refetchIfConfigMayBeStale();
+        return result;
       } catch {
+        // The widget itself failing - a site key the provider does not
+        // recognise reaches the error callback rather than the server - carries
+        // the same meaning, so it takes the same repair.
         setStatus('failed');
+        refetchIfConfigMayBeStale();
         return {
           data: null,
           error: challengeError,
         } satisfies AuthActionResult<T>;
       }
     },
-    [isLoading, tokenFor],
+    [isLoading, refetchIfConfigMayBeStale, tokenFor],
   );
 
   const control = captcha ? (

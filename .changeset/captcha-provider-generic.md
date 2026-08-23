@@ -23,4 +23,12 @@ project reports. A provider this build cannot render **fails closed with a visib
 it** rather than rendering nothing — an empty challenge sends no token and produces a refusal the
 end user cannot act on.
 
+**A challenge failure now refetches the project config once.** A browser holds
+the config it loaded, so when a project changes its captcha provider or rotates
+its key, tabs that are already open keep minting tokens the server will not
+accept — and retrying cannot fix that, only refetching can. The failing attempt
+still surfaces its error; the request is never replayed, because a duplicated
+sign-up is worse than a stranded tab. One refetch is spent per config, so a bot
+failing the challenge repeatedly cannot turn it into a request per attempt.
+
 Client-side only; no server change is required to adopt it.
