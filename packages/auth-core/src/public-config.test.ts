@@ -41,6 +41,7 @@ function publicConfigFixture(): PublicConfig {
     },
     turnstileSiteKey: '1x00000000000000000000AA',
     authTurnstileSiteKey: '1x00000000000000000000AA',
+    captcha: { provider: 'turnstile', siteKey: '1x00000000000000000000AA' },
     locale: 'en',
     badge: true,
     configVersion: 3,
@@ -169,5 +170,46 @@ describe('getPublicConfig', () => {
       name: 'TransportError',
       kind: 'invalid_response',
     });
+  });
+});
+
+describe('captcha config normalisation', () => {
+  function decodeWith(extra: Record<string, unknown>) {
+    const { captcha: _drop, ...base } = publicConfigFixture();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({ ...base, ...extra }),
+    );
+    return getPublicConfig(cfg(fetchImpl));
+  }
+
+  it('derives the generic shape from a server that only sends a Turnstile key', async () => {
+    // The whole point of deriving here: every caller reads `config.captcha`, so
+    // an older server does not force each component to remember the legacy field.
+    await expect(decodeWith({})).resolves.toMatchObject({
+      captcha: { provider: 'turnstile', siteKey: '1x00000000000000000000AA' },
+    });
+  });
+
+  it('reports no challenge when the project has none', async () => {
+    await expect(decodeWith({
+      turnstileSiteKey: null,
+      authTurnstileSiteKey: null,
+    })).resolves.toMatchObject({ captcha: null });
+  });
+
+  it('carries a provider this build cannot render, rather than dropping it', async () => {
+    // A silent null here is the failure that matters: the renderer would show
+    // nothing, send no token, and the user would meet an unexplained 403. Keep
+    // the slug so it can be named.
+    await expect(decodeWith({
+      captcha: { provider: 'some-future-provider', siteKey: 'sk-abc' },
+    })).resolves.toMatchObject({
+      captcha: { provider: 'some-future-provider', siteKey: 'sk-abc' },
+    });
+  });
+
+  it('refuses a malformed challenge', async () => {
+    await expect(decodeWith({ captcha: { provider: '', siteKey: 'x' } })).rejects.toThrow();
+    await expect(decodeWith({ captcha: { provider: 'turnstile' } })).rejects.toThrow();
   });
 });
