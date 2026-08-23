@@ -1,80 +1,18 @@
 'use client';
 import * as React from 'react';
+import { loadCaptcha } from './captcha-loader';
+import {
+  CAPTCHA_ADAPTERS,
+  type CaptchaApi,
+  type CaptchaWidgetId,
+} from './captcha-providers';
 
-const SCRIPT_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-const SCRIPT_LOAD_TIMEOUT_MS = 10_000;
 export const LOCAL_TURNSTILE_TEST_TOKEN = 'XXXX.DUMMY.TOKEN.XXXX';
 
-export type TurnstileApi = {
-  render(
-    container: HTMLElement,
-    options: {
-      sitekey: string;
-      theme: 'light' | 'dark' | 'auto';
-      action?: string;
-      execution?: 'render' | 'execute';
-      appearance?: 'always' | 'execute' | 'interaction-only';
-      size?: 'normal' | 'compact' | 'flexible';
-      language?: string;
-      callback: (token: string) => void;
-      'expired-callback': () => void;
-      'error-callback': () => void;
-      'timeout-callback'?: () => void;
-      'unsupported-callback'?: () => void;
-    },
-  ): string;
-  execute(widgetId: string): void;
-  remove(widgetId: string): void;
-};
+export type TurnstileApi = CaptchaApi;
 
-declare global {
-  interface Window {
-    turnstile?: TurnstileApi;
-  }
-}
-
-let loader: Promise<TurnstileApi> | null = null;
-
-export function loadTurnstile(): Promise<TurnstileApi> {
-  if (window.turnstile) return Promise.resolve(window.turnstile);
-  if (loader) return loader;
-  loader = new Promise<TurnstileApi>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(`script[src="${SCRIPT_URL}"]`);
-    const script = existing ?? document.createElement('script');
-    const cleanup = () => {
-      clearTimeout(timeout);
-      script.removeEventListener('load', loaded);
-      script.removeEventListener('error', failed);
-    };
-    const loaded = () => {
-      cleanup();
-      if (window.turnstile) {
-        resolve(window.turnstile);
-      } else {
-        reject(new Error('Turnstile unavailable'));
-      }
-    };
-    const failed = () => {
-      cleanup();
-      if (!existing) script.remove();
-      reject(new Error('Turnstile failed to load'));
-    };
-    const timeout = setTimeout(failed, SCRIPT_LOAD_TIMEOUT_MS);
-    script.addEventListener('load', loaded, { once: true });
-    script.addEventListener('error', failed, { once: true });
-    if (!existing) {
-      script.src = SCRIPT_URL;
-      script.async = true;
-      script.defer = true;
-      const nonce = document.querySelector<HTMLScriptElement>('script[nonce]')?.nonce;
-      if (nonce) script.nonce = nonce;
-      document.head.appendChild(script);
-    }
-  }).catch((error: unknown) => {
-    loader = null;
-    throw error;
-  });
-  return loader;
+export function loadTurnstile(): Promise<CaptchaApi> {
+  return loadCaptcha(CAPTCHA_ADAPTERS.turnstile);
 }
 
 export function Turnstile({
@@ -100,7 +38,8 @@ export function Turnstile({
     }
 
     let active = true;
-    let widget: { api: TurnstileApi; id: string } | null = null;
+    const adapter = CAPTCHA_ADAPTERS.turnstile;
+    let widget: { api: CaptchaApi; id: CaptchaWidgetId } | null = null;
     void loadTurnstile()
       .then((api) => {
         if (!active || !container.current) return;
@@ -123,7 +62,7 @@ export function Turnstile({
 
     return () => {
       active = false;
-      if (widget) widget.api.remove(widget.id);
+      if (widget) adapter.teardown(widget.api, widget.id);
     };
   }, [siteKey, theme]);
 

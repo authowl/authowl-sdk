@@ -17,4 +17,9 @@ application is running, and the difference between *no challenge configured* and
 an unexplained refusal. Keeping the slug lets the renderer name what it does not
 know.
 
+`<AuthChallenge/>` renders whichever of Cloudflare Turnstile, hCaptcha or reCAPTCHA v2 the
+project reports. A provider this build cannot render **fails closed with a message naming it**
+rather than rendering nothing — an empty challenge sends no token and produces a refusal the
+end user cannot act on.
+
 Client-side only; no server change is required to adopt it.

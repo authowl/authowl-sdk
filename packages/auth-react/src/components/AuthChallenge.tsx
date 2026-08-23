@@ -3,7 +3,13 @@ import * as React from 'react';
 import type { ActionFetchOptions, AuthActionResult, AuthClientError } from '@authowl/core';
 import { usePublicConfig } from '../hooks';
 import { useT } from '../i18n';
-import { loadTurnstile, type TurnstileApi } from './Turnstile';
+import { loadCaptcha } from './captcha-loader';
+import {
+  captchaAdapterFor,
+  type CaptchaAdapter,
+  type CaptchaApi,
+  type CaptchaWidgetId,
+} from './captcha-providers';
 
 export const AUTH_CHALLENGE_ACTIONS = {
   signUp: 'auth_signup',
@@ -21,8 +27,9 @@ type ChallengeRequest<T> = (
 ) => Promise<AuthActionResult<T> | null | undefined>;
 
 type ActiveWidget = {
-  api: TurnstileApi;
-  id: string;
+  adapter: CaptchaAdapter;
+  api: CaptchaApi;
+  id: CaptchaWidgetId;
   reject: (reason: Error) => void;
 };
 
@@ -33,7 +40,7 @@ const challengeError: AuthClientError = {
   message: 'Human verification failed.',
 };
 
-function turnstileTheme(
+function captchaTheme(
   root: HTMLElement | null,
   fallback: 'light' | 'dark' | 'system' | undefined,
 ): 'light' | 'dark' | 'auto' {
@@ -44,7 +51,7 @@ function turnstileTheme(
 }
 
 /**
- * One action-bound Turnstile executor shared by a complete auth surface. Each
+ * One action-bound challenge executor shared by a complete auth surface. Each
  * invocation creates a fresh widget, obtains exactly one token, removes that
  * widget before the network action starts, and transports the token only via
  * the typed fetch option. Multi-action forms can therefore never reuse a token
@@ -56,29 +63,32 @@ export function useAuthChallenge() {
   const container = React.useRef<HTMLDivElement>(null);
   const active = React.useRef<ActiveWidget | null>(null);
   const [status, setStatus] = React.useState<'idle' | 'checking' | 'failed'>('idle');
-  const siteKey = config?.authTurnstileSiteKey ?? null;
+  const captcha = config?.captcha ?? null;
+  const adapter = captcha ? captchaAdapterFor(captcha.provider) : null;
+  const unavailableProvider = captcha && !adapter ? captcha.provider : null;
 
   const removeActive = React.useCallback((reason?: Error) => {
     const current = active.current;
     active.current = null;
     if (!current) return;
-    current.api.remove(current.id);
+    current.adapter.teardown(current.api, current.id);
     if (reason) current.reject(reason);
   }, []);
 
   React.useEffect(
-    () => () => removeActive(new Error('Turnstile challenge was cancelled')),
+    () => () => removeActive(new Error('Captcha challenge was cancelled')),
     [removeActive],
   );
 
   const tokenFor = React.useCallback(
     async (action: AuthChallengeAction): Promise<string | null> => {
-      if (!siteKey) return null;
+      if (!captcha) return null;
+      if (!adapter) throw new Error(`Unsupported captcha provider: ${captcha.provider}`);
       setStatus('checking');
-      removeActive(new Error('Turnstile challenge was replaced'));
+      removeActive(new Error('Captcha challenge was replaced'));
       try {
-        const api = await loadTurnstile();
-        if (!container.current) throw new Error('Turnstile container unavailable');
+        const api = await loadCaptcha(adapter);
+        if (!container.current) throw new Error('Captcha container unavailable');
         return await new Promise<string>((resolve, reject) => {
           let settled = false;
           const finish = (outcome: { token: string } | { error: Error }) => {
@@ -86,27 +96,31 @@ export function useAuthChallenge() {
             settled = true;
             const current = active.current;
             active.current = null;
-            if (current) current.api.remove(current.id);
+            if (current) current.adapter.teardown(current.api, current.id);
             if ('token' in outcome) resolve(outcome.token);
             else reject(outcome.error);
           };
-          const fail = () => finish({ error: new Error('Turnstile challenge failed') });
+          const fail = () => finish({ error: new Error('Captcha challenge failed') });
           const root = container.current!.closest<HTMLElement>('.authowl-root');
+          const optionalFailureCallbacks = captcha.provider === 'turnstile'
+            ? {
+                'timeout-callback': fail,
+                'unsupported-callback': fail,
+              }
+            : {};
           const id = api.render(container.current!, {
-            sitekey: siteKey,
-            theme: turnstileTheme(root, config?.branding?.theme),
-            action,
-            execution: 'execute',
-            appearance: 'interaction-only',
-            size: 'flexible',
-            language: root?.dataset.authowlLocale ?? config?.locale,
+            ...adapter.invisibleRenderOptions({
+              siteKey: captcha.siteKey,
+              theme: captchaTheme(root, config?.branding?.theme),
+              action,
+              language: root?.dataset.authowlLocale ?? config?.locale,
+            }),
             callback: (token) => finish({ token }),
             'expired-callback': fail,
             'error-callback': fail,
-            'timeout-callback': fail,
-            'unsupported-callback': fail,
+            ...optionalFailureCallbacks,
           });
-          active.current = { api, id, reject };
+          active.current = { adapter, api, id, reject };
           try {
             api.execute(id);
           } catch {
@@ -117,7 +131,7 @@ export function useAuthChallenge() {
         setStatus('idle');
       }
     },
-    [config?.branding?.theme, config?.locale, removeActive, siteKey],
+    [adapter, captcha, config?.branding?.theme, config?.locale, removeActive],
   );
 
   const run = React.useCallback(
@@ -142,11 +156,13 @@ export function useAuthChallenge() {
     [isLoading, tokenFor],
   );
 
-  const control = siteKey ? (
+  const control = captcha ? (
     <div className="ba-auth-challenge" data-testid="auth-challenge">
-      <div className="ba-turnstile" ref={container} />
+      {adapter ? <div className="ba-turnstile" ref={container} /> : null}
       <p className="ba-sr-only" role="status" aria-live="polite">
-        {status === 'checking'
+        {unavailableProvider
+          ? t('authChallenge.error.unsupportedProvider', { provider: unavailableProvider })
+          : status === 'checking'
           ? t('authChallenge.checking')
           : status === 'failed'
             ? t('authChallenge.error.failed')
