@@ -32,3 +32,8 @@ sign-up is worse than a stranded tab. One refetch is spent per config, so a bot
 failing the challenge repeatedly cannot turn it into a request per attempt.
 
 Client-side only; no server change is required to adopt it.
+
+If your application uses Content Security Policy, allow the selected
+provider's script, frame, style, and connection origins before switching away
+from Turnstile. The SDK copies an existing script nonce onto the provider
+script, but provider frames and network requests still need CSP permission.

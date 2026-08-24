@@ -3,14 +3,9 @@ import * as React from 'react';
 import type { ActionFetchOptions, AuthActionResult, AuthClientError } from '@authowl/core';
 import { usePublicConfig } from '../hooks';
 import { useT } from '../i18n';
-import { loadCaptcha } from './captcha-loader';
 import { FormError } from './FormError';
-import {
-  captchaAdapterFor,
-  type CaptchaAdapter,
-  type CaptchaApi,
-  type CaptchaWidgetId,
-} from './captcha-providers';
+import { isSupportedCaptchaProvider } from './captcha-provider-ids';
+import type { CaptchaAdapter, CaptchaApi, CaptchaWidgetId } from './captcha-providers';
 
 export const AUTH_CHALLENGE_ACTIONS = {
   signUp: 'auth_signup',
@@ -65,8 +60,8 @@ export function useAuthChallenge() {
   const active = React.useRef<ActiveWidget | null>(null);
   const [status, setStatus] = React.useState<'idle' | 'checking' | 'failed'>('idle');
   const captcha = config?.captcha ?? null;
-  const adapter = captcha ? captchaAdapterFor(captcha.provider) : null;
-  const unavailableProvider = captcha && !adapter ? captcha.provider : null;
+  const providerSupported = captcha ? isSupportedCaptchaProvider(captcha.provider) : false;
+  const unavailableProvider = captcha && !providerSupported ? captcha.provider : null;
 
   /**
    * Whether a stale-config refetch has already been spent for THIS config.
@@ -105,10 +100,19 @@ export function useAuthChallenge() {
   const tokenFor = React.useCallback(
     async (action: AuthChallengeAction): Promise<string | null> => {
       if (!captcha) return null;
-      if (!adapter) throw new Error(`Unsupported captcha provider: ${captcha.provider}`);
+      if (!providerSupported) throw new Error(`Unsupported captcha provider: ${captcha.provider}`);
       setStatus('checking');
       removeActive(new Error('Captcha challenge was replaced'));
       try {
+        // The adapter and loader are needed only when an action is submitted.
+        // Keeping them in an on-demand chunk avoids charging every AuthOwl
+        // surface for three provider integrations it may never execute.
+        const [{ loadCaptcha }, { captchaAdapterFor }] = await Promise.all([
+          import('./captcha-loader'),
+          import('./captcha-providers'),
+        ]);
+        const adapter = captchaAdapterFor(captcha.provider);
+        if (!adapter) throw new Error(`Unsupported captcha provider: ${captcha.provider}`);
         const api = await loadCaptcha(adapter);
         if (!container.current) throw new Error('Captcha container unavailable');
         return await new Promise<string>((resolve, reject) => {
@@ -153,7 +157,7 @@ export function useAuthChallenge() {
         setStatus('idle');
       }
     },
-    [adapter, captcha, config?.branding?.theme, config?.locale, removeActive],
+    [captcha, config?.branding?.theme, config?.locale, providerSupported, removeActive],
   );
 
   const run = React.useCallback(
@@ -188,7 +192,7 @@ export function useAuthChallenge() {
 
   const control = captcha ? (
     <div className="ba-auth-challenge" data-testid="auth-challenge">
-      {adapter ? <div className="ba-turnstile" ref={container} /> : null}
+      {providerSupported ? <div className="ba-turnstile" ref={container} /> : null}
       {/*
         A provider this build cannot render is PERMANENT for this deployment, so
         it is shown rather than announced only to assistive technology. The

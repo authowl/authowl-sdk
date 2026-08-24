@@ -1,4 +1,5 @@
 'use client';
+import type { CaptchaProviderId } from './captcha-provider-ids';
 
 /**
  * The bot-challenge providers this build of the SDK can render.
@@ -13,8 +14,6 @@
  * caller is expected to say so rather than render nothing, because a challenge
  * that renders nothing sends no token and the user meets an unexplained refusal.
  */
-export type CaptchaProviderId = 'turnstile' | 'hcaptcha' | 'recaptcha-v2';
-
 export type CaptchaWidgetId = string | number;
 
 export type CaptchaTheme = 'light' | 'dark' | 'auto';

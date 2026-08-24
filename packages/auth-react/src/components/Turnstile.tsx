@@ -1,18 +1,21 @@
 'use client';
 import * as React from 'react';
-import { loadCaptcha } from './captcha-loader';
-import {
-  CAPTCHA_ADAPTERS,
-  type CaptchaApi,
-  type CaptchaWidgetId,
-} from './captcha-providers';
+import type { CaptchaAdapter, CaptchaApi, CaptchaWidgetId } from './captcha-providers';
 
 export const LOCAL_TURNSTILE_TEST_TOKEN = 'XXXX.DUMMY.TOKEN.XXXX';
 
 export type TurnstileApi = CaptchaApi;
 
-export function loadTurnstile(): Promise<CaptchaApi> {
-  return loadCaptcha(CAPTCHA_ADAPTERS.turnstile);
+export async function loadTurnstile(): Promise<{
+  api: CaptchaApi;
+  adapter: CaptchaAdapter;
+}> {
+  const [{ loadCaptcha }, { CAPTCHA_ADAPTERS }] = await Promise.all([
+    import('./captcha-loader'),
+    import('./captcha-providers'),
+  ]);
+  const adapter = CAPTCHA_ADAPTERS.turnstile;
+  return { api: await loadCaptcha(adapter), adapter };
 }
 
 export function Turnstile({
@@ -38,10 +41,9 @@ export function Turnstile({
     }
 
     let active = true;
-    const adapter = CAPTCHA_ADAPTERS.turnstile;
-    let widget: { api: CaptchaApi; id: CaptchaWidgetId } | null = null;
+    let widget: { api: CaptchaApi; adapter: CaptchaAdapter; id: CaptchaWidgetId } | null = null;
     void loadTurnstile()
-      .then((api) => {
+      .then(({ api, adapter }) => {
         if (!active || !container.current) return;
         const id = api.render(container.current, {
           sitekey: siteKey,
@@ -54,7 +56,7 @@ export function Turnstile({
             callbacks.current.onUnavailable();
           },
         });
-        widget = { api, id };
+        widget = { api, adapter, id };
       })
       .catch(() => {
         if (active) callbacks.current.onUnavailable();
@@ -62,7 +64,7 @@ export function Turnstile({
 
     return () => {
       active = false;
-      if (widget) adapter.teardown(widget.api, widget.id);
+      if (widget) widget.adapter.teardown(widget.api, widget.id);
     };
   }, [siteKey, theme]);
 
