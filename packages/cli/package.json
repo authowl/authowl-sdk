@@ -39,9 +39,9 @@
     "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^26.2.0",
     "tsup": "^8.3.5",
-    "typescript": "^5.7.2",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   },
   "engines": {
