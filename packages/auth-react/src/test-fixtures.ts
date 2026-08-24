@@ -59,6 +59,7 @@ export function makePublicConfig(overrides: Partial<PublicConfig> = {}): PublicC
     organizations: false,
     sso: false,
     jwtIssuer: null,
+    captcha: null,
     turnstileSiteKey: null,
     authTurnstileSiteKey: null,
     locale: 'en',

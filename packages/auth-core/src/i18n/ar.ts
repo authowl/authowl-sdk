@@ -97,6 +97,8 @@ export const ar: Record<keyof typeof en, string> = {
 
   'authChallenge.checking': 'جارٍ التحقق من أنك شخص حقيقي…',
   'authChallenge.error.failed': 'فشل التحقق البشري. حاول مرة أخرى.',
+  'authChallenge.error.unsupportedProvider':
+    'يتطلب موفّر التحقق البشري «{provider}» إصدارًا أحدث من حزمة التطوير.',
 
   'passkey.signInButton': 'تسجيل الدخول بمفتاح مرور',
   'passkey.waiting': 'في انتظار مفتاح المرور…',

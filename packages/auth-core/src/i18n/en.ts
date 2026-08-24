@@ -97,6 +97,8 @@ export const en = {
 
   'authChallenge.checking': 'Checking that you are human…',
   'authChallenge.error.failed': 'Human verification failed. Try again.',
+  'authChallenge.error.unsupportedProvider':
+    'Human verification provider “{provider}” requires a newer version of the SDK.',
 
   'passkey.signInButton': 'Sign in with a passkey',
   'passkey.waiting': 'Waiting for passkey…',

@@ -9,6 +9,21 @@ export type EnvironmentType = 'development' | 'production';
  * UI from (server contract CONTRACTS §2, `GET /api/projects/:id/public-config`).
  * Nothing here is secret. Method slugs are canonical snake_case.
  */
+/**
+ * A project's configured bot challenge.
+ *
+ * `provider` is deliberately a plain string rather than a union of the ones this
+ * SDK can render. A project may be switched to a provider that predates the
+ * copy of the SDK an application is running, and the difference between
+ * "no challenge configured" and "a challenge this build cannot render" is the
+ * difference between signing in and a silent 403 the user cannot act on. Keeping
+ * the slug lets the renderer say which provider it does not know.
+ */
+export interface CaptchaConfig {
+  provider: string;
+  siteKey: string;
+}
+
 export type PublicConfig = {
   /** Stable workspace product container shared by its environments. */
   applicationId: string;
@@ -142,6 +157,13 @@ export type PublicConfig = {
    * `<issuer>/token`.
    */
   jwtIssuer: { issuer: string; jwksUrl: string; aud: string } | null;
+  /**
+   * The bot challenge a project has configured, provider-agnostic.
+   *
+   * Prefer this over the two Turnstile fields below, which predate provider
+   * choice and remain populated whenever the provider IS Turnstile.
+   */
+  captcha: CaptchaConfig | null;
   /** Public Cloudflare Turnstile site key for the phone OTP challenge. */
   turnstileSiteKey: string | null;
   /** Public Cloudflare Turnstile site key for protected sign-up/sign-in actions. */
@@ -285,6 +307,33 @@ function decodePublicConfig(
       || ((mfa.required === true || mfa.backupCodes === true) && mfa.totp !== true)
     ) throw invalidPublicConfig();
   }
+  // Normalise the challenge to ONE shape before callers see it.
+  //
+  // A server older than provider choice sends no `captcha` at all, only the
+  // Turnstile site key. Deriving the generic shape here means every caller reads
+  // `config.captcha` and nothing downstream has to remember the legacy field
+  // exists - which is what keeps the eventual provider switch from becoming a
+  // change in five components.
+  if (row.captcha === undefined || row.captcha === null) {
+    row.captcha = typeof row.authTurnstileSiteKey === 'string'
+      && row.authTurnstileSiteKey.length > 0
+      ? { provider: 'turnstile', siteKey: row.authTurnstileSiteKey }
+      : null;
+  } else {
+    const captcha = asObject(row.captcha);
+    if (
+      typeof captcha.provider !== 'string'
+      || captcha.provider.length === 0
+      || captcha.provider.length > 64
+      || typeof captcha.siteKey !== 'string'
+      || captcha.siteKey.length === 0
+      || captcha.siteKey.length > 512
+    ) {
+      throw invalidPublicConfig();
+    }
+    row.captcha = { provider: captcha.provider, siteKey: captcha.siteKey };
+  }
+
   return row as unknown as PublicConfig;
 }
 
