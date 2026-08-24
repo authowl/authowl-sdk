@@ -1,6 +1,6 @@
 {
   "name": "@authowl/core",
-  "version": "0.18.2",
+  "version": "0.19.0",
   "description": "Framework-agnostic client for AuthOwl, the multi-tenant auth SaaS.",
   "license": "MIT",
   "publishConfig": {
