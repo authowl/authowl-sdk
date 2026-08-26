@@ -65,6 +65,31 @@ function normalizeDismissReason(reason: string): GoogleOneTapDismissReason {
   return 'unknown';
 }
 
+/**
+ * Warn once per mount site when One Tap runs without binding Google's ID token
+ * to this attempt.
+ *
+ * Without a nonce, a token captured from one browser can be replayed from
+ * another: Google will happily verify it, because nothing in it says which
+ * attempt asked for it. The prop exists and the server forwards it - what was
+ * missing is anything telling a developer the safe path is opt-in.
+ *
+ * Declared beside the call site so a consumer bundler eliminates it from
+ * production, matching how the provider reports a failed config load.
+ */
+const warnedMissingNonce = new Set<string>();
+function warnOneTapWithoutNonce(clientId: string): void {
+  if (warnedMissingNonce.has(clientId)) return;
+  warnedMissingNonce.add(clientId);
+  console.warn(
+    '[AuthOwl] <GoogleOneTap/> is running without a `nonce`. Google\u2019s ID token is ' +
+      'then not bound to this sign-in attempt, so a captured token can be replayed from ' +
+      'another browser. Generate a fresh random value per attempt server-side and pass ' +
+      'it as `nonce`; AuthOwl forwards it to Google and verifies the match. ' +
+      '(This warning is dev-only.)',
+  );
+}
+
 /** Invisible, server-configured Google One Tap conversion helper. */
 export function GoogleOneTap({
   disabled = false,
@@ -90,6 +115,12 @@ export function GoogleOneTap({
 
   const googleEnabled = config?.socialProviders.includes('google') === true;
   const clientId = config?.socialProviderClientIds?.google;
+
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    if (disabled || !googleEnabled || !clientId || nonce) return;
+    warnOneTapWithoutNonce(clientId);
+  }, [clientId, disabled, googleEnabled, nonce]);
 
   React.useEffect(() => {
     if (configLoading || !sessionLoaded) return;
