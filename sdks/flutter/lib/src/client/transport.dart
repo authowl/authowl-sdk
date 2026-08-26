@@ -7,8 +7,15 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../cookie.dart';
+
 import 'projection.dart';
 import 'storage.dart';
+
+/// Header carrying a single-use bot-challenge token.
+///
+/// Named for Turnstile because it predates provider choice; it carries
+/// whichever provider's token the project is configured for.
+const String authChallengeHeader = 'x-authowl-turnstile-token';
 
 /// Ceiling on a response body. A hostile or misconfigured endpoint should not
 /// be able to exhaust memory on a phone.
@@ -131,6 +138,7 @@ class AuthOwlTransport {
     String method = 'POST',
     Map<String, Object?>? body,
     Map<String, String>? query,
+    String? challengeToken,
   }) =>
       _send(
         Uri.parse('$_baseUrl$path').replace(
@@ -140,6 +148,7 @@ class AuthOwlTransport {
         method: method,
         body: body,
         includeSession: true,
+        challengeToken: challengeToken,
       );
 
   /// Fetch publishable project policy without replaying or capturing a session.
@@ -156,11 +165,17 @@ class AuthOwlTransport {
     required String method,
     required bool includeSession,
     Map<String, Object?>? body,
+    String? challengeToken,
   }) async {
     final headers = <String, String>{
       'accept': 'application/json',
       'x-publishable-key': publishableKey,
     };
+    // Single-use bot-challenge token. The header name predates provider choice
+    // and carries whichever provider's token the project is configured for.
+    if (challengeToken != null && challengeToken.isNotEmpty) {
+      headers[authChallengeHeader] = challengeToken;
+    }
     final stored = includeSession ? await storage.read(storageKey) : null;
     if (stored != null && stored.isNotEmpty) {
       headers['cookie'] = '$_cookieName=$stored';

@@ -141,6 +141,40 @@ provider-neutral anti-abuse ceremony. Standard routes use
 platform, then pass an `AkedlyShieldProof` to `startPhoneOtp()`. Provider API
 keys and pipeline IDs never enter the Flutter application.
 
+## Bot challenge
+
+A project can require a bot challenge on sign-in, sign-up, magic link, email OTP,
+password reset and verification resend. When one is active, those calls are
+refused with `403 BOT_CHALLENGE_FAILED` unless they carry a token.
+
+**This SDK does not render a challenge.** Obtaining the token is the
+application's job — through the provider's own Flutter integration, a WebView,
+or a platform plugin. Pass it and the SDK sends it:
+
+```dart
+await client.signInWithEmail(
+  email: email,
+  password: password,
+  challengeToken: token, // from your provider's widget
+);
+```
+
+The built-in forms take a callback and request a fresh token for every submit:
+
+```dart
+AuthOwlSignIn(
+  challengeTokenProvider: (action) => challenge.execute(action.value),
+  onSignedIn: () => context.go('/home'),
+)
+```
+
+Read `captcha` from the project's public config to learn whether a challenge is
+configured and which provider issued it — `null` means none, and the parameter
+can be omitted.
+
+Omitting the parameter sends no header at all, rather than an empty one: an
+empty token would be read as a token and refused.
+
 ## Conformance
 
 ```bash

@@ -38,6 +38,7 @@ export 'src/client/transport.dart'
         AuthError,
         AuthOwlTransport,
         AuthResult,
+        authChallengeHeader,
         maxResponseBytes,
         readSetCookie,
         requestTimeout;
