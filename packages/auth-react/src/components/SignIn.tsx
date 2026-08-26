@@ -7,6 +7,7 @@ import type { SignInPrimary } from '../signin-methods';
 import { finishSignIn } from './finish-sign-in';
 import { useSubmitAction } from './use-submit-action';
 import { usePasskeyAutofill } from './passkey-autofill';
+import { useSignInMethodRecorder } from '../last-used-method';
 import { SocialButtons } from './SocialButtons';
 import { PasskeyButton } from './PasskeyButton';
 import { ForgotPassword } from './ForgotPassword';
@@ -183,7 +184,10 @@ export function SignIn({
           onSubmit={() =>
             void run(() => signInEmailOtp({ email, otp }), {
               failure: t('emailOtp.error.invalidCode'),
-              onSuccess: () => finishSignIn({ sessionStore, redirectTo, onSignedIn }),
+              onSuccess: () => {
+                recordSucceeded('email-otp');
+                finishSignIn({ sessionStore, redirectTo, onSignedIn });
+              },
             })
           }
           onChangeEmail={() => {
@@ -237,6 +241,8 @@ export function SignIn({
   const showDivider =
     plan.social.length > 0 && (hasCredentialForm || plan.passkey || plan.phoneOtp);
 
+  const { recordSucceeded, rememberLeaving } = useSignInMethodRecorder();
+
   // One `run` per action, tagged so the busy label targets the pressed button.
   const start = (key: Exclude<SignInPrimary, null>, action: () => void) => {
     setInFlight(key);
@@ -257,8 +263,14 @@ export function SignIn({
           // member - swap to the challenge instead of finishing.
           const data = res.data;
           if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
+            // Password was right; the session is withheld pending a second
+            // factor. Recorded here rather than after the challenge, because
+            // the method that worked is the one the user chose - the second
+            // factor is not an alternative to it.
+            recordSucceeded(credentialMode === 'username' ? 'username' : 'password');
             setChallenge(true);
           } else {
+            recordSucceeded(credentialMode === 'username' ? 'username' : 'password');
             return finishSignIn({ sessionStore, redirectTo, onSignedIn });
           }
         },
@@ -268,7 +280,12 @@ export function SignIn({
     start('magic', () =>
       void run(() => authChallenge.run(AUTH_CHALLENGE_ACTIONS.passwordless, (options) => signInMagicLink({ email, callbackURL: redirectTo }, options)), {
         failure: t('magicLink.error.sendFailed'),
-        onSuccess: () => setView('magic-sent'),
+        onSuccess: () => {
+          // Parked, not recorded: sending the mail is not signing in, and
+          // the link is opened later - often in another browser entirely.
+          rememberLeaving('magic-link');
+          setView('magic-sent');
+        },
       }),
     );
   const doRequestOtp = () =>

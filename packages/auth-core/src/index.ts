@@ -18,6 +18,15 @@ export {
   type InvitationRecipientHint,
 } from './invitation-claim';
 export {
+  confirmPendingSignInMethod,
+  forgetLastUsedSignInMethod,
+  LAST_USED_METHODS,
+  readLastUsedSignInMethod,
+  recordLastUsedSignInMethod,
+  rememberPendingSignInMethod,
+  type LastUsedSignInMethod,
+} from './last-used-method';
+export {
   SESSION_TOKEN_HEADER,
   SESSION_TRANSPORT_BEARER,
   SESSION_TRANSPORT_HEADER,
