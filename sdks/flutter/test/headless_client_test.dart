@@ -57,6 +57,7 @@ AuthOwlTransport transportWith(
     );
 
 void main() {
+  _challengeTokenTests();
   group('readSetCookie', () {
     test('reads the named cookie and drops its attributes', () {
       expect(
@@ -533,6 +534,68 @@ void main() {
         ),
         throwsArgumentError,
       );
+    });
+  });
+}
+
+/// A challenge token has to reach the wire, or a project with an active bot
+/// challenge refuses these calls with `403 BOT_CHALLENGE_FAILED` and a Flutter
+/// application has no way to complete them.
+///
+/// The SDK renders nothing: obtaining the token is the application's job, and
+/// this is the seam it hands one back through. Each of the six actions the
+/// server challenges is covered, because a method that quietly drops the
+/// parameter fails only in production.
+void _challengeTokenTests() {
+  group('bot challenge token', () {
+    late Recorder recorder;
+    late AuthOwlClient auth;
+
+    setUp(() {
+      recorder = Recorder((_) => http.Response('{}', 200));
+      auth = AuthOwlClient(
+        apiUrl: 'https://api.authowl.dev',
+        publishableKey: publishableKey,
+        storage: InMemoryAuthOwlStorage(),
+        httpClient: recorder.client,
+      );
+    });
+
+    String? headerOf(int index) =>
+        recorder.requests[index].headers['x-authowl-turnstile-token'];
+
+    test('reaches the wire for every challenged action', () async {
+      await auth.signInWithEmail(
+          email: 'a@b.test', password: 'pw', challengeToken: 't-signin');
+      await auth.signUpWithEmail(
+          email: 'a@b.test', password: 'pw', challengeToken: 't-signup');
+      await auth.sendMagicLink(email: 'a@b.test', challengeToken: 't-magic');
+      await auth.sendEmailOtp(email: 'a@b.test', challengeToken: 't-otp');
+      await auth.requestPasswordReset(
+          email: 'a@b.test', challengeToken: 't-reset');
+      await auth.sendVerificationEmail(
+          email: 'a@b.test', challengeToken: 't-verify');
+
+      final sent = recorder.requests
+          .where((r) => r.headers.containsKey('x-authowl-turnstile-token'))
+          .map((r) => r.headers['x-authowl-turnstile-token'])
+          .toList();
+      expect(
+        sent,
+        containsAll(
+            ['t-signin', 't-signup', 't-magic', 't-otp', 't-reset', 't-verify']),
+      );
+    });
+
+    test('is absent when none is supplied, rather than sent empty', () async {
+      // An empty header is not the same as no header: the server would read it
+      // as a token and refuse it, turning "this project has no challenge" into
+      // a refusal.
+      await auth.sendMagicLink(email: 'a@b.test');
+      expect(headerOf(0), isNull);
+
+      await auth.sendMagicLink(email: 'a@b.test', challengeToken: '');
+      expect(headerOf(1), isNull);
     });
   });
 }
