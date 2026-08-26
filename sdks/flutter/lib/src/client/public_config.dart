@@ -16,6 +16,17 @@ class AuthOwlLegalConfig {
   final String? privacyUrl;
 }
 
+/// Provider-neutral bot-challenge configuration exposed to an application.
+class AuthOwlCaptchaConfig {
+  const AuthOwlCaptchaConfig({required this.provider, required this.siteKey});
+
+  /// Provider slug. New server providers remain visible to older SDKs.
+  final String provider;
+
+  /// Public widget key for the configured provider.
+  final String siteKey;
+}
+
 /// The public capabilities needed by Flutter clients.
 class AuthOwlPublicConfig {
   const AuthOwlPublicConfig({
@@ -27,6 +38,7 @@ class AuthOwlPublicConfig {
     required this.legal,
     required this.organizations,
     required this.locale,
+    required this.captcha,
     this.primaryColor,
   });
 
@@ -38,6 +50,7 @@ class AuthOwlPublicConfig {
   final AuthOwlLegalConfig legal;
   final bool organizations;
   final String locale;
+  final AuthOwlCaptchaConfig? captcha;
   final String? primaryColor;
 
   /// Decode the server's current shape while preserving the legacy method list.
@@ -74,6 +87,28 @@ class AuthOwlPublicConfig {
       return null;
     }
 
+    final captchaRaw = raw['captcha'];
+    final legacySiteKey = raw['authTurnstileSiteKey'];
+    AuthOwlCaptchaConfig? captcha;
+    if (captchaRaw != null) {
+      if (captchaRaw is! Map) return null;
+      final provider = captchaRaw['provider'];
+      final siteKey = captchaRaw['siteKey'];
+      if (provider is! String ||
+          provider.isEmpty ||
+          provider.length > 64 ||
+          siteKey is! String ||
+          siteKey.isEmpty ||
+          siteKey.length > 512) {
+        return null;
+      }
+      captcha = AuthOwlCaptchaConfig(provider: provider, siteKey: siteKey);
+    } else if (legacySiteKey is String) {
+      if (legacySiteKey.isEmpty || legacySiteKey.length > 512) return null;
+      captcha =
+          AuthOwlCaptchaConfig(provider: 'turnstile', siteKey: legacySiteKey);
+    }
+
     return AuthOwlPublicConfig(
       enabledMethods: methods,
       passwordSignUp: password?['signUp'] is bool
@@ -94,6 +129,7 @@ class AuthOwlPublicConfig {
       ),
       organizations: raw['organizations'] == true,
       locale: raw['locale'] is String ? raw['locale'] as String : 'en',
+      captcha: captcha,
       primaryColor: brandingRaw is Map && brandingRaw['primaryColor'] is String
           ? brandingRaw['primaryColor'] as String
           : null,

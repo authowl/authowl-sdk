@@ -159,6 +159,15 @@ await client.signInWithEmail(
 );
 ```
 
+The built-in forms take a callback and request a fresh token for every submit:
+
+```dart
+AuthOwlSignIn(
+  challengeTokenProvider: (action) => challenge.execute(action.value),
+  onSignedIn: () => context.go('/home'),
+)
+```
+
 Read `captcha` from the project's public config to learn whether a challenge is
 configured and which provider issued it — `null` means none, and the parameter
 can be omitted.

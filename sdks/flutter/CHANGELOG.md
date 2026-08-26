@@ -4,7 +4,7 @@
 
 ## 0.3.0 - 2026-08-26
 
-- Added `challengeToken` to sign-in, sign-up, magic link, email OTP, password reset and verification resend, so an application can complete a project bot challenge. Without it, a project with an active challenge refuses these calls.
+- Added provider-neutral bot-challenge configuration, `challengeToken` support for every challenged headless action, and fresh-token callbacks for the built-in sign-in, sign-up, and email OTP forms.
 
 ## 0.2.1 - 2026-08-21
 

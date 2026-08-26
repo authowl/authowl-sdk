@@ -407,6 +407,10 @@ void main() {
               'branding': {'primaryColor': '#0EA5A4'},
               'organizations': true,
               'locale': 'ar',
+              'captcha': {
+                'provider': 'future-provider',
+                'siteKey': 'public-widget-key',
+              },
             }),
             200,
           ));
@@ -423,9 +427,39 @@ void main() {
       expect(result.data!.legal.version, 7);
       expect(result.data!.organizations, isTrue);
       expect(result.data!.primaryColor, '#0EA5A4');
+      expect(result.data!.captcha!.provider, 'future-provider');
+      expect(result.data!.captcha!.siteKey, 'public-widget-key');
       expect(recorder.requests.single.url.path, endsWith('/public-config'));
       expect(recorder.requests.single.headers['cookie'], isNull);
       await client.dispose();
+    });
+
+    test('normalizes legacy Turnstile config and rejects malformed captcha',
+        () {
+      final legacy = AuthOwlPublicConfig.fromJson({
+        'enabledMethods': <String>[],
+        'legal': {'required': false, 'version': 0},
+        'authTurnstileSiteKey': 'legacy-site-key',
+      });
+      expect(legacy!.captcha!.provider, 'turnstile');
+      expect(legacy.captcha!.siteKey, 'legacy-site-key');
+
+      expect(
+        AuthOwlPublicConfig.fromJson({
+          'enabledMethods': <String>[],
+          'legal': {'required': false, 'version': 0},
+          'captcha': {'provider': '', 'siteKey': 'key'},
+        }),
+        isNull,
+      );
+      expect(
+        AuthOwlPublicConfig.fromJson({
+          'enabledMethods': <String>[],
+          'legal': {'required': false, 'version': 0},
+          'authTurnstileSiteKey': '',
+        }),
+        isNull,
+      );
     });
 
     test('sends the accepted consent version during sign-up', () async {
@@ -478,12 +512,13 @@ void main() {
       final challenge = result.data! as AkedlyShieldChallenge;
       expect(challenge.connectionId, 'connection_1');
       expect(challenge.difficulty, 12);
-      expect(recorder.requests.single.url.path,
-          endsWith('/phone-otp/challenge'));
+      expect(
+          recorder.requests.single.url.path, endsWith('/phone-otp/challenge'));
       await client.dispose();
     });
 
-    test('serializes typed Akedly Shield proof when starting phone OTP', () async {
+    test('serializes typed Akedly Shield proof when starting phone OTP',
+        () async {
       final recorder = Recorder((_) => http.Response(
             jsonEncode({'status': 'pending'}),
             200,
@@ -582,8 +617,14 @@ void _challengeTokenTests() {
           .toList();
       expect(
         sent,
-        containsAll(
-            ['t-signin', 't-signup', 't-magic', 't-otp', 't-reset', 't-verify']),
+        containsAll([
+          't-signin',
+          't-signup',
+          't-magic',
+          't-otp',
+          't-reset',
+          't-verify'
+        ]),
       );
     });
 
