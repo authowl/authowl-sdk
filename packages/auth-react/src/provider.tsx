@@ -3,6 +3,7 @@ import * as React from 'react';
 import {
   captureInvitationClaim,
   createAuthOwlClient,
+  setActiveLocale,
   directionFor,
   getPublicConfig,
   isLocale,
@@ -139,6 +140,7 @@ export function AuthOwlProvider({
   );
   const client = React.useMemo(() => createAuthOwlClient(resolved), [resolved]);
 
+
   const [config, setConfig] = React.useState<PublicConfig | null>(null);
   const [configState, setConfigState] = React.useState<ConfigState>('loading');
   const [configAttempt, setConfigAttempt] = React.useState(0);
@@ -179,6 +181,15 @@ export function AuthOwlProvider({
   }, [localeProp]);
 
   const locale = resolveLocale(localeProp, autoLocale, config?.locale);
+  // Tell the server which language this application is rendering, so a
+  // verification email follows the sign-up that asked for it rather than the
+  // project's default. Published rather than passed into the client, because
+  // rebuilding the client to change a language would rebuild the session
+  // store with it.
+  React.useEffect(() => {
+    setActiveLocale(resolved.decoded.projectId, locale);
+    return () => setActiveLocale(resolved.decoded.projectId, null);
+  }, [locale, resolved.decoded.projectId]);
 
   // Take the invitation id out of the URL on the first mount that sees it. The
   // query parameter dies at the first redirect of the sign-up the invitee still

@@ -10,8 +10,16 @@ import type { ResolvedAuthConfig } from './config';
 import { TransportError, type BoundedJsonResult } from './transport';
 import { requestPublishableJson } from './http';
 import { CHALLENGE_REJECTED_CODE } from './session-challenge';
+import { activeLocale } from './active-locale';
 
 export const AUTH_CHALLENGE_HEADER = 'x-authowl-turnstile-token';
+/**
+ * The language this request is being conducted in.
+ *
+ * Advisory: a server that does not know it ignores it, and one that does
+ * falls back to the project default for anything it has no catalogue for.
+ */
+export const AUTH_LOCALE_HEADER = 'x-authowl-locale';
 const AUTH_REQUEST_TIMEOUT_MS = 10_000;
 const MAX_RESPONSE_DEPTH = 32;
 const MAX_RESPONSE_NODES = 20_000;
@@ -96,6 +104,8 @@ export function createAuthHttpClient(
       if (options.fetchOptions?.authChallengeToken) {
         headers.set(AUTH_CHALLENGE_HEADER, options.fetchOptions.authChallengeToken);
       }
+      const locale = activeLocale(config.decoded.projectId);
+      if (locale) headers.set(AUTH_LOCALE_HEADER, locale);
       if (options.body !== undefined) headers.set('content-type', 'application/json');
 
       const init: RequestInit = {
