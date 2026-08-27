@@ -7,6 +7,7 @@ import type { SignInPrimary } from '../signin-methods';
 import { finishSignIn } from './finish-sign-in';
 import { useSubmitAction } from './use-submit-action';
 import { usePasskeyAutofill } from './passkey-autofill';
+import { useSignInMethodRecorder } from '../last-used-method';
 import { SocialButtons } from './SocialButtons';
 import { PasskeyButton } from './PasskeyButton';
 import { ForgotPassword } from './ForgotPassword';
@@ -84,6 +85,15 @@ export function SignIn({
   // enrolment screen it cannot leave. See useConfirmedMfaPending.
   const mfaEnrolment = useConfirmedMfaPending('clear');
   const emailRef = React.useRef<HTMLInputElement>(null);
+  const recordSignInMethod = useSignInMethodRecorder();
+  const onPasskeySignedIn = React.useCallback(() => {
+    recordSignInMethod('passkey');
+    onSignedIn?.();
+  }, [onSignedIn, recordSignInMethod]);
+  const onPhoneOtpSignedIn = React.useCallback(() => {
+    recordSignInMethod('phone-otp');
+    onSignedIn?.();
+  }, [onSignedIn, recordSignInMethod]);
 
   // Zero-config: render exactly what the project enabled. Resolution is a pure,
   // tested helper. A failed request returns the fail-closed UI below, so this
@@ -100,7 +110,7 @@ export function SignIn({
   usePasskeyAutofill({
     enabled: credentialMode === 'email' && plan.autofillHost !== null,
     redirectTo,
-    onSignedIn,
+    onSignedIn: onPasskeySignedIn,
   });
 
   const badge = <AuthOwlBadge force={showBadge} />;
@@ -183,7 +193,10 @@ export function SignIn({
           onSubmit={() =>
             void run(() => signInEmailOtp({ email, otp }), {
               failure: t('emailOtp.error.invalidCode'),
-              onSuccess: () => finishSignIn({ sessionStore, redirectTo, onSignedIn }),
+              onSuccess: () => {
+                recordSignInMethod('email-otp');
+                finishSignIn({ sessionStore, redirectTo, onSignedIn });
+              },
             })
           }
           onChangeEmail={() => {
@@ -219,7 +232,7 @@ export function SignIn({
         {branding}
         <PhoneOTP
           redirectTo={redirectTo}
-          onSignedIn={onSignedIn}
+          onSignedIn={onPhoneOtpSignedIn}
           onBack={() => setView('sign-in')}
           onMfaPasswordRequired={() => {
             setView('sign-in');
@@ -256,6 +269,9 @@ export function SignIn({
           // a 2FA-enrolled user the session is withheld and `data` is the redirect
           // member - swap to the challenge instead of finishing.
           const data = res.data;
+          // Password was right even when the session is withheld for a second
+          // factor. That factor is not an alternative sign-in method.
+          recordSignInMethod(credentialMode === 'username' ? 'username' : 'password');
           if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
             setChallenge(true);
           } else {
@@ -268,7 +284,12 @@ export function SignIn({
     start('magic', () =>
       void run(() => authChallenge.run(AUTH_CHALLENGE_ACTIONS.passwordless, (options) => signInMagicLink({ email, callbackURL: redirectTo }, options)), {
         failure: t('magicLink.error.sendFailed'),
-        onSuccess: () => setView('magic-sent'),
+        onSuccess: () => {
+          // Parked, not recorded: sending the mail is not signing in, and
+          // the link is opened later from the user's mail client.
+          recordSignInMethod('magic-link', true);
+          setView('magic-sent');
+        },
       }),
     );
   const doRequestOtp = () =>
@@ -290,6 +311,7 @@ export function SignIn({
         {
           failure: t('sso.error.startFailed'),
           mapError: (error) => (error.status === 404 ? t('sso.error.notFound') : null),
+          onSuccess: () => recordSignInMethod('sso', true),
           // SSO always redirects the browser to the IdP; keep the spinner up
           // through that navigation instead of flashing back to idle.
           keepPendingOnSuccess: true,
@@ -442,7 +464,9 @@ export function SignIn({
           )}
         </form>
       )}
-      {plan.passkey && <PasskeyButton redirectTo={redirectTo} onSignedIn={onSignedIn} />}
+      {plan.passkey && (
+        <PasskeyButton redirectTo={redirectTo} onSignedIn={onPasskeySignedIn} />
+      )}
       {plan.phoneOtp && (
         <button
           type="button"

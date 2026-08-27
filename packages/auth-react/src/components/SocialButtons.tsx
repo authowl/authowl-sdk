@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
 import { useSignIn } from '../hooks';
+import { useSignInMethodRecorder } from '../last-used-method';
 import { useT, useServerError } from '../i18n';
 import { ProviderIcon } from './social-icons';
 import { Busy } from './Spinner';
@@ -38,6 +39,7 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
   const t = useT();
   const toServerError = useServerError();
   const { signInSocial } = useSignIn();
+  const recordSignInMethod = useSignInMethodRecorder();
   const [pending, setPending] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -91,6 +93,11 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
               if (res?.error) {
                 setError(toServerError(res.error, t('social.error.startFailed')));
                 setPending(null);
+              } else {
+                // Park only after the redirect start succeeds. A user who
+                // bounces off consent has not signed in; promotion waits for a
+                // session on return.
+                recordSignInMethod(`social:${provider}`, true);
               }
             } catch {
               setError(t('social.error.startFailed'));

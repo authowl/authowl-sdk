@@ -187,11 +187,15 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // the original 73kb ceiling. The on-demand QR chunk is intentionally outside
 // this initial-payload row, just like Shield and TeamsSection; esbuild still
 // builds and resolves it, so the dependency cannot disappear unnoticed.
+// Last-used sign-in memory (2026-08-27) raises React 72->73. Recording every
+// successful in-page method plus truthfully settling redirect methods measures
+// 72.1kb after removing redundant storage APIs and compacting the pending state.
+// The 73kb row preserves roughly 0.9kb of regression headroom.
 
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 72,
+    maxGzipKb: 73,
     label: '@authowl/react (provider + hooks + components)',
   },
   {

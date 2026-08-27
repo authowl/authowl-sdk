@@ -15,6 +15,8 @@ import {
 } from '@authowl/core';
 import { resolveAppearance } from './appearance';
 import { InvitationPrompt } from './components/InvitationPrompt';
+import { useConfirmPendingSignInMethod } from './last-used-method';
+import { usePublicConfig, useUser } from './hooks';
 
 // Dev-only, once-per-project warning for public-config failures. The drop-ins
 // fail closed with retry UI because inventing a password form can advertise a
@@ -40,6 +42,20 @@ function warnPublicConfigFailed(resolved: ResolvedAuthConfig, error: unknown): v
       'missing/mismatched project. Check `apiUrl` and `publishableKey` on ' +
       '<AuthOwlProvider>. (This warning is dev-only.)',
   );
+}
+
+/**
+ * Promote a parked redirect sign-in once a session actually exists.
+ *
+ * Mounted centrally because the page a redirect comes back to is frequently not
+ * the one it left, so no component that starts one can be relied on to still be
+ * there. Renders nothing.
+ */
+function LastUsedMethodSync(): null {
+  const { config } = usePublicConfig();
+  const { isLoaded, isSignedIn } = useUser();
+  useConfirmPendingSignInMethod(isLoaded, isSignedIn, config?.environmentId ?? null);
+  return null;
 }
 
 export type Appearance = {
@@ -212,6 +228,7 @@ export function AuthOwlProvider({
         style={{ display: 'contents', ...merged.style }}
       >
         {children}
+        <LastUsedMethodSync />
         {invitationPrompt ? <InvitationPrompt /> : null}
       </div>
     </Context.Provider>
