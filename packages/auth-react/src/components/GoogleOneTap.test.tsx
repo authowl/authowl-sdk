@@ -262,3 +262,74 @@ describe('GoogleOneTap', () => {
     expect(mocks.initialize).toHaveBeenCalledTimes(1);
   });
 });
+/**
+ * The safe path is opt-in, so the only thing standing between a developer and a
+ * replayable ID token is knowing the prop exists. A dev-only warning is what
+ * tells them - and it must stay quiet once they have done it, or it trains
+ * people to ignore console output.
+ *
+ * Each case uses its own client id because the warning dedupes per id, which is
+ * also what the last case checks.
+ */
+describe('missing nonce', () => {
+  let warn: ReturnType<typeof vi.spyOn>;
+
+  function useClientId(id: string) {
+    mocks.config.socialProviderClientIds = { google: id };
+  }
+  function warnedAboutNonce(): boolean {
+    return warn.mock.calls.some(
+      (call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('without a `nonce`'),
+    );
+  }
+
+  beforeEach(() => {
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterEach(() => {
+    warn.mockRestore();
+  });
+
+  it('warns when One Tap runs without binding the token to this attempt', async () => {
+    useClientId('no-nonce.apps.googleusercontent.com');
+    render(<GoogleOneTap />);
+    await waitFor(() => expect(warnedAboutNonce()).toBe(true));
+    const message = warn.mock.calls.find((call: unknown[]) =>
+      `${call[0]}`.includes('nonce'),
+    )?.[0];
+    // The warning must not promise replay prevention this flow does not enforce.
+    expect(message).toContain('does not keep separate one-time server state');
+    expect(message).not.toContain('prevents replay');
+  });
+
+  it('stays quiet once a nonce is supplied', async () => {
+    useClientId('with-nonce.apps.googleusercontent.com');
+    render(<GoogleOneTap nonce="per-attempt-value" />);
+    await waitFor(() => expect(mocks.initialize).toHaveBeenCalled());
+    expect(warnedAboutNonce()).toBe(false);
+  });
+
+  it('says nothing when the component is not going to prompt at all', async () => {
+    // A disabled component has no token to bind, so a warning would be noise.
+    useClientId('disabled.apps.googleusercontent.com');
+    const onSkipped = vi.fn();
+    render(<GoogleOneTap disabled onSkipped={onSkipped} />);
+    // Wait on what a disabled mount definitely does, rather than on the absence
+    // of something another test may already have caused.
+    await waitFor(() => expect(onSkipped).toHaveBeenCalledWith('disabled'));
+    expect(warnedAboutNonce()).toBe(false);
+  });
+
+  it('warns once per client id, not once per mount', async () => {
+    useClientId('repeated.apps.googleusercontent.com');
+    const first = render(<GoogleOneTap />);
+    await waitFor(() => expect(warnedAboutNonce()).toBe(true));
+    first.unmount();
+
+    warn.mockClear();
+    render(<GoogleOneTap />);
+    await waitFor(() => expect(mocks.initialize).toHaveBeenCalled());
+    expect(warnedAboutNonce()).toBe(false);
+  });
+});
