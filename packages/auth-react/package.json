@@ -1,6 +1,6 @@
 {
   "name": "@authowl/react",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "description": "React provider, hooks, and drop-in components for AuthOwl, the multi-tenant auth SaaS.",
   "license": "MIT",
   "publishConfig": {
