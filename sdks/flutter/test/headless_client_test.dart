@@ -57,6 +57,7 @@ AuthOwlTransport transportWith(
     );
 
 void main() {
+  _challengeTokenTests();
   group('readSetCookie', () {
     test('reads the named cookie and drops its attributes', () {
       expect(
@@ -406,6 +407,10 @@ void main() {
               'branding': {'primaryColor': '#0EA5A4'},
               'organizations': true,
               'locale': 'ar',
+              'captcha': {
+                'provider': 'future-provider',
+                'siteKey': 'public-widget-key',
+              },
             }),
             200,
           ));
@@ -422,9 +427,39 @@ void main() {
       expect(result.data!.legal.version, 7);
       expect(result.data!.organizations, isTrue);
       expect(result.data!.primaryColor, '#0EA5A4');
+      expect(result.data!.captcha!.provider, 'future-provider');
+      expect(result.data!.captcha!.siteKey, 'public-widget-key');
       expect(recorder.requests.single.url.path, endsWith('/public-config'));
       expect(recorder.requests.single.headers['cookie'], isNull);
       await client.dispose();
+    });
+
+    test('normalizes legacy Turnstile config and rejects malformed captcha',
+        () {
+      final legacy = AuthOwlPublicConfig.fromJson({
+        'enabledMethods': <String>[],
+        'legal': {'required': false, 'version': 0},
+        'authTurnstileSiteKey': 'legacy-site-key',
+      });
+      expect(legacy!.captcha!.provider, 'turnstile');
+      expect(legacy.captcha!.siteKey, 'legacy-site-key');
+
+      expect(
+        AuthOwlPublicConfig.fromJson({
+          'enabledMethods': <String>[],
+          'legal': {'required': false, 'version': 0},
+          'captcha': {'provider': '', 'siteKey': 'key'},
+        }),
+        isNull,
+      );
+      expect(
+        AuthOwlPublicConfig.fromJson({
+          'enabledMethods': <String>[],
+          'legal': {'required': false, 'version': 0},
+          'authTurnstileSiteKey': '',
+        }),
+        isNull,
+      );
     });
 
     test('sends the accepted consent version during sign-up', () async {
@@ -477,12 +512,13 @@ void main() {
       final challenge = result.data! as AkedlyShieldChallenge;
       expect(challenge.connectionId, 'connection_1');
       expect(challenge.difficulty, 12);
-      expect(recorder.requests.single.url.path,
-          endsWith('/phone-otp/challenge'));
+      expect(
+          recorder.requests.single.url.path, endsWith('/phone-otp/challenge'));
       await client.dispose();
     });
 
-    test('serializes typed Akedly Shield proof when starting phone OTP', () async {
+    test('serializes typed Akedly Shield proof when starting phone OTP',
+        () async {
       final recorder = Recorder((_) => http.Response(
             jsonEncode({'status': 'pending'}),
             200,
@@ -533,6 +569,74 @@ void main() {
         ),
         throwsArgumentError,
       );
+    });
+  });
+}
+
+/// A challenge token has to reach the wire, or a project with an active bot
+/// challenge refuses these calls with `403 BOT_CHALLENGE_FAILED` and a Flutter
+/// application has no way to complete them.
+///
+/// The SDK renders nothing: obtaining the token is the application's job, and
+/// this is the seam it hands one back through. Each of the six actions the
+/// server challenges is covered, because a method that quietly drops the
+/// parameter fails only in production.
+void _challengeTokenTests() {
+  group('bot challenge token', () {
+    late Recorder recorder;
+    late AuthOwlClient auth;
+
+    setUp(() {
+      recorder = Recorder((_) => http.Response('{}', 200));
+      auth = AuthOwlClient(
+        apiUrl: 'https://api.authowl.dev',
+        publishableKey: publishableKey,
+        storage: InMemoryAuthOwlStorage(),
+        httpClient: recorder.client,
+      );
+    });
+
+    String? headerOf(int index) =>
+        recorder.requests[index].headers['x-authowl-turnstile-token'];
+
+    test('reaches the wire for every challenged action', () async {
+      await auth.signInWithEmail(
+          email: 'a@b.test', password: 'pw', challengeToken: 't-signin');
+      await auth.signUpWithEmail(
+          email: 'a@b.test', password: 'pw', challengeToken: 't-signup');
+      await auth.sendMagicLink(email: 'a@b.test', challengeToken: 't-magic');
+      await auth.sendEmailOtp(email: 'a@b.test', challengeToken: 't-otp');
+      await auth.requestPasswordReset(
+          email: 'a@b.test', challengeToken: 't-reset');
+      await auth.sendVerificationEmail(
+          email: 'a@b.test', challengeToken: 't-verify');
+
+      final sent = recorder.requests
+          .where((r) => r.headers.containsKey('x-authowl-turnstile-token'))
+          .map((r) => r.headers['x-authowl-turnstile-token'])
+          .toList();
+      expect(
+        sent,
+        containsAll([
+          't-signin',
+          't-signup',
+          't-magic',
+          't-otp',
+          't-reset',
+          't-verify'
+        ]),
+      );
+    });
+
+    test('is absent when none is supplied, rather than sent empty', () async {
+      // An empty header is not the same as no header: the server would read it
+      // as a token and refuse it, turning "this project has no challenge" into
+      // a refusal.
+      await auth.sendMagicLink(email: 'a@b.test');
+      expect(headerOf(0), isNull);
+
+      await auth.sendMagicLink(email: 'a@b.test', challengeToken: '');
+      expect(headerOf(1), isNull);
     });
   });
 }

@@ -17,5 +17,11 @@
     "notes": [
       "Initial release of the official AuthOwl Flutter SDK."
     ]
+  },
+  "0.3.0": {
+    "date": "2026-08-26",
+    "notes": [
+      "Added provider-neutral bot-challenge configuration, `challengeToken` support for every challenged headless action, and fresh-token callbacks for the built-in sign-in, sign-up, and email OTP forms."
+    ]
   }
 }

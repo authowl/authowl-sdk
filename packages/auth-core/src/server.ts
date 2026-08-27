@@ -216,3 +216,9 @@ export type {
 } from './admin-api.generated';
 export { ADMIN_API_SPEC_SHA256, type AdminOperationId } from './admin-operations.generated';
 export { verifyWebhook, type VerifyWebhookInput } from './webhook';
+export {
+  mcpProtectedResourceMetadata,
+  mcpProtectedResourceMetadataUrl,
+  mcpUnauthorizedChallenge,
+  type McpProtectedResourceMetadata,
+} from './mcp';
