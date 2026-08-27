@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../authowl_client.dart'
+    show AuthOwlChallengeAction, AuthOwlChallengeTokenProvider;
 import '../provider.dart';
 import 'primitives.dart';
 
@@ -17,6 +19,7 @@ class AuthOwlSignIn extends StatefulWidget {
     this.onSecondFactorRequired,
     this.onMfaEnrollmentRequired,
     this.onForgotPassword,
+    this.challengeTokenProvider,
     super.key,
   });
 
@@ -31,6 +34,9 @@ class AuthOwlSignIn extends StatefulWidget {
 
   /// Rendered as a link under the form, when provided.
   final VoidCallback? onForgotPassword;
+
+  /// Called for each submit to mint a fresh, single-use challenge token.
+  final AuthOwlChallengeTokenProvider? challengeTokenProvider;
 
   @override
   State<AuthOwlSignIn> createState() => _AuthOwlSignInState();
@@ -75,11 +81,26 @@ class _AuthOwlSignInState extends State<AuthOwlSignIn> {
       _error = null;
     });
 
+    String? challengeToken;
+    try {
+      challengeToken = await widget.challengeTokenProvider
+          ?.call(AuthOwlChallengeAction.signIn);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = scope.t('signIn.error.failed');
+      });
+      return;
+    }
+    if (!mounted) return;
+
     final result = await scope.client.signInWithEmail(
       // The email is trimmed; the password never is - trailing spaces are
       // legitimate characters and silently dropping them locks people out.
       email: _email.text.trim(),
       password: _password.text,
+      challengeToken: challengeToken,
     );
     if (!mounted) return;
 

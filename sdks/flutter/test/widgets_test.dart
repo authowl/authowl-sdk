@@ -135,6 +135,38 @@ Future<void> fill(WidgetTester tester, String key, String value) async {
 
 void main() {
   group('AuthOwlSignIn', () {
+    testWidgets('mints and sends a fresh challenge token', (tester) async {
+      final recorder = Recorder((_) => ok(<String, Object?>{
+            'user': <String, Object?>{'id': 'u1'},
+          }));
+      AuthOwlChallengeAction? requestedAction;
+      await tester.pumpWidget(
+        host(
+          AuthOwlSignIn(
+            challengeTokenProvider: (action) async {
+              requestedAction = action;
+              return 'signin-token';
+            },
+          ),
+          recorder,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await fill(tester, 'authowl-signin-email', 'mona@example.test');
+      await fill(tester, 'authowl-signin-password', 'correct horse');
+      await tester.tap(find.byKey(const Key('authowl-signin-submit')));
+      await tester.pumpAndSettle();
+
+      expect(requestedAction, AuthOwlChallengeAction.signIn);
+      expect(
+        recorder
+            .requestEndingWith('/sign-in/email')
+            .headers[authChallengeHeader],
+        'signin-token',
+      );
+    });
+
     testWidgets('renders wording from the generated catalog', (tester) async {
       final recorder = Recorder((_) => ok(<String, Object?>{}));
       await tester.pumpWidget(host(const AuthOwlSignIn(), recorder));
@@ -247,6 +279,38 @@ void main() {
   });
 
   group('AuthOwlSignUp', () {
+    testWidgets('mints and sends a fresh challenge token', (tester) async {
+      final recorder =
+          Recorder((_) => ok(<String, Object?>{'sessionCreated': false}));
+      AuthOwlChallengeAction? requestedAction;
+      await tester.pumpWidget(
+        host(
+          AuthOwlSignUp(
+            challengeTokenProvider: (action) async {
+              requestedAction = action;
+              return 'signup-token';
+            },
+          ),
+          recorder,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await fill(tester, 'authowl-signup-name', 'Mona');
+      await fill(tester, 'authowl-signup-email', 'mona@example.test');
+      await fill(tester, 'authowl-signup-password', 'correct horse');
+      await tester.tap(find.byKey(const Key('authowl-signup-submit')));
+      await tester.pumpAndSettle();
+
+      expect(requestedAction, AuthOwlChallengeAction.signUp);
+      expect(
+        recorder
+            .requestEndingWith('/sign-up/email')
+            .headers[authChallengeHeader],
+        'signup-token',
+      );
+    });
+
     testWidgets('requires the display name the server demands', (tester) async {
       final recorder =
           Recorder((_) => ok(<String, Object?>{'sessionCreated': true}));
@@ -435,6 +499,37 @@ void main() {
   });
 
   group('AuthOwlEmailOtpForm', () {
+    testWidgets(
+        'mints and sends a fresh challenge token before requesting a code',
+        (tester) async {
+      final recorder = Recorder((_) => ok(<String, Object?>{}));
+      AuthOwlChallengeAction? requestedAction;
+      await tester.pumpWidget(
+        host(
+          AuthOwlEmailOtpForm(
+            challengeTokenProvider: (action) async {
+              requestedAction = action;
+              return 'passwordless-token';
+            },
+          ),
+          recorder,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await fill(tester, 'authowl-emailotp-email', 'mona@example.test');
+      await tester.tap(find.byKey(const Key('authowl-emailotp-request')));
+      await tester.pumpAndSettle();
+
+      expect(requestedAction, AuthOwlChallengeAction.passwordless);
+      expect(
+        recorder
+            .requestEndingWith('/email-otp/send-verification-otp')
+            .headers[authChallengeHeader],
+        'passwordless-token',
+      );
+    });
+
     testWidgets('advances to the code stage only after the code is sent',
         (tester) async {
       final recorder = Recorder((_) => ok(<String, Object?>{'success': true}));

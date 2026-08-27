@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../authowl_client.dart'
+    show AuthOwlChallengeAction, AuthOwlChallengeTokenProvider;
 import '../provider.dart';
 import 'primitives.dart';
 
@@ -12,9 +14,16 @@ import 'primitives.dart';
 /// the address entered in the first, and splitting them across routes loses
 /// that context on a back navigation.
 class AuthOwlEmailOtpForm extends StatefulWidget {
-  const AuthOwlEmailOtpForm({this.onSignedIn, super.key});
+  const AuthOwlEmailOtpForm({
+    this.onSignedIn,
+    this.challengeTokenProvider,
+    super.key,
+  });
 
   final VoidCallback? onSignedIn;
+
+  /// Called before requesting a code to mint a fresh challenge token.
+  final AuthOwlChallengeTokenProvider? challengeTokenProvider;
 
   @override
   State<AuthOwlEmailOtpForm> createState() => _AuthOwlEmailOtpFormState();
@@ -57,7 +66,24 @@ class _AuthOwlEmailOtpFormState extends State<AuthOwlEmailOtpForm> {
       _error = null;
     });
 
-    final result = await scope.client.sendEmailOtp(email: _email.text.trim());
+    String? challengeToken;
+    try {
+      challengeToken = await widget.challengeTokenProvider
+          ?.call(AuthOwlChallengeAction.passwordless);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = scope.t('emailOtp.error.sendFailed');
+      });
+      return;
+    }
+    if (!mounted) return;
+
+    final result = await scope.client.sendEmailOtp(
+      email: _email.text.trim(),
+      challengeToken: challengeToken,
+    );
     if (!mounted) return;
     setState(() => _busy = false);
 

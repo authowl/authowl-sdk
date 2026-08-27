@@ -17,6 +17,13 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../hooks', () => ({
   useSignIn: () => ({ signInSocial: mocks.signInSocial }),
+  // The buttons park which provider is being tried before navigating away, and
+  // that is scoped per project, so the recorder needs the resolved config.
+  usePublicConfig: () => ({
+    config: { environmentId: '2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60' },
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 vi.mock('../i18n', () => ({

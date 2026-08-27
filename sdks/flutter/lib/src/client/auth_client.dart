@@ -10,6 +10,24 @@ import 'storage.dart';
 import 'transport.dart';
 import 'public_config.dart';
 
+/// The server-side action a challenge token must be minted for.
+enum AuthOwlChallengeAction {
+  signIn('auth_signin'),
+  signUp('auth_signup'),
+  passwordless('auth_passwordless'),
+  passwordReset('auth_reset'),
+  verificationEmail('auth_verify_email');
+
+  const AuthOwlChallengeAction(this.value);
+
+  final String value;
+}
+
+/// Mints a fresh, single-use bot-challenge token for a built-in auth form.
+typedef AuthOwlChallengeTokenProvider = Future<String?> Function(
+  AuthOwlChallengeAction action,
+);
+
 /// Signs users in, keeps the session, and exposes account and organization
 /// actions.
 ///
@@ -58,12 +76,16 @@ class AuthOwlClient {
     required String email,
     required String password,
     bool rememberMe = true,
+    String? challengeToken,
   }) =>
-      _mutating('/sign-in/email', {
-        'email': email,
-        'password': password,
-        'rememberMe': rememberMe,
-      });
+      _mutating(
+          '/sign-in/email',
+          {
+            'email': email,
+            'password': password,
+            'rememberMe': rememberMe,
+          },
+          challengeToken: challengeToken);
 
   Future<AuthResult<Object?>> signInWithUsername({
     required String username,
@@ -102,17 +124,24 @@ class AuthOwlClient {
   Future<AuthResult<Object?>> sendMagicLink({
     required String email,
     String? callbackURL,
+    String? challengeToken,
   }) =>
-      _transport.send('/sign-in/magic-link', body: {
+      _transport
+          .send('/sign-in/magic-link', challengeToken: challengeToken, body: {
         'email': email,
         if (callbackURL != null) 'callbackURL': callbackURL,
       });
 
-  Future<AuthResult<Object?>> sendEmailOtp({required String email}) =>
-      _transport.send('/email-otp/send-verification-otp', body: {
-        'email': email,
-        'type': 'sign-in',
-      });
+  Future<AuthResult<Object?>> sendEmailOtp({
+    required String email,
+    String? challengeToken,
+  }) =>
+      _transport.send('/email-otp/send-verification-otp',
+          challengeToken: challengeToken,
+          body: {
+            'email': email,
+            'type': 'sign-in',
+          });
 
   Future<AuthResult<Object?>> signInWithEmailOtp({
     required String email,
@@ -130,22 +159,27 @@ class AuthOwlClient {
     String? firstName,
     String? lastName,
     int? consentVersion,
+    String? challengeToken,
   }) =>
-      _mutating('/sign-up/email', {
-        'email': email,
-        'password': password,
-        if (name != null) 'name': name,
-        if (username != null) 'username': username,
-        if (firstName != null) 'firstName': firstName,
-        if (lastName != null) 'lastName': lastName,
-        if (consentVersion != null) 'consentVersion': consentVersion,
-      });
+      _mutating(
+          '/sign-up/email',
+          {
+            'email': email,
+            'password': password,
+            if (name != null) 'name': name,
+            if (username != null) 'username': username,
+            if (firstName != null) 'firstName': firstName,
+            if (lastName != null) 'lastName': lastName,
+            if (consentVersion != null) 'consentVersion': consentVersion,
+          },
+          challengeToken: challengeToken);
 
   // -- phone -----------------------------------------------------------------
 
   /// Discover the provider-neutral anti-abuse ceremony selected by the server.
   Future<AuthResult<PhoneOtpChallenge>> preparePhoneOtp() async {
-    final result = await _transport.send('/phone-otp/challenge', body: const {});
+    final result =
+        await _transport.send('/phone-otp/challenge', body: const {});
     if (result.error != null) return AuthResult(error: result.error);
     final challenge = PhoneOtpChallenge.fromJson(result.data);
     if (challenge == null) {
@@ -198,11 +232,14 @@ class AuthOwlClient {
   Future<AuthResult<Object?>> requestPasswordReset({
     required String email,
     String? redirectTo,
+    String? challengeToken,
   }) =>
-      _transport.send('/request-password-reset', body: {
-        'email': email,
-        if (redirectTo != null) 'redirectTo': redirectTo,
-      });
+      _transport.send('/request-password-reset',
+          challengeToken: challengeToken,
+          body: {
+            'email': email,
+            if (redirectTo != null) 'redirectTo': redirectTo,
+          });
 
   Future<AuthResult<Object?>> resetPassword({
     required String token,
@@ -216,11 +253,14 @@ class AuthOwlClient {
   Future<AuthResult<Object?>> sendVerificationEmail({
     required String email,
     String? callbackURL,
+    String? challengeToken,
   }) =>
-      _transport.send('/send-verification-email', body: {
-        'email': email,
-        if (callbackURL != null) 'callbackURL': callbackURL,
-      });
+      _transport.send('/send-verification-email',
+          challengeToken: challengeToken,
+          body: {
+            'email': email,
+            if (callbackURL != null) 'callbackURL': callbackURL,
+          });
 
   // -- account ---------------------------------------------------------------
 
@@ -296,9 +336,10 @@ class AuthOwlClient {
   }
 
   /// Run an action, then re-read the session it may have changed.
-  Future<AuthResult<Object?>> _mutating(
-      String path, Map<String, Object?> body) async {
-    final result = await _transport.send(path, body: body);
+  Future<AuthResult<Object?>> _mutating(String path, Map<String, Object?> body,
+      {String? challengeToken}) async {
+    final result =
+        await _transport.send(path, body: body, challengeToken: challengeToken);
     if (result.isSuccess) await session.refresh(force: true);
     return result;
   }

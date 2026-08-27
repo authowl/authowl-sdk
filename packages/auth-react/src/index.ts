@@ -148,3 +148,4 @@ export type {
   OrganizationTeamMember,
   OrganizationUserInvitation,
 } from '@authowl/core';
+export { useLastUsedSignInMethod } from './last-used-method';
