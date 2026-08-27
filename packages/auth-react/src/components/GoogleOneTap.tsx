@@ -37,7 +37,7 @@ export type GoogleOneTapError = {
 export type GoogleOneTapProps = {
   /** Disable prompting without unmounting the component. */
   disabled?: boolean;
-  /** Bind Google's ID token to this browser attempt. Generate a fresh random value server-side. */
+  /** Ask Google to include this nonce and verify the returned token carries the same value. */
   nonce?: string;
   /** Let eligible returning Google users sign in automatically. Defaults to false. */
   autoSelect?: boolean;
@@ -65,6 +65,32 @@ function normalizeDismissReason(reason: string): GoogleOneTapDismissReason {
   return 'unknown';
 }
 
+/**
+ * Warn once per mount site when One Tap runs without binding Google's ID token
+ * to this attempt.
+ *
+ * The prop exists and the server verifies that the returned token carries the
+ * value supplied during exchange. This is useful protocol binding, but the
+ * direct browser exchange does not persist independent one-time nonce state,
+ * so the prop alone must not be presented as replay prevention.
+ *
+ * Declared beside the call site so a consumer bundler eliminates it from
+ * production, matching how the provider reports a failed config load.
+ */
+const warnedMissingNonce = new Set<string>();
+function warnOneTapWithoutNonce(clientId: string): void {
+  if (warnedMissingNonce.has(clientId)) return;
+  warnedMissingNonce.add(clientId);
+  console.warn(
+    '[AuthOwl] <GoogleOneTap/> is running without a `nonce`. Google\u2019s ID token is ' +
+      'then not bound to a value chosen for this prompt. Generate a fresh random value per ' +
+      'prompt and pass it as `nonce`; AuthOwl forwards it to Google and verifies the match. ' +
+      'The direct browser exchange does not keep separate one-time server state, so do not ' +
+      'treat this prop by itself as replay protection. ' +
+      '(This warning is dev-only.)',
+  );
+}
+
 /** Invisible, server-configured Google One Tap conversion helper. */
 export function GoogleOneTap({
   disabled = false,
@@ -90,6 +116,12 @@ export function GoogleOneTap({
 
   const googleEnabled = config?.socialProviders.includes('google') === true;
   const clientId = config?.socialProviderClientIds?.google;
+
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    if (disabled || !googleEnabled || !clientId || nonce) return;
+    warnOneTapWithoutNonce(clientId);
+  }, [clientId, disabled, googleEnabled, nonce]);
 
   React.useEffect(() => {
     if (configLoading || !sessionLoaded) return;

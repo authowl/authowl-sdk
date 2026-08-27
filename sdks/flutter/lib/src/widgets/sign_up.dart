@@ -1,7 +1,11 @@
 /// Drop-in email/password sign-up screen.
 library;
 
-import '../../authowl_client.dart' show AuthOwlLegalConfig;
+import '../../authowl_client.dart'
+    show
+        AuthOwlChallengeAction,
+        AuthOwlChallengeTokenProvider,
+        AuthOwlLegalConfig;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -11,13 +15,20 @@ import 'primitives.dart';
 
 /// Create an account with an email address and password.
 class AuthOwlSignUp extends StatefulWidget {
-  const AuthOwlSignUp({this.onSignedUp, super.key});
+  const AuthOwlSignUp({
+    this.onSignedUp,
+    this.challengeTokenProvider,
+    super.key,
+  });
 
   /// Called on success with whether a SESSION was established.
   ///
   /// Projects that require email verification create none, and "check your
   /// email" is a different screen from "you are in".
   final void Function({required bool sessionCreated})? onSignedUp;
+
+  /// Called for each submit to mint a fresh, single-use challenge token.
+  final AuthOwlChallengeTokenProvider? challengeTokenProvider;
 
   @override
   State<AuthOwlSignUp> createState() => _AuthOwlSignUpState();
@@ -94,6 +105,20 @@ class _AuthOwlSignUpState extends State<AuthOwlSignUp> {
       _error = null;
     });
 
+    String? challengeToken;
+    try {
+      challengeToken = await widget.challengeTokenProvider
+          ?.call(AuthOwlChallengeAction.signUp);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = scope.t('signUp.error.failed');
+      });
+      return;
+    }
+    if (!mounted) return;
+
     final result = await scope.client.signUpWithEmail(
       email: _email.text.trim(),
       password: _password.text,
@@ -101,6 +126,7 @@ class _AuthOwlSignUpState extends State<AuthOwlSignUp> {
       consentVersion: scope.publicConfig?.legal.required == true
           ? scope.publicConfig!.legal.version
           : null,
+      challengeToken: challengeToken,
     );
     if (!mounted) return;
 
