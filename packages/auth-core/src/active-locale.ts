@@ -18,24 +18,39 @@
  * rebuild it - a rebuilt client is a rebuilt session store, which is a very
  * expensive way to answer a question about wording.
  */
-const activeLocales = new Map<string, string>();
+type LocaleRegistration = { token: symbol; locale: string };
+const activeLocales = new Map<string, LocaleRegistration[]>();
 
 /** Bounded so a hostile or accidental value cannot become a header of any size. */
 const LOCALE_PATTERN = /^[a-z]{2}$/;
 
-export function setActiveLocale(projectId: string, locale: string | null): void {
+export function setActiveLocale(projectId: string, locale: string | null): () => void {
+  // This state belongs to one browser tab. Refuse to create process-global
+  // request state when the core package is imported by a server renderer.
+  if (typeof window === 'undefined') return () => {};
   if (locale === null) {
     activeLocales.delete(projectId);
-    return;
+    return () => {};
   }
   const normalized = locale.trim().toLowerCase();
   // The server accepts only locales it has catalogues for and ignores the rest,
   // so an unknown value here costs nothing - but sending an unbounded string
   // would, and this is a header on every authenticated request.
-  if (!LOCALE_PATTERN.test(normalized)) return;
-  activeLocales.set(projectId, normalized);
+  if (!LOCALE_PATTERN.test(normalized)) return () => {};
+  const token = Symbol(projectId);
+  const registrations = activeLocales.get(projectId) ?? [];
+  registrations.push({ token, locale: normalized });
+  activeLocales.set(projectId, registrations);
+  return () => {
+    const current = activeLocales.get(projectId);
+    if (!current) return;
+    const remaining = current.filter((registration) => registration.token !== token);
+    if (remaining.length === 0) activeLocales.delete(projectId);
+    else activeLocales.set(projectId, remaining);
+  };
 }
 
 export function activeLocale(projectId: string): string | null {
-  return activeLocales.get(projectId) ?? null;
+  if (typeof window === 'undefined') return null;
+  return activeLocales.get(projectId)?.at(-1)?.locale ?? null;
 }

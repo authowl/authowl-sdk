@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { activeLocale, setActiveLocale } from './active-locale';
 
@@ -25,9 +28,17 @@ describe('the language the application says it is rendering', () => {
   });
 
   it('is cleared when a provider unmounts', () => {
-    setActiveLocale(projectA, 'ar');
-    setActiveLocale(projectA, null);
+    const release = setActiveLocale(projectA, 'ar');
+    release();
     expect(activeLocale(projectA)).toBeNull();
+  });
+
+  it('restores an older provider when a newer one for the same project unmounts', () => {
+    setActiveLocale(projectA, 'ar');
+    const releaseNewer = setActiveLocale(projectA, 'en');
+    expect(activeLocale(projectA)).toBe('en');
+    releaseNewer();
+    expect(activeLocale(projectA)).toBe('ar');
   });
 
   /**

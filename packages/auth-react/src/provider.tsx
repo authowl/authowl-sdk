@@ -187,8 +187,7 @@ export function AuthOwlProvider({
   // rebuilding the client to change a language would rebuild the session
   // store with it.
   React.useEffect(() => {
-    setActiveLocale(resolved.decoded.projectId, locale);
-    return () => setActiveLocale(resolved.decoded.projectId, null);
+    return setActiveLocale(resolved.decoded.projectId, locale);
   }, [locale, resolved.decoded.projectId]);
 
   // Take the invitation id out of the URL on the first mount that sees it. The
