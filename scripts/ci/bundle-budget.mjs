@@ -191,6 +191,10 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // successful in-page method plus truthfully settling redirect methods measures
 // 72.1kb after removing redundant storage APIs and compacting the pending state.
 // The 73kb row preserves roughly 0.9kb of regression headroom.
+// Request-locale propagation (2026-08-27) raises Core 22->23. The scoped locale
+// registry and outgoing request header measure 22.1kb after combining with the
+// new MCP and sign-in-memory surfaces. The 23kb row preserves roughly 0.9kb of
+// regression headroom rather than hiding the combined cost in a retry.
 
 const BUDGETS = [
   {
@@ -200,7 +204,7 @@ const BUDGETS = [
   },
   {
     entry: 'packages/auth-core/dist/index.js',
-    maxGzipKb: 22,
+    maxGzipKb: 23,
     label: '@authowl/core (framework-neutral fetch/state client)',
   },
 ];

@@ -199,3 +199,5 @@ export { AuthOwlError, RateLimitedError, InvalidKeyError } from './errors';
 export { AuthOwlHttpError } from './http';
 export { TransportError, type TransportErrorKind } from './transport';
 export { LOCALES, directionFor, isLocale, type Locale } from './i18n';
+export { activeLocale, setActiveLocale } from './active-locale';
+export { AUTH_LOCALE_HEADER } from './http-client';
