@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../publishable_key.dart';
 import 'phone_otp.dart';
+import 'privacy_client.dart';
 import 'session.dart';
 import 'storage.dart';
 import 'transport.dart';
@@ -35,7 +36,12 @@ typedef AuthOwlChallengeTokenProvider = Future<String?> Function(
 /// derived from `@authowl/core` and drift-checked in CI, so this client and the
 /// JavaScript one cannot silently disagree about the API they call.
 class AuthOwlClient {
-  AuthOwlClient._(this._transport, this.session, this.projectId);
+  AuthOwlClient._(
+    this._transport,
+    this.session,
+    this.privacy,
+    this.projectId,
+  );
 
   /// Build a client for a project.
   ///
@@ -63,11 +69,16 @@ class AuthOwlClient {
       httpClient: httpClient,
     );
     return AuthOwlClient._(
-        transport, AuthOwlSessionStore(transport), key.projectId);
+      transport,
+      AuthOwlSessionStore(transport),
+      AuthOwlPrivacyClient(transport),
+      key.projectId,
+    );
   }
 
   final AuthOwlTransport _transport;
   final AuthOwlSessionStore session;
+  final AuthOwlPrivacyClient privacy;
   final String projectId;
 
   // -- sign in ---------------------------------------------------------------
@@ -159,6 +170,7 @@ class AuthOwlClient {
     String? firstName,
     String? lastName,
     int? consentVersion,
+    Map<String, Object?>? privacyEvidence,
     String? challengeToken,
   }) =>
       _mutating(
@@ -171,6 +183,7 @@ class AuthOwlClient {
             if (firstName != null) 'firstName': firstName,
             if (lastName != null) 'lastName': lastName,
             if (consentVersion != null) 'consentVersion': consentVersion,
+            if (privacyEvidence != null) 'privacyEvidence': privacyEvidence,
           },
           challengeToken: challengeToken);
 

@@ -72,7 +72,7 @@ catalogs as the web components (`@authowl/core/i18n`) so the wording never
 drifts between platforms.
 
 ```tsx
-import { EmailOtpForm, SignIn, SignUp, SocialButtons } from '@authowl/react-native';
+import { EmailOtpForm, PrivacyCenter, SignIn, SignUp, SocialButtons } from '@authowl/react-native';
 
 <SignIn
   onSignedIn={() => router.replace('/home')}
@@ -81,6 +81,7 @@ import { EmailOtpForm, SignIn, SignUp, SocialButtons } from '@authowl/react-nati
 <SignUp onSignedUp={({ sessionCreated }) =>
   router.replace(sessionCreated ? '/home' : '/check-your-email')} />
 <EmailOtpForm onSignedIn={() => router.replace('/home')} />
+<PrivacyCenter />
 ```
 
 `<SignIn />` reports success **only once a session exists**. A two-factor
@@ -95,6 +96,12 @@ verification return none, and "check your email" is a different screen from
 The provider loads the project's public capabilities once. Built-in screens
 hide disabled methods, enforce the configured password length, collect required
 legal consent, and send the accepted consent version automatically.
+
+When privacy notices are published, `<SignUp />` presents the exact localized
+versions and records an explicit grant or refusal for every optional purpose.
+Signed-in users can use `<PrivacyCenter />` to change those choices and submit
+data-rights requests. Custom interfaces can call the same typed APIs through
+`usePrivacy()` or `useAuthOwlClient().privacy`.
 
 Pass `locale="ar"` to `<AuthOwlProvider>` to render Arabic. It is not
 auto-detected from the device: a phone set to Arabic does not mean the app is
@@ -201,6 +208,7 @@ if (has({ permission: 'org:billing:read' })) return <Billing />;
 - `useUser()` - the signed-in user, or `null`
 - `useSession()` - raw session state (`isPending`, `error`, `refetch`)
 - `useAuthOwlClient()` - native-safe sign-in, account, organization, and passkey management actions
+- `usePrivacy()` - typed consent preferences and data-rights actions
 - `useSocialSignIn()` - exchanges a provider-issued ID token for an AuthOwl session
 
 ## Social sign-in

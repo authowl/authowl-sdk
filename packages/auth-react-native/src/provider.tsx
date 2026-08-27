@@ -23,6 +23,7 @@ import type {
   SocialAuthData,
   AuthActionResult,
   PublicConfig,
+  PrivacyClient,
 } from '@authowl/core/native';
 
 import { createAuthOwlNative, type AuthOwlNativeConfig } from './client';
@@ -144,6 +145,11 @@ export function usePublicConfig(): {
     state: publicConfigState,
     isLoading: publicConfigState === 'loading',
   };
+}
+
+/** Typed consent preferences and data-rights actions for the signed-in user. */
+export function usePrivacy(): PrivacyClient {
+  return useAuthOwlContext().client.privacy;
 }
 
 /** The live session state, re-rendering whenever the session changes. */

@@ -39,6 +39,20 @@ export {
 export type { AddPasskeyOptions, AuthPasskey, PasskeyAuthData } from './client';
 export { resolveConfig, type AuthConfig, type ResolvedAuthConfig } from './config';
 export { getPublicConfig, type PublicConfig } from './public-config';
+export { LOCALES, directionFor, isLocale, type Locale } from './i18n';
+export { createIdempotencyKey } from './idempotency';
+export {
+  buildPrivacySignUpEvidence,
+  type CreatePrivacyRightsRequestOptions,
+  type PrivacyClient,
+  type PrivacyConsentPreference,
+  type PrivacyConsentState,
+  type PrivacyLocale,
+  type PrivacyRightsRequest,
+  type PrivacyRightState,
+  type PrivacyRightType,
+  type RecordPrivacyConsentOptions,
+} from './privacy-client';
 export {
   resolveProjectCapabilities,
   type ProjectCapabilities,

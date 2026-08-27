@@ -115,6 +115,24 @@
 .ba-checkbox:focus-visible + .ba-checkbox-visual { outline: 2px solid var(--ba-accent); outline-offset: 2px; }
 .ba-checkbox:disabled + .ba-checkbox-visual { opacity: 0.55; }
 
+/* Exact-version privacy notice delivery and purpose-specific sign-up choices. */
+.ba-privacy-signup { display: grid; gap: 14px; margin-block: 2px; padding: 16px; border: 1px solid var(--ba-border); border-radius: 10px; background: color-mix(in srgb, var(--ba-hover) 58%, transparent); }
+.ba-privacy-signup-header { display: grid; gap: 4px; }
+.ba-privacy-signup-header h3 { margin: 0; color: var(--ba-fg); font-size: 15px; line-height: 1.35; }
+.ba-privacy-signup-header p { margin: 0; color: var(--ba-muted); font-size: 12px; line-height: 1.55; }
+.ba-eyebrow { color: var(--ba-accent) !important; font-size: 10px !important; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.ba-privacy-notices { display: grid; gap: 8px; }
+.ba-privacy-notice { overflow: hidden; border: 1px solid var(--ba-divider); border-radius: 8px; background: var(--ba-surface); }
+.ba-privacy-notice summary { padding: 10px 12px; cursor: pointer; color: var(--ba-fg); font-size: 12px; font-weight: 650; }
+.ba-privacy-notice p { max-height: 180px; overflow: auto; margin: 0; padding: 0 12px 12px; color: var(--ba-muted); font-size: 12px; line-height: 1.6; white-space: pre-wrap; }
+.ba-privacy-purpose-list { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.ba-privacy-purpose-list legend { margin-bottom: 7px; color: var(--ba-fg); font-size: 12px; font-weight: 650; }
+.ba-privacy-purpose { display: flex; align-items: flex-start; gap: 10px; padding: 10px 11px; border: 1px solid var(--ba-divider); border-radius: 8px; background: var(--ba-surface); cursor: pointer; }
+.ba-privacy-purpose > span:last-child { display: grid; gap: 3px; min-width: 0; }
+.ba-privacy-purpose strong { color: var(--ba-fg); font-size: 12px; line-height: 1.35; }
+.ba-privacy-purpose small, .ba-privacy-choice-note { color: var(--ba-muted); font-size: 11px; line-height: 1.5; }
+.ba-privacy-choice-note { margin: 0; }
+
 /* Project logo, optional wordmark, and environment identity shared by the
    managed sign-in and sign-up components. */
 .ba-branding { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
@@ -221,6 +239,46 @@
 .ba-profile-section .ba-input { min-height: 42px; box-sizing: border-box; width: 100%; }
 .ba-profile-section input[type='email'],
 .ba-profile-section input[inputmode='url'] { direction: ltr; text-align: left; }
+
+/* Privacy center: consent controls, rights intake, request history, notices. */
+.ba-privacy-center { display: grid; gap: 28px; }
+.ba-privacy-center-header { margin-bottom: 0; }
+.ba-privacy-center-block { display: grid; gap: 13px; }
+.ba-privacy-center-block + .ba-privacy-center-block { padding-top: 24px; border-top: 1px solid var(--ba-divider); }
+.ba-privacy-center-block-heading { display: grid; gap: 4px; }
+.ba-privacy-center-block-heading h3 { margin: 0; color: var(--ba-fg); font-size: 15px; }
+.ba-privacy-center-block-heading p { margin: 0; color: var(--ba-muted); font-size: 12px; line-height: 1.55; }
+.ba-privacy-center-choices { display: grid; gap: 9px; }
+.ba-privacy-center-choice { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px; border: 1px solid var(--ba-border); border-radius: 10px; background: var(--ba-surface); }
+.ba-privacy-center-choice > span { display: grid; gap: 4px; min-width: 0; }
+.ba-privacy-center-choice strong { color: var(--ba-fg); font-size: 13px; }
+.ba-privacy-center-choice small { color: var(--ba-muted); font-size: 11px; line-height: 1.5; }
+.ba-privacy-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; min-width: 70px; border: 0; padding: 0; background: none; color: var(--ba-muted); cursor: pointer; }
+.ba-privacy-toggle > span { position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--ba-border); transition: background-color 150ms ease; }
+.ba-privacy-toggle > span::after { content: ''; position: absolute; inset-block-start: 3px; inset-inline-start: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--ba-surface); box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform 150ms ease; }
+.ba-privacy-toggle[aria-checked='true'] > span { background: var(--ba-accent-solid); }
+.ba-privacy-toggle[aria-checked='true'] > span::after { transform: translateX(14px); }
+[dir='rtl'] .ba-privacy-toggle[aria-checked='true'] > span::after { transform: translateX(-14px); }
+.ba-privacy-toggle b { font-size: 11px; font-weight: 650; }
+.ba-privacy-toggle:focus-visible { outline: 2px solid var(--ba-accent); outline-offset: 3px; border-radius: 5px; }
+.ba-privacy-toggle:disabled { opacity: .55; cursor: wait; }
+.ba-privacy-right-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ba-privacy-right { min-height: 42px; padding: 10px 12px; border: 1px solid var(--ba-border); border-radius: 8px; background: var(--ba-surface); color: var(--ba-fg); text-align: start; font-size: 12px; font-weight: 600; cursor: pointer; }
+.ba-privacy-right:hover:not(:disabled) { border-color: var(--ba-accent); background: var(--ba-hover); }
+.ba-privacy-right-danger { color: var(--ba-danger-text); }
+.ba-privacy-right:disabled { opacity: .55; cursor: wait; }
+.ba-privacy-request-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ba-privacy-request-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 13px; border: 1px solid var(--ba-divider); border-radius: 8px; }
+.ba-privacy-request-list li > span { display: grid; gap: 3px; }
+.ba-privacy-request-list strong { color: var(--ba-fg); font-size: 12px; }
+.ba-privacy-request-list small { color: var(--ba-muted); font-size: 10px; }
+.ba-privacy-request-list li > b { padding: 4px 7px; border-radius: 999px; background: var(--ba-hover); color: var(--ba-muted); font-size: 10px; font-weight: 650; }
+.ba-privacy-request-list li > b[data-state='completed'] { background: color-mix(in srgb, var(--ba-success) 12%, transparent); color: var(--ba-success); }
+.ba-privacy-empty { margin: 0; padding: 14px; border-radius: 8px; background: var(--ba-hover); color: var(--ba-muted); font-size: 12px; }
+@media (max-width: 520px) {
+  .ba-privacy-right-grid { grid-template-columns: minmax(0, 1fr); }
+  .ba-privacy-center-choice { align-items: flex-start; }
+}
 .ba-profile-submit { align-self: flex-start; min-width: 132px; }
 .ba-profile-list + .ba-profile-submit { margin-top: 20px; }
 .ba-profile-current { display: flex; flex-direction: column; gap: 5px; margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--ba-border); border-radius: 8px; }

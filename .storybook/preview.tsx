@@ -38,6 +38,7 @@ const preview: Preview = {
       const signedIn = context.parameters.authowl?.signedIn !== false;
       const consentRequired = context.parameters.authowl?.consentRequired === true;
       const configUnavailable = context.parameters.authowl?.configUnavailable === true;
+      const privacyEnabled = context.parameters.authowl?.privacyEnabled === true;
       const primaryColor = typeof context.parameters.authowl?.primaryColor === 'string'
         ? context.parameters.authowl.primaryColor
         : undefined;
@@ -48,6 +49,7 @@ const preview: Preview = {
           signedIn={signedIn}
           consentRequired={consentRequired}
           configUnavailable={configUnavailable}
+          privacyEnabled={privacyEnabled}
           primaryColor={primaryColor}
         >
           <main

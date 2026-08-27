@@ -5,7 +5,9 @@ import '../../authowl_client.dart'
     show
         AuthOwlChallengeAction,
         AuthOwlChallengeTokenProvider,
-        AuthOwlLegalConfig;
+        AuthOwlLegalConfig,
+        AuthOwlPrivacyConfig,
+        createAuthOwlIdempotencyKey;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -42,6 +44,9 @@ class _AuthOwlSignUpState extends State<AuthOwlSignUp> {
   String? _error;
   bool _acceptedConsent = false;
   int? _consentVersion;
+  String? _privacyFingerprint;
+  String _privacyCorrelationId = createAuthOwlIdempotencyKey();
+  final Set<String> _grantedPurposeCodes = <String>{};
 
   @override
   void initState() {
@@ -66,6 +71,16 @@ class _AuthOwlSignUpState extends State<AuthOwlSignUp> {
     if (version != _consentVersion) {
       _consentVersion = version;
       _acceptedConsent = false;
+    }
+    final privacy = AuthOwlProvider.of(context).publicConfig?.privacy;
+    final privacyFingerprint = privacy == null
+        ? null
+        : '${privacy.notices.map((notice) => notice.noticeVersionId).join(',')}|'
+            '${privacy.consentPurposes.map((purpose) => purpose.purposeVersionId).join(',')}';
+    if (privacyFingerprint != _privacyFingerprint) {
+      _privacyFingerprint = privacyFingerprint;
+      _privacyCorrelationId = createAuthOwlIdempotencyKey();
+      _grantedPurposeCodes.clear();
     }
   }
 
@@ -126,6 +141,13 @@ class _AuthOwlSignUpState extends State<AuthOwlSignUp> {
       consentVersion: scope.publicConfig?.legal.required == true
           ? scope.publicConfig!.legal.version
           : null,
+      privacyEvidence: scope.publicConfig?.privacy?.notices.isNotEmpty == true
+          ? scope.publicConfig!.privacy!.buildSignUpEvidence(
+              locale: scope.locale == 'ar' ? 'ar' : 'en',
+              grantedPurposeCodes: _grantedPurposeCodes,
+              correlationId: _privacyCorrelationId,
+            )
+          : null,
       challengeToken: challengeToken,
     );
     if (!mounted) return;
@@ -150,56 +172,175 @@ class _AuthOwlSignUpState extends State<AuthOwlSignUp> {
       return const SizedBox.shrink();
     }
     final legal = config?.legal;
-    return AuthOwlColumn(
-      key: const Key('authowl-signup'),
-      children: <Widget>[
-        Text(scope.t('signUp.title'),
-            style: Theme.of(context).textTheme.headlineSmall),
-        AuthOwlField(
-          key: const Key('authowl-signup-name'),
-          label: scope.t('signUp.nameLabel'),
-          controller: _name,
-          enabled: !_busy,
-          autofillHints: const <String>[AutofillHints.name],
-        ),
-        AuthOwlField(
-          key: const Key('authowl-signup-email'),
-          label: scope.t('common.emailLabel'),
-          controller: _email,
-          enabled: !_busy,
-          keyboardType: TextInputType.emailAddress,
-          autofillHints: const <String>[AutofillHints.username],
-        ),
-        AuthOwlField(
-          key: const Key('authowl-signup-password'),
-          label: scope.t('common.passwordLabel'),
-          controller: _password,
-          obscure: true,
-          enabled: !_busy,
-          autofillHints: const <String>[AutofillHints.newPassword],
-          maxLength: config?.passwordMaxLength ?? 128,
-          onSubmitted: _submit,
-        ),
-        if (legal?.required == true)
-          _LegalConsentRow(
-            key: const Key('authowl-signup-consent'),
-            scope: scope,
-            legal: legal!,
-            accepted: _acceptedConsent,
+    return SingleChildScrollView(
+      child: AuthOwlColumn(
+        key: const Key('authowl-signup'),
+        children: <Widget>[
+          Text(scope.t('signUp.title'),
+              style: Theme.of(context).textTheme.headlineSmall),
+          AuthOwlField(
+            key: const Key('authowl-signup-name'),
+            label: scope.t('signUp.nameLabel'),
+            controller: _name,
             enabled: !_busy,
-            onChanged: (accepted) =>
-                setState(() => _acceptedConsent = accepted),
+            autofillHints: const <String>[AutofillHints.name],
           ),
-        AuthOwlFormError(message: _error),
-        AuthOwlSubmitButton(
-          key: const Key('authowl-signup-submit'),
-          label: scope.t('signUp.submit'),
-          busyLabel: scope.t('signUp.submitPending'),
-          onPressed: _submit,
-          busy: _busy,
-          enabled: _canSubmit(scope),
+          AuthOwlField(
+            key: const Key('authowl-signup-email'),
+            label: scope.t('common.emailLabel'),
+            controller: _email,
+            enabled: !_busy,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const <String>[AutofillHints.username],
+          ),
+          AuthOwlField(
+            key: const Key('authowl-signup-password'),
+            label: scope.t('common.passwordLabel'),
+            controller: _password,
+            obscure: true,
+            enabled: !_busy,
+            autofillHints: const <String>[AutofillHints.newPassword],
+            maxLength: config?.passwordMaxLength ?? 128,
+            onSubmitted: _submit,
+          ),
+          if (legal?.required == true)
+            _LegalConsentRow(
+              key: const Key('authowl-signup-consent'),
+              scope: scope,
+              legal: legal!,
+              accepted: _acceptedConsent,
+              enabled: !_busy,
+              onChanged: (accepted) =>
+                  setState(() => _acceptedConsent = accepted),
+            ),
+          if (config?.privacy != null &&
+              (config!.privacy!.notices.isNotEmpty ||
+                  config.privacy!.consentPurposes.isNotEmpty))
+            _PrivacySignUpEvidence(
+              key: const Key('authowl-signup-privacy-evidence'),
+              scope: scope,
+              privacy: config.privacy!,
+              grantedPurposeCodes: _grantedPurposeCodes,
+              enabled: !_busy,
+              onPurposeChanged: (code, granted) => setState(() {
+                if (granted) {
+                  _grantedPurposeCodes.add(code);
+                } else {
+                  _grantedPurposeCodes.remove(code);
+                }
+              }),
+            ),
+          AuthOwlFormError(message: _error),
+          AuthOwlSubmitButton(
+            key: const Key('authowl-signup-submit'),
+            label: scope.t('signUp.submit'),
+            busyLabel: scope.t('signUp.submitPending'),
+            onPressed: _submit,
+            busy: _busy,
+            enabled: _canSubmit(scope),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrivacySignUpEvidence extends StatelessWidget {
+  const _PrivacySignUpEvidence({
+    required this.scope,
+    required this.privacy,
+    required this.grantedPurposeCodes,
+    required this.enabled,
+    required this.onPurposeChanged,
+    super.key,
+  });
+
+  final AuthOwlScope scope;
+  final AuthOwlPrivacyConfig privacy;
+  final Set<String> grantedPurposeCodes;
+  final bool enabled;
+  final void Function(String code, bool granted) onPurposeChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final locale = scope.locale == 'ar' ? 'ar' : 'en';
+    return Material(
+      color: colors.surfaceContainerLowest,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(scope.t('privacy.signup.title'),
+                style: theme.textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              scope.t('privacy.signup.description'),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colors.onSurfaceVariant,
+                height: 1.4,
+              ),
+            ),
+            if (privacy.notices.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 12),
+              ...privacy.notices.asMap().entries.map((entry) => ExpansionTile(
+                    key: Key(
+                        'authowl-privacy-notice-${entry.value.noticeVersionId}'),
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(bottom: 12),
+                    initiallyExpanded: entry.key == 0,
+                    title: Text(entry.value.title[locale] ?? ''),
+                    children: <Widget>[
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          entry.value.body[locale] ?? '',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )),
+            ],
+            if (privacy.consentPurposes.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 12),
+              Text(scope.t('privacy.signup.optional'),
+                  style: theme.textTheme.labelLarge),
+              const SizedBox(height: 4),
+              ...privacy.consentPurposes.map((purpose) => CheckboxListTile(
+                    key: Key('authowl-signup-purpose-${purpose.code}'),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    activeColor: scope.primaryColor,
+                    checkColor: authOwlForegroundFor(scope.primaryColor),
+                    value: grantedPurposeCodes.contains(purpose.code),
+                    onChanged: enabled
+                        ? (value) =>
+                            onPurposeChanged(purpose.code, value == true)
+                        : null,
+                    title: Text(purpose.title[locale] ?? ''),
+                    subtitle: Text(purpose.description[locale] ?? ''),
+                  )),
+              Text(
+                scope.t('privacy.signup.choiceNote'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
         ),
-      ],
+      ),
     );
   }
 }

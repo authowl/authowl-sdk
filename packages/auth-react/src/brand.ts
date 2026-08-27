@@ -254,7 +254,10 @@ export type BrandRamp = {
 
 export type BrandRampSet = { light: BrandRamp; dark: BrandRamp };
 
-const LIGHT_SURFACE = '#ffffff';
+// Standalone components are commonly mounted on the SDK's light hover canvas,
+// not only on a white card. Solving against this slightly darker surface also
+// clears white, and keeps small accent labels AA-compliant in both placements.
+const LIGHT_SURFACE = '#f4f4f5';
 const DARK_SURFACE = '#18181b';
 
 /**

@@ -31,6 +31,13 @@ export function useAccount(): UseAccountResult {
   return useAuthClient().account;
 }
 
+export type UsePrivacyResult = AuthOwlClient['privacy'];
+
+/** Signed-in privacy preferences and data-subject-rights actions. */
+export function usePrivacy(): UsePrivacyResult {
+  return useAuthClient().privacy;
+}
+
 export type UsePublicConfigResult = {
   config: PublicConfig | null;
   isLoading: boolean;

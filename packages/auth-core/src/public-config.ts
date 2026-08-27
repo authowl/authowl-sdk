@@ -128,6 +128,32 @@ export type PublicConfig = {
     version: number;
     required: boolean;
   };
+  /** Published, bilingual privacy notices and optional consent purposes. */
+  privacy?: {
+    notices: Array<{
+      noticeId: string;
+      noticeVersionId: string;
+      code: string;
+      version: number;
+      title: { en: string; ar: string };
+      body: { en: string; ar: string };
+      digest: { en: string; ar: string };
+      activityCodes: string[];
+      purposeCodes: string[];
+      effectiveFrom: string;
+    }>;
+    consentPurposes: Array<{
+      purposeId: string;
+      purposeVersionId: string;
+      code: string;
+      version: number;
+      title: { en: string; ar: string };
+      description: { en: string; ar: string };
+      digest: { en: string; ar: string };
+      activityCodes: string[];
+      dataCategories: string[];
+    }>;
+  };
   /**
    * Whether the project lets signed-in users enrol a second factor (TOTP). A
    * capability flag, not a sign-in method (so it's absent from `enabledMethods`):
@@ -284,6 +310,7 @@ function decodePublicConfig(
     }
   }
   if (row.authentication !== undefined) assertAuthentication(row.authentication);
+  if (row.privacy !== undefined) assertPrivacyConfig(row.privacy);
   if (row.emailVerification !== undefined) {
     const email = asObject(row.emailVerification);
     if (
@@ -386,6 +413,80 @@ function assertAuthentication(value: unknown): void {
   ) {
     throw invalidPublicConfig();
   }
+}
+
+function assertPrivacyConfig(value: unknown): void {
+  const privacy = asObject(value);
+  if (
+    !Array.isArray(privacy.notices)
+    || !Array.isArray(privacy.consentPurposes)
+    || privacy.notices.length > 64
+    || privacy.consentPurposes.length > 64
+  ) throw invalidPublicConfig();
+
+  for (const entry of privacy.notices) {
+    const notice = asObject(entry);
+    assertPrivacyIdentity(notice, 'noticeId', 'noticeVersionId');
+    assertLocalizedText(notice.title, 512);
+    assertLocalizedText(notice.body, 100_000);
+    assertLocalizedDigest(notice.digest);
+    if (
+      !isStringArray(notice.activityCodes, 128)
+      || !isStringArray(notice.purposeCodes, 128)
+      || typeof notice.effectiveFrom !== 'string'
+      || !Number.isFinite(Date.parse(notice.effectiveFrom))
+    ) throw invalidPublicConfig();
+  }
+  for (const entry of privacy.consentPurposes) {
+    const purpose = asObject(entry);
+    assertPrivacyIdentity(purpose, 'purposeId', 'purposeVersionId');
+    assertLocalizedText(purpose.title, 512);
+    assertLocalizedText(purpose.description, 10_000);
+    assertLocalizedDigest(purpose.digest);
+    if (
+      !isStringArray(purpose.activityCodes, 128)
+      || !isStringArray(purpose.dataCategories, 128)
+    ) throw invalidPublicConfig();
+  }
+}
+
+function assertPrivacyIdentity(
+  row: Record<string, unknown>,
+  idKey: string,
+  versionIdKey: string,
+): void {
+  if (
+    typeof row[idKey] !== 'string'
+    || !isUuid(row[idKey] as string)
+    || typeof row[versionIdKey] !== 'string'
+    || !isUuid(row[versionIdKey] as string)
+    || typeof row.code !== 'string'
+    || !/^[a-z][a-z0-9_]{0,63}$/.test(row.code)
+    || !Number.isSafeInteger(row.version)
+    || (row.version as number) < 1
+  ) throw invalidPublicConfig();
+}
+
+function assertLocalizedText(value: unknown, maxLength: number): void {
+  const text = asObject(value);
+  if (
+    typeof text.en !== 'string'
+    || text.en.length === 0
+    || text.en.length > maxLength
+    || typeof text.ar !== 'string'
+    || text.ar.length === 0
+    || text.ar.length > maxLength
+  ) throw invalidPublicConfig();
+}
+
+function assertLocalizedDigest(value: unknown): void {
+  const digest = asObject(value);
+  if (
+    typeof digest.en !== 'string'
+    || !/^[a-f0-9]{64}$/.test(digest.en)
+    || typeof digest.ar !== 'string'
+    || !/^[a-f0-9]{64}$/.test(digest.ar)
+  ) throw invalidPublicConfig();
 }
 
 function isOptionalNullableString(value: unknown): boolean {

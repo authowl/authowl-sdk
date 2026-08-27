@@ -66,6 +66,7 @@ Widget host(
 
 Map<String, Object?> publicConfig({
   bool consentRequired = false,
+  bool privacyEnabled = false,
   String? primaryColor,
 }) =>
     {
@@ -85,6 +86,34 @@ Map<String, Object?> publicConfig({
       },
       'organizations': false,
       'locale': 'en',
+      if (privacyEnabled)
+        'privacy': {
+          'notices': [
+            {
+              'noticeVersionId': '22222222-2222-4222-8222-222222222222',
+              'title': {
+                'en': 'Privacy at sign-up',
+                'ar': 'الخصوصية عند التسجيل'
+              },
+              'body': {
+                'en': 'How this app uses your data.',
+                'ar': 'كيفية استخدام التطبيق لبياناتك.'
+              },
+              'purposeCodes': ['research'],
+            }
+          ],
+          'consentPurposes': [
+            {
+              'purposeVersionId': '44444444-4444-4444-8444-444444444444',
+              'code': 'research',
+              'title': {'en': 'Optional research', 'ar': 'أبحاث اختيارية'},
+              'description': {
+                'en': 'Help improve the app.',
+                'ar': 'المساعدة في تحسين التطبيق.'
+              },
+            }
+          ],
+        },
       if (primaryColor != null) 'branding': {'primaryColor': primaryColor},
     };
 
@@ -299,6 +328,9 @@ void main() {
       await fill(tester, 'authowl-signup-name', 'Mona');
       await fill(tester, 'authowl-signup-email', 'mona@example.test');
       await fill(tester, 'authowl-signup-password', 'correct horse');
+      await tester.ensureVisible(
+        find.byKey(const Key('authowl-signup-submit')),
+      );
       await tester.tap(find.byKey(const Key('authowl-signup-submit')));
       await tester.pumpAndSettle();
 
@@ -388,6 +420,142 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(recorder.bodyEndingWith('/sign-up/email')['consentVersion'], 7);
+    });
+
+    testWidgets('renders notices and sends exact optional-purpose evidence',
+        (tester) async {
+      final recorder = Recorder((request) {
+        if (request.url.path.endsWith('/public-config')) {
+          return ok(publicConfig(privacyEnabled: true));
+        }
+        return ok(<String, Object?>{'sessionCreated': true});
+      });
+      await tester.pumpWidget(host(const AuthOwlSignUp(), recorder));
+      await tester.pumpAndSettle();
+
+      expect(find.text('How this app uses your data.'), findsOneWidget);
+      await tester
+          .tap(find.byKey(const Key('authowl-signup-purpose-research')));
+      await tester.pump();
+      await fill(tester, 'authowl-signup-name', 'Mona');
+      await fill(tester, 'authowl-signup-email', 'mona@example.test');
+      await fill(tester, 'authowl-signup-password', 'correct horse');
+      await tester.ensureVisible(
+        find.byKey(const Key('authowl-signup-submit')),
+      );
+      await tester.tap(find.byKey(const Key('authowl-signup-submit')));
+      await tester.pumpAndSettle();
+
+      final evidence =
+          recorder.bodyEndingWith('/sign-up/email')['privacyEvidence']
+              as Map<String, Object?>;
+      expect(evidence['locale'], 'en');
+      expect(
+          evidence['correlationId'],
+          matches(
+            RegExp(
+                r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'),
+          ));
+      expect(evidence['noticeVersionIds'],
+          ['22222222-2222-4222-8222-222222222222']);
+      final decisions = evidence['consentDecisions'] as List<Object?>;
+      expect(decisions.single, containsPair('decision', 'granted'));
+    });
+
+    testWidgets('manages consent and submits data-rights requests',
+        (tester) async {
+      final storage = InMemoryAuthOwlStorage();
+      await storage.write('authowl.session.$projectId', 'tok_privacy');
+      final recorder = Recorder((request) {
+        final path = request.url.path;
+        if (path.endsWith('/public-config')) {
+          return ok(publicConfig(privacyEnabled: true));
+        }
+        if (path.endsWith('/get-session')) {
+          return ok({
+            'user': {'id': 'user_1'},
+            'session': {'id': 'session_1'},
+          });
+        }
+        if (path.endsWith('/privacy/consent-decisions')) {
+          if (request.method == 'POST') {
+            return ok({
+              'recorded': true,
+              'decision': 'withdrawn',
+              'decidedAt': '2026-08-27T10:00:00.000Z',
+            });
+          }
+          return ok({
+            'preferences': [
+              {
+                'purposeId': 'purpose_1',
+                'purposeVersionId': '44444444-4444-4444-8444-444444444444',
+                'code': 'research',
+                'state': 'granted',
+                'updatedAt': '2026-08-27T10:00:00.000Z',
+                'decidedAt': '2026-08-27T10:00:00.000Z',
+              }
+            ],
+          });
+        }
+        if (request.method == 'POST') {
+          return ok({
+            'request': {
+              'id': 'request_2',
+              'rightType': 'erasure',
+              'state': 'received',
+              'locale': 'en',
+              'receivedAt': '2026-08-27T10:00:00.000Z',
+              'acknowledgedAt': null,
+              'fulfilmentDeadline': '2026-09-27T10:00:00.000Z',
+              'completedAt': null,
+            },
+          });
+        }
+        return ok({
+          'requests': [
+            {
+              'id': 'request_1',
+              'rightType': 'access',
+              'state': 'received',
+              'locale': 'en',
+              'receivedAt': '2026-08-27T10:00:00.000Z',
+              'acknowledgedAt': null,
+              'fulfilmentDeadline': '2026-09-27T10:00:00.000Z',
+              'completedAt': null,
+            }
+          ],
+        });
+      });
+
+      await tester.pumpWidget(host(
+        const AuthOwlPrivacyCenter(),
+        recorder,
+        storage: storage,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Privacy center'), findsOneWidget);
+      expect(find.text('Received'), findsOneWidget);
+      await tester
+          .tap(find.byKey(const Key('authowl-privacy-purpose-research')));
+      await tester.pumpAndSettle();
+      final consentRequest = recorder.requests.lastWhere((request) =>
+          request.method == 'POST' &&
+          request.url.path.endsWith('/privacy/consent-decisions'));
+      expect(
+        (jsonDecode(consentRequest.body) as Map)['decision'],
+        'withdrawn',
+      );
+
+      final erasure = find.byKey(const Key('authowl-privacy-right-erasure'));
+      await tester.ensureVisible(erasure);
+      await tester.tap(erasure);
+      await tester.pumpAndSettle();
+      final rightsRequest = recorder.requests.lastWhere((request) =>
+          request.method == 'POST' &&
+          request.url.path.endsWith('/privacy/rights'));
+      expect((jsonDecode(rightsRequest.body) as Map)['rightType'], 'erasure');
     });
 
     testWidgets('uses project branding in light and dark modes',

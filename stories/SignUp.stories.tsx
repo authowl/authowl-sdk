@@ -58,3 +58,23 @@ export const ConsentRequired: Story = {
       .not.toBe(0);
   },
 };
+
+export const PrivacyEvidence: Story = {
+  parameters: {
+    authowl: {
+      signedIn: false,
+      privacyEnabled: true,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    const canvas = within(canvasElement);
+    const notice = canvasElement.querySelector('.ba-privacy-notice summary');
+    await expect(notice).not.toBeNull();
+    const research = await canvas.findByRole('checkbox');
+    await expect(research).not.toBeChecked();
+    await userEvent.click(research);
+    await expect(research).toBeChecked();
+    await expect(canvasElement.querySelector('.ba-social-grid')).toBeNull();
+  },
+};

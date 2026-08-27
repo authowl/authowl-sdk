@@ -7,7 +7,7 @@ Flutter widgets, provider, and session management for
 
 ```yaml
 dependencies:
-  authowl: ^0.1.0
+  authowl: ^0.3.0
   flutter_secure_storage: ^9.0.0
 ```
 
@@ -74,6 +74,8 @@ AuthOwlSignUp(onSignedUp: ({required sessionCreated}) =>
   context.go(sessionCreated ? '/home' : '/check-your-email'))
 
 AuthOwlEmailOtpForm(onSignedIn: () => context.go('/home'))
+
+const AuthOwlPrivacyCenter()
 ```
 
 `AuthOwlSignIn` reports success **only once a session exists**. A two-factor
@@ -86,6 +88,19 @@ verification create none.
 The provider loads the project's public configuration once. Built-in widgets
 hide disabled methods, enforce the configured password length, collect required
 legal consent, and send the accepted consent version automatically.
+
+When privacy notices are published, `AuthOwlSignUp` presents the exact
+localized versions and records an explicit grant or refusal for each optional
+purpose. Signed-in users can use `AuthOwlPrivacyCenter` to update choices and
+submit data-rights requests. Custom interfaces use the typed headless client:
+
+```dart
+final choices = await scope.client.privacy.listConsentPreferences();
+await scope.client.privacy.createRightsRequest(
+  rightType: AuthOwlPrivacyRight.access,
+  locale: AuthOwlPrivacyLocale.ar,
+);
+```
 
 ## Session state
 

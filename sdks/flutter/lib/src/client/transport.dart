@@ -110,6 +110,7 @@ class AuthOwlTransport {
   })  : _ownsHttpClient = httpClient == null,
         _http = httpClient ?? http.Client(),
         _secure = _requireSafeOrigin(apiUrl, allowHttpLoopback),
+        _projectBaseUrl = '$apiUrl/api/projects/$projectId',
         _baseUrl = '$apiUrl/api/projects/$projectId/auth',
         _publicConfigUrl = '$apiUrl/api/projects/$projectId/public-config';
 
@@ -120,6 +121,7 @@ class AuthOwlTransport {
   final http.Client _http;
   final bool _ownsHttpClient;
   final bool _secure;
+  final String _projectBaseUrl;
   final String _baseUrl;
   final String _publicConfigUrl;
 
@@ -149,6 +151,27 @@ class AuthOwlTransport {
         body: body,
         includeSession: true,
         challengeToken: challengeToken,
+      );
+
+  /// Issue an authenticated request to a project API outside the auth engine.
+  ///
+  /// Privacy, billing, and other project-owned APIs share the exact session
+  /// cookie and publishable-key boundary used by auth without pretending their
+  /// routes live below `/auth`.
+  Future<AuthResult<Object?>> sendProject(
+    String path, {
+    String method = 'GET',
+    Map<String, Object?>? body,
+    Map<String, String>? query,
+  }) =>
+      _send(
+        Uri.parse('$_projectBaseUrl$path').replace(
+          queryParameters: query == null || query.isEmpty ? null : query,
+        ),
+        projectionPath: path,
+        method: method,
+        body: body,
+        includeSession: true,
       );
 
   /// Fetch publishable project policy without replaying or capturing a session.

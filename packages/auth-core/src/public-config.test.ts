@@ -116,6 +116,50 @@ describe('getPublicConfig', () => {
     });
   });
 
+  it('validates the published bilingual privacy projection', async () => {
+    const privacy = {
+      notices: [{
+        noticeId: '33333333-3333-4333-8333-333333333333',
+        noticeVersionId: '44444444-4444-4444-8444-444444444444',
+        code: 'signup_notice',
+        version: 1,
+        title: { en: 'Privacy', ar: 'الخصوصية' },
+        body: { en: 'Notice body', ar: 'نص الإشعار' },
+        digest: { en: 'a'.repeat(64), ar: 'b'.repeat(64) },
+        activityCodes: ['account'],
+        purposeCodes: ['research'],
+        effectiveFrom: '2026-08-27T10:00:00.000Z',
+      }],
+      consentPurposes: [{
+        purposeId: '55555555-5555-4555-8555-555555555555',
+        purposeVersionId: '66666666-6666-4666-8666-666666666666',
+        code: 'research',
+        version: 1,
+        title: { en: 'Research', ar: 'الأبحاث' },
+        description: { en: 'Optional research', ar: 'أبحاث اختيارية' },
+        digest: { en: 'c'.repeat(64), ar: 'd'.repeat(64) },
+        activityCodes: ['account'],
+        dataCategories: ['usage'],
+      }],
+    };
+    const fetchImpl = vi.fn(
+      async () => Response.json({ ...publicConfigFixture(), privacy }),
+    ) as unknown as typeof fetch;
+    await expect(getPublicConfig(cfg(fetchImpl))).resolves.toMatchObject({ privacy });
+
+    const malformed = vi.fn(async () => Response.json({
+      ...publicConfigFixture(),
+      privacy: {
+        ...privacy,
+        notices: [{ ...privacy.notices[0], digest: { en: 'not-a-digest', ar: 'b'.repeat(64) } }],
+      },
+    })) as unknown as typeof fetch;
+    await expect(getPublicConfig(cfg(malformed))).rejects.toMatchObject({
+      name: 'TransportError',
+      kind: 'invalid_response',
+    });
+  });
+
   it.each([
     [{ minLength: 0, maxLength: 96 }],
     [{ minLength: 97, maxLength: 96 }],

@@ -80,6 +80,7 @@ vi.mock('../i18n', () => ({
   Bidi: ({ children }: { children: React.ReactNode }) => <bdi>{children}</bdi>,
   richMessage: (message: string) => message,
   useServerError: () => mocks.serverError,
+  useLocale: () => 'en',
   useT: () => (key: string) => key,
 }));
 
@@ -104,6 +105,7 @@ describe('SignUp passwordless passkey flow', () => {
       userModel: undefined,
       emailVerification: undefined,
       mfa: undefined,
+      privacy: undefined,
     });
   });
 
@@ -178,6 +180,59 @@ describe('SignUp passwordless passkey flow', () => {
       }, undefined),
     );
     expect(await screen.findByTestId('signup-passkey-completion')).toBeTruthy();
+  });
+
+  it('submits exact bilingual notice versions and explicit purpose choices', async () => {
+    Object.assign(mocks.config, {
+      enabledMethods: ['password'],
+      privacy: {
+        notices: [{
+          noticeId: '11111111-1111-4111-8111-111111111111',
+          noticeVersionId: '22222222-2222-4222-8222-222222222222',
+          code: 'signup_notice',
+          version: 1,
+          title: { en: 'Privacy notice', ar: 'إشعار الخصوصية' },
+          body: { en: 'How data is used.', ar: 'كيفية استخدام البيانات.' },
+          digest: { en: 'a'.repeat(64), ar: 'b'.repeat(64) },
+          activityCodes: ['research'],
+          purposeCodes: ['research'],
+          effectiveFrom: '2026-08-27T10:00:00.000Z',
+        }],
+        consentPurposes: [{
+          purposeId: '33333333-3333-4333-8333-333333333333',
+          purposeVersionId: '44444444-4444-4444-8444-444444444444',
+          code: 'research',
+          version: 1,
+          title: { en: 'Product research', ar: 'أبحاث المنتج' },
+          description: { en: 'Optional research.', ar: 'أبحاث اختيارية.' },
+          digest: { en: 'c'.repeat(64), ar: 'd'.repeat(64) },
+          activityCodes: ['research'],
+          dataCategories: ['usage'],
+        }],
+      },
+    });
+    render(<SignUp />);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Product research/ }));
+    fireEvent.change(screen.getByLabelText('signUp.nameLabel'), { target: { value: 'Mona' } });
+    fireEvent.change(screen.getByLabelText('common.emailLabel'), { target: { value: 'mona@example.test' } });
+    fireEvent.change(screen.getByLabelText('common.passwordLabel'), { target: { value: 'correct horse battery staple' } });
+    fireEvent.click(screen.getByRole('button', { name: 'signUp.submit' }));
+
+    await waitFor(() => expect(mocks.signUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        privacyEvidence: expect.objectContaining({
+          locale: 'en',
+          correlationId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+          noticeVersionIds: ['22222222-2222-4222-8222-222222222222'],
+          consentDecisions: [expect.objectContaining({
+            purposeCode: 'research',
+            decision: 'granted',
+          })],
+        }),
+      }),
+      undefined,
+    ));
   });
 
   it('shows verification pending when signup succeeds without creating a session', async () => {

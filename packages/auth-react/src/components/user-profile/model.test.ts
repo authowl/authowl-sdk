@@ -22,6 +22,7 @@ describe('UserProfile model', () => {
       recovery: false,
       accountDeletion: true,
       social: true,
+      privacy: true,
     })).toEqual([
       'profile',
       'email',
@@ -29,6 +30,7 @@ describe('UserProfile model', () => {
       'sessions',
       'passkeys',
       'mfa',
+      'privacy',
       'danger',
     ]);
   });
@@ -41,6 +43,7 @@ describe('UserProfile model', () => {
       recovery: false,
       accountDeletion: false,
       social: false,
+      privacy: false,
     })).toEqual(['profile', 'email', 'password', 'sessions']);
   });
 

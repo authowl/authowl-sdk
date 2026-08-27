@@ -9,6 +9,7 @@ export const USER_PROFILE_SECTIONS = [
   'passkeys',
   'mfa',
   'recovery',
+  'privacy',
   'danger',
 ] as const;
 
@@ -22,6 +23,8 @@ export type UserProfileCapabilities = {
   accountDeletion: boolean;
   /** Whether the project has any social provider configured to link/unlink. */
   social: boolean;
+  /** Whether this server publishes the subject privacy contract. */
+  privacy: boolean;
 };
 
 export function userProfileSectionsFor(
@@ -34,6 +37,7 @@ export function userProfileSectionsFor(
     if (section === 'recovery') return capabilities.recovery;
     if (section === 'danger') return capabilities.accountDeletion;
     if (section === 'social') return capabilities.social;
+    if (section === 'privacy') return capabilities.privacy;
     return true;
   });
 }

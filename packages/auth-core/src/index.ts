@@ -187,6 +187,19 @@ export {
   type PublicConfig,
 } from './public-config';
 export { createIdempotencyKey } from './idempotency';
+export {
+  buildPrivacySignUpEvidence,
+  createPrivacyClient,
+  type CreatePrivacyRightsRequestOptions,
+  type PrivacyClient,
+  type PrivacyConsentPreference,
+  type PrivacyConsentState,
+  type PrivacyLocale,
+  type PrivacyRightsRequest,
+  type PrivacyRightState,
+  type PrivacyRightType,
+  type RecordPrivacyConsentOptions,
+} from './privacy-client';
 export { AUTH_CHALLENGE_HEADER } from './http-client';
 export { createTokenClient, type TokenClient, type GetToken, type GetTokenOptions } from './token';
 export {

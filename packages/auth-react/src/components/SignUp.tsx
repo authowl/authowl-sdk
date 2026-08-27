@@ -1,7 +1,8 @@
 'use client';
 import * as React from 'react';
+import { createIdempotencyKey } from '@authowl/core';
 import { usePublicConfig, useSignUp } from '../hooks';
-import { useT, useServerError } from '../i18n';
+import { useLocale, useT, useServerError } from '../i18n';
 import { SocialButtons } from './SocialButtons';
 import { AuthOwlBadge } from './AuthOwlBadge';
 import { VerificationPending } from './VerificationPending';
@@ -16,6 +17,7 @@ import { resolveProjectCapabilities } from '../project-capabilities';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { InvitationBanner } from './InvitationBanner';
 import { PublicConfigError } from './PublicConfigError';
+import { buildPrivacySignUpEvidence, PrivacySignUpEvidence } from './PrivacySignUpEvidence';
 
 export type SignUpProps = {
   redirectTo?: string;
@@ -46,6 +48,7 @@ export function SignUp({
   showBranding = true,
 }: SignUpProps = {}) {
   const t = useT();
+  const locale = useLocale();
   const toServerError = useServerError();
   const { signUp } = useSignUp();
   const { config, isLoading, isError } = usePublicConfig();
@@ -63,6 +66,10 @@ export function SignUp({
   // buttons (a social sign-in also creates the account), and the accepted
   // version rides along in the sign-up body so the server records + enforces it.
   const [accepted, setAccepted] = React.useState(false);
+  const [grantedPurposeCodes, setGrantedPurposeCodes] = React.useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [privacyCorrelationId] = React.useState(createIdempotencyKey);
   const legal = config?.legal;
   const consentRequired = Boolean(legal?.required);
   const consentBlocked = consentRequired && !accepted;
@@ -113,6 +120,16 @@ export function SignUp({
               : {}),
             callbackURL: verifyEmailUrl,
             consentVersion: legal?.required ? legal.version : undefined,
+            ...(config?.privacy && config.privacy.notices.length > 0
+              ? {
+                  privacyEvidence: buildPrivacySignUpEvidence(
+                    config.privacy,
+                    locale,
+                    grantedPurposeCodes,
+                    privacyCorrelationId,
+                  ),
+                }
+              : {}),
           },
           options,
         ),
@@ -172,14 +189,17 @@ export function SignUp({
   // config is unavailable.
   const methods = config?.enabledMethods ?? ['password'];
   const publicSignupAllowed = config?.signUp?.mode !== 'restricted';
-  // Under required consent, drop social from the sign-up surface: a social
-  // sign-up's keyless OAuth callback can't carry the accepted version, so the
-  // server blocks it - showing the button would only dead-end after the redirect.
+  const exactPrivacyEvidenceRequired = (config?.privacy?.notices.length ?? 0) > 0;
+  // Under required legal acceptance or exact privacy-notice delivery, drop
+  // social from the sign-up surface: a keyless OAuth callback cannot carry the
+  // accepted contract or the exact notice versions, so the server blocks it.
   // Password sign-up captures consent; social stays a sign-IN method for existing
   // users. (A consent-required, social-only project therefore has no sign-up path,
   // surfaced as the "no methods" state below.)
   const social =
-    consentRequired || !publicSignupAllowed ? [] : (config?.socialProviders ?? []);
+    consentRequired || exactPrivacyEvidenceRequired || !publicSignupAllowed
+      ? []
+      : (config?.socialProviders ?? []);
   const showPassword =
     publicSignupAllowed
     && capabilities.passwordSignIn
@@ -190,6 +210,7 @@ export function SignUp({
     && capabilities.emailOtpSignIn
     && capabilities.emailSignUp
     && !consentRequired
+    && !exactPrivacyEvidenceRequired
     && !capabilities.mfaRequired;
   const renderable = showPassword || showPasswordless || social.length > 0;
 
@@ -303,6 +324,21 @@ export function SignUp({
             />
           </label>
           {authChallenge.control}
+          {config?.privacy && (
+            <PrivacySignUpEvidence
+              privacy={config.privacy}
+              locale={locale}
+              grantedPurposeCodes={grantedPurposeCodes}
+              onPurposeChange={(purposeCode, granted) => {
+                setGrantedPurposeCodes((current) => {
+                  const next = new Set(current);
+                  if (granted) next.add(purposeCode);
+                  else next.delete(purposeCode);
+                  return next;
+                });
+              }}
+            />
+          )}
           {legal && (
             <LegalConsentCheckbox
               legal={legal}
