@@ -100,8 +100,27 @@ describe('a redirect method that has not come back yet', () => {
     expect(readLastUsedSignInMethod(projectId)).toBe('passkey');
   });
 
+  it('is discarded when another method succeeds in page', () => {
+    rememberPendingSignInMethod(projectId, 'social:google');
+    recordLastUsedSignInMethod(projectId, 'password');
+    expect(confirmPendingSignInMethod(projectId)).toBeNull();
+    expect(readLastUsedSignInMethod(projectId)).toBe('password');
+  });
+
+  it('expires instead of being promoted by an unrelated later session', () => {
+    const now = Date.now();
+    localStorage.setItem(
+      pendingSignInMethodStorageKey(projectId),
+      JSON.stringify({ method: 'social:google', createdAt: now - 16 * 60 * 1_000 }),
+    );
+    expect(confirmPendingSignInMethod(projectId)).toBeNull();
+  });
+
   it('discards a tampered pending value rather than promoting it', () => {
-    localStorage.setItem(pendingSignInMethodStorageKey(projectId), 'social:<script>');
+    localStorage.setItem(
+      pendingSignInMethodStorageKey(projectId),
+      JSON.stringify({ method: 'social:<script>', createdAt: Date.now() }),
+    );
     expect(confirmPendingSignInMethod(projectId)).toBeNull();
     expect(readLastUsedSignInMethod(projectId)).toBeNull();
   });

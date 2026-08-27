@@ -39,7 +39,7 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
   const t = useT();
   const toServerError = useServerError();
   const { signInSocial } = useSignIn();
-  const { rememberLeaving } = useSignInMethodRecorder();
+  const { rememberLeaving, forgetLeaving } = useSignInMethodRecorder();
   const [pending, setPending] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -56,8 +56,9 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
     if (!url.searchParams.has('authowl_error')) return;
     url.searchParams.delete('authowl_error');
     window.history.replaceState(window.history.state, '', url.toString());
+    forgetLeaving();
     setError(t('social.error.startFailed'));
-  }, [t]);
+  }, [forgetLeaving, t]);
 
   if (providers.length === 0) return null;
 
@@ -95,10 +96,12 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
                 errorCallbackURL: window.location.href,
               });
               if (res?.error) {
+                forgetLeaving();
                 setError(toServerError(res.error, t('social.error.startFailed')));
                 setPending(null);
               }
             } catch {
+              forgetLeaving();
               setError(t('social.error.startFailed'));
               setPending(null);
             }

@@ -2,6 +2,7 @@
 import * as React from 'react';
 import {
   confirmPendingSignInMethod,
+  forgetPendingSignInMethod,
   readLastUsedSignInMethod,
   recordLastUsedSignInMethod,
   rememberPendingSignInMethod,
@@ -42,6 +43,7 @@ export function useLastUsedSignInMethod(): LastUsedSignInMethod | null {
 export function useSignInMethodRecorder(): {
   recordSucceeded: (method: LastUsedSignInMethod) => void;
   rememberLeaving: (method: LastUsedSignInMethod) => void;
+  forgetLeaving: () => void;
 } {
   const { config } = usePublicConfig();
   const projectId = config?.environmentId ?? null;
@@ -52,6 +54,9 @@ export function useSignInMethodRecorder(): {
       },
       rememberLeaving: (method) => {
         if (projectId) rememberPendingSignInMethod(projectId, method);
+      },
+      forgetLeaving: () => {
+        if (projectId) forgetPendingSignInMethod(projectId);
       },
     }),
     [projectId],

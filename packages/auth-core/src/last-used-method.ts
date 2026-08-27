@@ -91,6 +91,9 @@ export function recordLastUsedSignInMethod(
   method: LastUsedSignInMethod,
 ): void {
   if (!isLastUsedSignInMethod(method)) return;
+  // An in-page method that just succeeded is stronger evidence than any
+  // redirect attempt left behind by a cancelled or failed provider flow.
+  writeTo(localStore(), pendingSignInMethodStorageKey(projectId), null);
   writeTo(localStore(), lastUsedMethodStorageKey(projectId), method);
 }
 
@@ -99,6 +102,7 @@ export function forgetLastUsedSignInMethod(projectId: string): void {
 }
 
 const PENDING_KEY_PREFIX = 'authowl.last-used-method.pending';
+const PENDING_MAX_AGE_MS = 15 * 60 * 1_000;
 
 export const pendingSignInMethodStorageKey = (projectId: string): string =>
   `${PENDING_KEY_PREFIX}.${projectId}`;
@@ -117,7 +121,16 @@ export function rememberPendingSignInMethod(
   method: LastUsedSignInMethod,
 ): void {
   if (!isLastUsedSignInMethod(method)) return;
-  writeTo(localStore(), pendingSignInMethodStorageKey(projectId), method);
+  writeTo(
+    localStore(),
+    pendingSignInMethodStorageKey(projectId),
+    JSON.stringify({ method, createdAt: Date.now() }),
+  );
+}
+
+/** Clear a redirect attempt that failed before navigation completed. */
+export function forgetPendingSignInMethod(projectId: string): void {
+  writeTo(localStore(), pendingSignInMethodStorageKey(projectId), null);
 }
 
 /**
@@ -130,7 +143,25 @@ export function confirmPendingSignInMethod(
 ): LastUsedSignInMethod | null {
   const pending = readFrom(localStore(), pendingSignInMethodStorageKey(projectId));
   writeTo(localStore(), pendingSignInMethodStorageKey(projectId), null);
-  if (pending === null || !isLastUsedSignInMethod(pending)) return null;
-  recordLastUsedSignInMethod(projectId, pending);
-  return pending;
+  if (pending === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(pending);
+  } catch {
+    return null;
+  }
+  if (
+    typeof parsed !== 'object'
+    || parsed === null
+    || !('method' in parsed)
+    || !('createdAt' in parsed)
+    || typeof parsed.method !== 'string'
+    || typeof parsed.createdAt !== 'number'
+    || !isLastUsedSignInMethod(parsed.method)
+    || !Number.isFinite(parsed.createdAt)
+    || parsed.createdAt > Date.now()
+    || Date.now() - parsed.createdAt > PENDING_MAX_AGE_MS
+  ) return null;
+  recordLastUsedSignInMethod(projectId, parsed.method);
+  return parsed.method;
 }

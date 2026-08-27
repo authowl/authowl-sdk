@@ -85,6 +85,15 @@ export function SignIn({
   // enrolment screen it cannot leave. See useConfirmedMfaPending.
   const mfaEnrolment = useConfirmedMfaPending('clear');
   const emailRef = React.useRef<HTMLInputElement>(null);
+  const { recordSucceeded, rememberLeaving } = useSignInMethodRecorder();
+  const onPasskeySignedIn = React.useCallback(() => {
+    recordSucceeded('passkey');
+    onSignedIn?.();
+  }, [onSignedIn, recordSucceeded]);
+  const onPhoneOtpSignedIn = React.useCallback(() => {
+    recordSucceeded('phone-otp');
+    onSignedIn?.();
+  }, [onSignedIn, recordSucceeded]);
 
   // Zero-config: render exactly what the project enabled. Resolution is a pure,
   // tested helper. A failed request returns the fail-closed UI below, so this
@@ -101,7 +110,7 @@ export function SignIn({
   usePasskeyAutofill({
     enabled: credentialMode === 'email' && plan.autofillHost !== null,
     redirectTo,
-    onSignedIn,
+    onSignedIn: onPasskeySignedIn,
   });
 
   const badge = <AuthOwlBadge force={showBadge} />;
@@ -223,7 +232,7 @@ export function SignIn({
         {branding}
         <PhoneOTP
           redirectTo={redirectTo}
-          onSignedIn={onSignedIn}
+          onSignedIn={onPhoneOtpSignedIn}
           onBack={() => setView('sign-in')}
           onMfaPasswordRequired={() => {
             setView('sign-in');
@@ -240,8 +249,6 @@ export function SignIn({
   const hasCredentialForm = hasEmailMethod || plan.username;
   const showDivider =
     plan.social.length > 0 && (hasCredentialForm || plan.passkey || plan.phoneOtp);
-
-  const { recordSucceeded, rememberLeaving } = useSignInMethodRecorder();
 
   // One `run` per action, tagged so the busy label targets the pressed button.
   const start = (key: Exclude<SignInPrimary, null>, action: () => void) => {
@@ -307,6 +314,7 @@ export function SignIn({
         {
           failure: t('sso.error.startFailed'),
           mapError: (error) => (error.status === 404 ? t('sso.error.notFound') : null),
+          onSuccess: () => rememberLeaving('sso'),
           // SSO always redirects the browser to the IdP; keep the spinner up
           // through that navigation instead of flashing back to idle.
           keepPendingOnSuccess: true,
@@ -459,7 +467,9 @@ export function SignIn({
           )}
         </form>
       )}
-      {plan.passkey && <PasskeyButton redirectTo={redirectTo} onSignedIn={onSignedIn} />}
+      {plan.passkey && (
+        <PasskeyButton redirectTo={redirectTo} onSignedIn={onPasskeySignedIn} />
+      )}
       {plan.phoneOtp && (
         <button
           type="button"

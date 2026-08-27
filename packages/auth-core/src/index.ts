@@ -20,6 +20,7 @@ export {
 export {
   confirmPendingSignInMethod,
   forgetLastUsedSignInMethod,
+  forgetPendingSignInMethod,
   LAST_USED_METHODS,
   readLastUsedSignInMethod,
   recordLastUsedSignInMethod,
