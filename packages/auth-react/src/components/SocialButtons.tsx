@@ -39,7 +39,7 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
   const t = useT();
   const toServerError = useServerError();
   const { signInSocial } = useSignIn();
-  const { rememberLeaving, forgetLeaving } = useSignInMethodRecorder();
+  const recordSignInMethod = useSignInMethodRecorder();
   const [pending, setPending] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -56,9 +56,8 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
     if (!url.searchParams.has('authowl_error')) return;
     url.searchParams.delete('authowl_error');
     window.history.replaceState(window.history.state, '', url.toString());
-    forgetLeaving();
     setError(t('social.error.startFailed'));
-  }, [forgetLeaving, t]);
+  }, [t]);
 
   if (providers.length === 0) return null;
 
@@ -86,22 +85,21 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
               // page as the error destination. On the legacy transport (React
               // Native, `disableRedirect`, or a call carrying `scopes`) the
               // action still returns `{ error }` and no redirect happens.
-              // Parked, not recorded: this navigates away, and a user who
-              // bounces off the consent screen has not signed in with it. It is
-              // promoted only when a session actually appears.
-              rememberLeaving(`social:${provider}`);
               const res = await signInSocial({
                 provider,
                 callbackURL: destination,
                 errorCallbackURL: window.location.href,
               });
               if (res?.error) {
-                forgetLeaving();
                 setError(toServerError(res.error, t('social.error.startFailed')));
                 setPending(null);
+              } else {
+                // Park only after the redirect start succeeds. A user who
+                // bounces off consent has not signed in; promotion waits for a
+                // session on return.
+                recordSignInMethod(`social:${provider}`, true);
               }
             } catch {
-              forgetLeaving();
               setError(t('social.error.startFailed'));
               setPending(null);
             }

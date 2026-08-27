@@ -3,13 +3,12 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  confirmPendingSignInMethod,
-  forgetLastUsedSignInMethod,
   lastUsedMethodStorageKey,
   pendingSignInMethodStorageKey,
   readLastUsedSignInMethod,
   recordLastUsedSignInMethod,
   rememberPendingSignInMethod,
+  settlePendingSignInMethod,
 } from './last-used-method';
 
 const projectId = '2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60';
@@ -30,12 +29,6 @@ describe('remembering which method worked here', () => {
     // "social" alone would point a returning Google user at a row of buttons.
     recordLastUsedSignInMethod(projectId, 'social:google');
     expect(readLastUsedSignInMethod(projectId)).toBe('social:google');
-  });
-
-  it('forgets on request', () => {
-    recordLastUsedSignInMethod(projectId, 'password');
-    forgetLastUsedSignInMethod(projectId);
-    expect(readLastUsedSignInMethod(projectId)).toBeNull();
   });
 
   /**
@@ -78,18 +71,18 @@ describe('a redirect method that has not come back yet', () => {
 
   it('is promoted once a session confirms it', () => {
     rememberPendingSignInMethod(projectId, 'social:google');
-    expect(confirmPendingSignInMethod(projectId)).toBe('social:google');
+    settlePendingSignInMethod(projectId, true);
     expect(readLastUsedSignInMethod(projectId)).toBe('social:google');
   });
 
   it('is cleared by the confirmation, so a later visit cannot promote it twice', () => {
     rememberPendingSignInMethod(projectId, 'sso');
-    confirmPendingSignInMethod(projectId);
-    forgetLastUsedSignInMethod(projectId);
+    settlePendingSignInMethod(projectId, true);
+    localStorage.removeItem(lastUsedMethodStorageKey(projectId));
 
     // A user who returns much later, signed in from somewhere else entirely,
     // must not have that stale attempt resurrected as "what worked".
-    expect(confirmPendingSignInMethod(projectId)).toBeNull();
+    settlePendingSignInMethod(projectId, true);
     expect(readLastUsedSignInMethod(projectId)).toBeNull();
   });
 
@@ -103,25 +96,23 @@ describe('a redirect method that has not come back yet', () => {
   it('is discarded when another method succeeds in page', () => {
     rememberPendingSignInMethod(projectId, 'social:google');
     recordLastUsedSignInMethod(projectId, 'password');
-    expect(confirmPendingSignInMethod(projectId)).toBeNull();
+    settlePendingSignInMethod(projectId, true);
     expect(readLastUsedSignInMethod(projectId)).toBe('password');
   });
 
-  it('expires instead of being promoted by an unrelated later session', () => {
-    const now = Date.now();
-    localStorage.setItem(
-      pendingSignInMethodStorageKey(projectId),
-      JSON.stringify({ method: 'social:google', createdAt: now - 16 * 60 * 1_000 }),
-    );
-    expect(confirmPendingSignInMethod(projectId)).toBeNull();
+  it('is cleared when the returning session settles signed out', () => {
+    rememberPendingSignInMethod(projectId, 'social:google');
+    settlePendingSignInMethod(projectId, false);
+    settlePendingSignInMethod(projectId, true);
+    expect(readLastUsedSignInMethod(projectId)).toBeNull();
   });
 
   it('discards a tampered pending value rather than promoting it', () => {
     localStorage.setItem(
       pendingSignInMethodStorageKey(projectId),
-      JSON.stringify({ method: 'social:<script>', createdAt: Date.now() }),
+      'social:<script>',
     );
-    expect(confirmPendingSignInMethod(projectId)).toBeNull();
+    settlePendingSignInMethod(projectId, true);
     expect(readLastUsedSignInMethod(projectId)).toBeNull();
   });
 });

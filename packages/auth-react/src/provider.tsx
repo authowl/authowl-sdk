@@ -53,8 +53,8 @@ function warnPublicConfigFailed(resolved: ResolvedAuthConfig, error: unknown): v
  */
 function LastUsedMethodSync(): null {
   const { config } = usePublicConfig();
-  const { isSignedIn } = useUser();
-  useConfirmPendingSignInMethod(isSignedIn, config?.environmentId ?? null);
+  const { isLoaded, isSignedIn } = useUser();
+  useConfirmPendingSignInMethod(isLoaded, isSignedIn, config?.environmentId ?? null);
   return null;
 }
 

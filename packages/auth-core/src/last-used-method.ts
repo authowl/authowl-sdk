@@ -36,30 +36,26 @@ import { localStore, readFrom, writeTo } from './web-storage';
  * Social providers collapse to `social:<id>` so a returning Google user is
  * pointed at the Google button rather than at "social" generally.
  */
-export const LAST_USED_METHODS = [
-  'password',
-  'username',
-  'magic-link',
-  'email-otp',
-  'phone-otp',
-  'passkey',
-  'sso',
-] as const;
-
 export type LastUsedSignInMethod =
-  | (typeof LAST_USED_METHODS)[number]
+  | 'password'
+  | 'username'
+  | 'magic-link'
+  | 'email-otp'
+  | 'phone-otp'
+  | 'passkey'
+  | 'sso'
   | `social:${string}`;
 
 const STORAGE_KEY_PREFIX = 'authowl.last-used-method';
 /** Bounds what a hostile storage value can be, and what a provider id may look like. */
-const SOCIAL_PROVIDER_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const METHOD_PATTERN =
+  /^(password|username|magic-link|email-otp|phone-otp|passkey|sso|social:[a-z0-9][a-z0-9_-]{0,63})$/;
 
 export const lastUsedMethodStorageKey = (projectId: string): string =>
   `${STORAGE_KEY_PREFIX}.${projectId}`;
 
 function isLastUsedSignInMethod(value: string): value is LastUsedSignInMethod {
-  if ((LAST_USED_METHODS as readonly string[]).includes(value)) return true;
-  return value.startsWith('social:') && SOCIAL_PROVIDER_PATTERN.test(value.slice(7));
+  return METHOD_PATTERN.test(value);
 }
 
 /**
@@ -97,15 +93,8 @@ export function recordLastUsedSignInMethod(
   writeTo(localStore(), lastUsedMethodStorageKey(projectId), method);
 }
 
-export function forgetLastUsedSignInMethod(projectId: string): void {
-  writeTo(localStore(), lastUsedMethodStorageKey(projectId), null);
-}
-
-const PENDING_KEY_PREFIX = 'authowl.last-used-method.pending';
-const PENDING_MAX_AGE_MS = 15 * 60 * 1_000;
-
 export const pendingSignInMethodStorageKey = (projectId: string): string =>
-  `${PENDING_KEY_PREFIX}.${projectId}`;
+  `${STORAGE_KEY_PREFIX}.pending.${projectId}`;
 
 /**
  * Note that a REDIRECT method is being attempted, without recording it as used.
@@ -124,44 +113,20 @@ export function rememberPendingSignInMethod(
   writeTo(
     localStore(),
     pendingSignInMethodStorageKey(projectId),
-    JSON.stringify({ method, createdAt: Date.now() }),
+    method,
   );
 }
 
-/** Clear a redirect attempt that failed before navigation completed. */
-export function forgetPendingSignInMethod(projectId: string): void {
-  writeTo(localStore(), pendingSignInMethodStorageKey(projectId), null);
-}
-
 /**
- * Promote a parked redirect attempt now that a session exists, and clear it.
+ * Settle a parked redirect attempt once the returning session has loaded.
  *
- * Call only with a confirmed session. Returns what was promoted, or null.
+ * A signed-in return promotes it. A signed-out return clears it, so a cancelled
+ * redirect cannot be mistaken for an unrelated sign-in later.
  */
-export function confirmPendingSignInMethod(
-  projectId: string,
-): LastUsedSignInMethod | null {
+export function settlePendingSignInMethod(projectId: string, signedIn: boolean): void {
   const pending = readFrom(localStore(), pendingSignInMethodStorageKey(projectId));
   writeTo(localStore(), pendingSignInMethodStorageKey(projectId), null);
-  if (pending === null) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(pending);
-  } catch {
-    return null;
+  if (signedIn && pending !== null && isLastUsedSignInMethod(pending)) {
+    writeTo(localStore(), lastUsedMethodStorageKey(projectId), pending);
   }
-  if (
-    typeof parsed !== 'object'
-    || parsed === null
-    || !('method' in parsed)
-    || !('createdAt' in parsed)
-    || typeof parsed.method !== 'string'
-    || typeof parsed.createdAt !== 'number'
-    || !isLastUsedSignInMethod(parsed.method)
-    || !Number.isFinite(parsed.createdAt)
-    || parsed.createdAt > Date.now()
-    || Date.now() - parsed.createdAt > PENDING_MAX_AGE_MS
-  ) return null;
-  recordLastUsedSignInMethod(projectId, parsed.method);
-  return parsed.method;
 }

@@ -85,15 +85,15 @@ export function SignIn({
   // enrolment screen it cannot leave. See useConfirmedMfaPending.
   const mfaEnrolment = useConfirmedMfaPending('clear');
   const emailRef = React.useRef<HTMLInputElement>(null);
-  const { recordSucceeded, rememberLeaving } = useSignInMethodRecorder();
+  const recordSignInMethod = useSignInMethodRecorder();
   const onPasskeySignedIn = React.useCallback(() => {
-    recordSucceeded('passkey');
+    recordSignInMethod('passkey');
     onSignedIn?.();
-  }, [onSignedIn, recordSucceeded]);
+  }, [onSignedIn, recordSignInMethod]);
   const onPhoneOtpSignedIn = React.useCallback(() => {
-    recordSucceeded('phone-otp');
+    recordSignInMethod('phone-otp');
     onSignedIn?.();
-  }, [onSignedIn, recordSucceeded]);
+  }, [onSignedIn, recordSignInMethod]);
 
   // Zero-config: render exactly what the project enabled. Resolution is a pure,
   // tested helper. A failed request returns the fail-closed UI below, so this
@@ -194,7 +194,7 @@ export function SignIn({
             void run(() => signInEmailOtp({ email, otp }), {
               failure: t('emailOtp.error.invalidCode'),
               onSuccess: () => {
-                recordSucceeded('email-otp');
+                recordSignInMethod('email-otp');
                 finishSignIn({ sessionStore, redirectTo, onSignedIn });
               },
             })
@@ -269,15 +269,12 @@ export function SignIn({
           // a 2FA-enrolled user the session is withheld and `data` is the redirect
           // member - swap to the challenge instead of finishing.
           const data = res.data;
+          // Password was right even when the session is withheld for a second
+          // factor. That factor is not an alternative sign-in method.
+          recordSignInMethod(credentialMode === 'username' ? 'username' : 'password');
           if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
-            // Password was right; the session is withheld pending a second
-            // factor. Recorded here rather than after the challenge, because
-            // the method that worked is the one the user chose - the second
-            // factor is not an alternative to it.
-            recordSucceeded(credentialMode === 'username' ? 'username' : 'password');
             setChallenge(true);
           } else {
-            recordSucceeded(credentialMode === 'username' ? 'username' : 'password');
             return finishSignIn({ sessionStore, redirectTo, onSignedIn });
           }
         },
@@ -289,8 +286,8 @@ export function SignIn({
         failure: t('magicLink.error.sendFailed'),
         onSuccess: () => {
           // Parked, not recorded: sending the mail is not signing in, and
-          // the link is opened later - often in another browser entirely.
-          rememberLeaving('magic-link');
+          // the link is opened later from the user's mail client.
+          recordSignInMethod('magic-link', true);
           setView('magic-sent');
         },
       }),
@@ -314,7 +311,7 @@ export function SignIn({
         {
           failure: t('sso.error.startFailed'),
           mapError: (error) => (error.status === 404 ? t('sso.error.notFound') : null),
-          onSuccess: () => rememberLeaving('sso'),
+          onSuccess: () => recordSignInMethod('sso', true),
           // SSO always redirects the browser to the IdP; keep the spinner up
           // through that navigation instead of flashing back to idle.
           keepPendingOnSuccess: true,

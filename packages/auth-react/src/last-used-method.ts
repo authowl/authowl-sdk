@@ -1,11 +1,10 @@
 'use client';
 import * as React from 'react';
 import {
-  confirmPendingSignInMethod,
-  forgetPendingSignInMethod,
   readLastUsedSignInMethod,
   recordLastUsedSignInMethod,
   rememberPendingSignInMethod,
+  settlePendingSignInMethod,
   type LastUsedSignInMethod,
 } from '@authowl/core';
 import { usePublicConfig } from './hooks';
@@ -39,39 +38,29 @@ export function useLastUsedSignInMethod(): LastUsedSignInMethod | null {
   );
 }
 
-/** Recorders bound to the active project, or no-ops before config resolves. */
-export function useSignInMethodRecorder(): {
-  recordSucceeded: (method: LastUsedSignInMethod) => void;
-  rememberLeaving: (method: LastUsedSignInMethod) => void;
-  forgetLeaving: () => void;
-} {
+/** Recorder bound to the active project, or a no-op before config resolves. */
+export function useSignInMethodRecorder(): (
+  method: LastUsedSignInMethod,
+  pending?: boolean,
+) => void {
   const { config } = usePublicConfig();
   const projectId = config?.environmentId ?? null;
-  return React.useMemo(
-    () => ({
-      recordSucceeded: (method) => {
-        if (projectId) recordLastUsedSignInMethod(projectId, method);
-      },
-      rememberLeaving: (method) => {
-        if (projectId) rememberPendingSignInMethod(projectId, method);
-      },
-      forgetLeaving: () => {
-        if (projectId) forgetPendingSignInMethod(projectId);
-      },
-    }),
+  return React.useCallback(
+    (method, pending) => {
+      if (!projectId) return;
+      (pending ? rememberPendingSignInMethod : recordLastUsedSignInMethod)(projectId, method);
+    },
     [projectId],
   );
 }
 
-/**
- * Promote a parked redirect attempt once a session exists.
- *
- * Mounted once, centrally, rather than in each component that can start a
- * redirect - the page that comes back is frequently not the one that left.
- */
-export function useConfirmPendingSignInMethod(signedIn: boolean, projectId: string | null): void {
+/** Settle a parked redirect after the returning session finishes loading. */
+export function useConfirmPendingSignInMethod(
+  loaded: boolean,
+  signedIn: boolean,
+  projectId: string | null,
+): void {
   React.useEffect(() => {
-    if (!signedIn || !projectId) return;
-    confirmPendingSignInMethod(projectId);
-  }, [projectId, signedIn]);
+    if (loaded && projectId) settlePendingSignInMethod(projectId, signedIn);
+  }, [loaded, projectId, signedIn]);
 }

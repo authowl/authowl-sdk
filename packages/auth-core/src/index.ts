@@ -18,13 +18,10 @@ export {
   type InvitationRecipientHint,
 } from './invitation-claim';
 export {
-  confirmPendingSignInMethod,
-  forgetLastUsedSignInMethod,
-  forgetPendingSignInMethod,
-  LAST_USED_METHODS,
   readLastUsedSignInMethod,
   recordLastUsedSignInMethod,
   rememberPendingSignInMethod,
+  settlePendingSignInMethod,
   type LastUsedSignInMethod,
 } from './last-used-method';
 export {
