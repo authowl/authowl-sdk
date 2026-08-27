@@ -262,8 +262,6 @@ describe('GoogleOneTap', () => {
     expect(mocks.initialize).toHaveBeenCalledTimes(1);
   });
 });
-
-
 /**
  * The safe path is opt-in, so the only thing standing between a developer and a
  * replayable ID token is knowing the prop exists. A dev-only warning is what
@@ -281,7 +279,8 @@ describe('missing nonce', () => {
   }
   function warnedAboutNonce(): boolean {
     return warn.mock.calls.some(
-      (call) => typeof call[0] === 'string' && call[0].includes('without a `nonce`'),
+      (call: unknown[]) =>
+        typeof call[0] === 'string' && call[0].includes('without a `nonce`'),
     );
   }
 
@@ -296,9 +295,12 @@ describe('missing nonce', () => {
     useClientId('no-nonce.apps.googleusercontent.com');
     render(<GoogleOneTap />);
     await waitFor(() => expect(warnedAboutNonce()).toBe(true));
-    const message = warn.mock.calls.find((call) => `${call[0]}`.includes('nonce'))?.[0];
-    // The warning has to say what goes wrong, not just what is missing.
-    expect(message).toContain('replayed');
+    const message = warn.mock.calls.find((call: unknown[]) =>
+      `${call[0]}`.includes('nonce'),
+    )?.[0];
+    // The warning must not promise replay prevention this flow does not enforce.
+    expect(message).toContain('does not keep separate one-time server state');
+    expect(message).not.toContain('prevents replay');
   });
 
   it('stays quiet once a nonce is supplied', async () => {

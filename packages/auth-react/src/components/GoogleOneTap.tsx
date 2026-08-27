@@ -37,7 +37,7 @@ export type GoogleOneTapError = {
 export type GoogleOneTapProps = {
   /** Disable prompting without unmounting the component. */
   disabled?: boolean;
-  /** Bind Google's ID token to this browser attempt. Generate a fresh random value server-side. */
+  /** Ask Google to include this nonce and verify the returned token carries the same value. */
   nonce?: string;
   /** Let eligible returning Google users sign in automatically. Defaults to false. */
   autoSelect?: boolean;
@@ -69,10 +69,10 @@ function normalizeDismissReason(reason: string): GoogleOneTapDismissReason {
  * Warn once per mount site when One Tap runs without binding Google's ID token
  * to this attempt.
  *
- * Without a nonce, a token captured from one browser can be replayed from
- * another: Google will happily verify it, because nothing in it says which
- * attempt asked for it. The prop exists and the server forwards it - what was
- * missing is anything telling a developer the safe path is opt-in.
+ * The prop exists and the server verifies that the returned token carries the
+ * value supplied during exchange. This is useful protocol binding, but the
+ * direct browser exchange does not persist independent one-time nonce state,
+ * so the prop alone must not be presented as replay prevention.
  *
  * Declared beside the call site so a consumer bundler eliminates it from
  * production, matching how the provider reports a failed config load.
@@ -83,9 +83,10 @@ function warnOneTapWithoutNonce(clientId: string): void {
   warnedMissingNonce.add(clientId);
   console.warn(
     '[AuthOwl] <GoogleOneTap/> is running without a `nonce`. Google\u2019s ID token is ' +
-      'then not bound to this sign-in attempt, so a captured token can be replayed from ' +
-      'another browser. Generate a fresh random value per attempt server-side and pass ' +
-      'it as `nonce`; AuthOwl forwards it to Google and verifies the match. ' +
+      'then not bound to a value chosen for this prompt. Generate a fresh random value per ' +
+      'prompt and pass it as `nonce`; AuthOwl forwards it to Google and verifies the match. ' +
+      'The direct browser exchange does not keep separate one-time server state, so do not ' +
+      'treat this prop by itself as replay protection. ' +
       '(This warning is dev-only.)',
   );
 }
