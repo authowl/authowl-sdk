@@ -35,6 +35,20 @@ describe('where a client looks for the metadata', () => {
       'https://mcp.example.com/.well-known/oauth-protected-resource',
     );
   });
+
+  it.each([
+    ['a fragment', 'https://mcp.example.com/mcp#fragment'],
+    ['embedded credentials', 'https://user:secret@mcp.example.com/mcp'],
+    ['an insecure remote origin', 'http://mcp.example.com/mcp'],
+  ])('refuses %s', (_label, resource) => {
+    expect(() => mcpProtectedResourceMetadataUrl(resource)).toThrow();
+  });
+
+  it('allows HTTP for a local development server', () => {
+    expect(mcpProtectedResourceMetadataUrl('http://localhost:3000/mcp')).toBe(
+      'http://localhost:3000/.well-known/oauth-protected-resource/mcp',
+    );
+  });
 });
 
 describe('the metadata document', () => {
@@ -76,6 +90,24 @@ describe('the metadata document', () => {
     expect(full.scopes_supported).toEqual(['openid']);
     expect(full.resource_name).toBe('Acme MCP');
   });
+
+  it('omits an empty scopes list as the metadata protocol requires', () => {
+    const doc = mcpProtectedResourceMetadata({
+      resource: 'https://mcp.example.com/mcp',
+      authorizationServers: [issuer],
+      scopesSupported: [],
+    });
+    expect(doc).not.toHaveProperty('scopes_supported');
+  });
+
+  it('rejects an invalid authorization-server URL', () => {
+    expect(() =>
+      mcpProtectedResourceMetadata({
+        resource: 'https://mcp.example.com/mcp',
+        authorizationServers: ['javascript:alert(1)'],
+      }),
+    ).toThrow(/authorization server/);
+  });
 });
 
 describe('the 401 that starts a connection', () => {
@@ -114,6 +146,6 @@ describe('the 401 that starts a connection', () => {
     expect(header.split('\n')).toHaveLength(1);
     expect(header.match(/"/g)?.length).toBe(6);
     // Exactly three quoted values, each opened and closed.
-    expect(header.match(/=\"[^\"]*\"/g)).toHaveLength(3);
+    expect(header.match(/="[^"]*"/g)).toHaveLength(3);
   });
 });

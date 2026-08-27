@@ -13,6 +13,27 @@
 /** RFC 9728 §3. */
 const WELL_KNOWN_SUFFIX = '/.well-known/oauth-protected-resource';
 
+function protocolUrl(value: string, field: string): URL {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new TypeError(`${field} must be an absolute URL.`);
+  }
+  const loopback =
+    url.hostname === 'localhost'
+    || url.hostname === '127.0.0.1'
+    || url.hostname === '[::1]';
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) {
+    throw new TypeError(`${field} must use HTTPS, except on a loopback host.`);
+  }
+  if (url.hash) throw new TypeError(`${field} must not contain a fragment.`);
+  if (url.username || url.password) {
+    throw new TypeError(`${field} must not contain embedded credentials.`);
+  }
+  return url;
+}
+
 export type McpProtectedResourceMetadata = Readonly<{
   resource: string;
   authorization_servers: readonly string[];
@@ -33,7 +54,7 @@ export type McpProtectedResourceMetadata = Readonly<{
  * and the agent reports only that it could not authenticate.
  */
 export function mcpProtectedResourceMetadataUrl(resource: string): string {
-  const url = new URL(resource);
+  const url = protocolUrl(resource, 'resource');
   // A terminating slash on the host is removed before inserting, so a bare
   // origin publishes at the suffix alone rather than at `.../` with an empty
   // segment after it.
@@ -57,10 +78,14 @@ export function mcpProtectedResourceMetadata(input: {
   scopesSupported?: readonly string[];
   resourceName?: string;
 }): McpProtectedResourceMetadata {
+  protocolUrl(input.resource, 'resource');
   if (input.authorizationServers.length === 0) {
     throw new Error(
       'An MCP server must name at least one authorization server, or no client can authenticate to it.',
     );
+  }
+  for (const authorizationServer of input.authorizationServers) {
+    protocolUrl(authorizationServer, 'authorization server');
   }
   return Object.freeze({
     resource: input.resource,
@@ -68,7 +93,9 @@ export function mcpProtectedResourceMetadata(input: {
     // Declared because a client should not have to guess how to present a
     // token, and AuthOwl issues bearer tokens for the Authorization header.
     bearer_methods_supported: Object.freeze(['header'] as const),
-    ...(input.scopesSupported ? { scopes_supported: Object.freeze([...input.scopesSupported]) } : {}),
+    ...(input.scopesSupported?.length
+      ? { scopes_supported: Object.freeze([...input.scopesSupported]) }
+      : {}),
     ...(input.resourceName ? { resource_name: input.resourceName } : {}),
   });
 }
@@ -93,7 +120,7 @@ export function mcpUnauthorizedChallenge(input: {
 }): string {
   const parts = [`resource_metadata="${mcpProtectedResourceMetadataUrl(input.resource)}"`];
   if (input.error) parts.push(`error="${input.error}"`);
-  if (input.errorDescription) {
+  if (input.error && input.errorDescription) {
     // Quoted-string, so anything that would end the quote early is dropped
     // rather than escaped - a description is a courtesy and not worth a header
     // injection.
