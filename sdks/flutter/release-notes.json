@@ -1,4 +1,10 @@
 {
+  "0.4.0": {
+    "date": "2026-08-28",
+    "notes": [
+      "Added exact-version privacy notice evidence, granular consent choices, authenticated privacy APIs, and a bilingual managed privacy center."
+    ]
+  },
   "0.2.1": {
     "date": "2026-08-21",
     "notes": [
