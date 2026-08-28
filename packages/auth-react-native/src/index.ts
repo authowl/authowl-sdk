@@ -36,6 +36,7 @@ export {
   useAuthOwlClient,
   useAuthOwlLocale,
   usePublicConfig,
+  usePrivacy,
   useSession,
   useSocialSignIn,
   useUser,
@@ -45,6 +46,8 @@ export { SignIn } from './components/SignIn';
 export type { SignInProps } from './components/SignIn';
 export { SignUp } from './components/SignUp';
 export type { SignUpProps } from './components/SignUp';
+export { PrivacyCenter } from './components/PrivacyCenter';
+export type { PrivacyCenterProps } from './components/PrivacyCenter';
 export { EmailOtpForm } from './components/EmailOtpForm';
 export type { EmailOtpFormProps } from './components/EmailOtpForm';
 export { OrganizationSwitcher } from './components/OrganizationSwitcher';
@@ -78,5 +81,12 @@ export type {
   NativeAuthClient,
   NativeSocialSignInOptions,
   OrganizationMembership,
+  PrivacyClient,
+  PrivacyConsentPreference,
+  PrivacyConsentState,
+  PrivacyLocale,
+  PrivacyRightsRequest,
+  PrivacyRightState,
+  PrivacyRightType,
   SessionState,
 } from '@authowl/core/native';

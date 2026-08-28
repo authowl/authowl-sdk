@@ -26,5 +26,6 @@ export 'src/provider.dart' show AuthOwlProvider, AuthOwlScope;
 export 'src/theme.dart' show authOwlBrandColor, authOwlBrandForeground;
 export 'src/widgets/email_otp_form.dart';
 export 'src/widgets/primitives.dart';
+export 'src/widgets/privacy_center.dart';
 export 'src/widgets/sign_in.dart';
 export 'src/widgets/sign_up.dart';

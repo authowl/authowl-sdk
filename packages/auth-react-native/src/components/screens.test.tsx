@@ -132,6 +132,57 @@ describe('<SignUp />', () => {
     })));
   });
 
+  it('renders exact privacy notices and sends explicit optional choices', async () => {
+    publicConfig.value = {
+      ...publicConfig.value,
+      privacy: {
+        notices: [{
+          noticeId: '11111111-1111-4111-8111-111111111111',
+          noticeVersionId: '22222222-2222-4222-8222-222222222222',
+          code: 'signup_notice',
+          version: 1,
+          title: { en: 'Privacy at sign-up', ar: 'الخصوصية عند التسجيل' },
+          body: { en: 'How this app uses your data.', ar: 'كيفية استخدام التطبيق لبياناتك.' },
+          digest: { en: 'a'.repeat(64), ar: 'b'.repeat(64) },
+          activityCodes: ['research'],
+          purposeCodes: ['research'],
+          effectiveFrom: '2026-08-27T10:00:00.000Z',
+        }],
+        consentPurposes: [{
+          purposeId: '33333333-3333-4333-8333-333333333333',
+          purposeVersionId: '44444444-4444-4444-8444-444444444444',
+          code: 'research',
+          version: 1,
+          title: { en: 'Optional research', ar: 'أبحاث اختيارية' },
+          description: { en: 'Help improve the app.', ar: 'المساعدة في تحسين التطبيق.' },
+          digest: { en: 'c'.repeat(64), ar: 'd'.repeat(64) },
+          activityCodes: ['research'],
+          dataCategories: ['usage'],
+        }],
+      },
+    };
+    signUpEmail.mockResolvedValue({ data: { sessionCreated: true }, error: null });
+    render(<SignUp />);
+    expect(screen.getByText('How this app uses your data.')).toBeTruthy();
+    fireEvent.click(byId('authowl-signup-purpose-research'));
+    type('authowl-signup-name', 'Mona');
+    type('authowl-signup-email', 'mona@example.test');
+    type('authowl-signup-password', 'correct horse');
+    fireEvent.click(button('authowl-signup-submit'));
+
+    await waitFor(() => expect(signUpEmail).toHaveBeenCalledWith(expect.objectContaining({
+      privacyEvidence: {
+        locale: 'en',
+        correlationId: expect.any(String),
+        noticeVersionIds: ['22222222-2222-4222-8222-222222222222'],
+        consentDecisions: [expect.objectContaining({
+          purposeCode: 'research',
+          decision: 'granted',
+        })],
+      },
+    })));
+  });
+
   it('uses AuthOwl gold in both default themes', () => {
     for (const theme of [defaultTheme, darkTheme]) {
       const styles = createStyles(theme);

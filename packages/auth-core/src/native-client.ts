@@ -118,6 +118,7 @@ function redirectTransport(params: {
 import { createIdempotencyKey } from './idempotency';
 import { createAccountClient } from './account-client';
 import { createOrganizationClient } from './organization-client';
+import { createPrivacyClient } from './privacy-client';
 import {
   decodeEmailOtpSignIn,
   decodeEmailSignIn,
@@ -283,6 +284,7 @@ export function createAuthActionClient(
       // client `has()`/`hasPermission()` reflect the current active org.
       () => session.store.getSnapshot().data?.session.membership ?? null,
     ),
+    privacy: createPrivacyClient(http),
     signIn: {
       email: (params, fetchOptions) => {
         beginSession(params);

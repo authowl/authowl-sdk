@@ -39,6 +39,10 @@ export const Sessions = sectionStory('sessions');
 export const Passkeys = sectionStory('passkeys');
 export const MultiFactor = sectionStory('mfa');
 export const Recovery = sectionStory('recovery');
+export const Privacy: Story = {
+  ...sectionStory('privacy'),
+  parameters: { authowl: { privacyEnabled: true } },
+};
 export const DangerZone = sectionStory('danger');
 
 export const Modal: Story = {

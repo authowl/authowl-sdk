@@ -28,7 +28,9 @@
 library;
 
 export 'src/client/auth_client.dart';
+export 'src/client/idempotency.dart';
 export 'src/client/phone_otp.dart';
+export 'src/client/privacy_client.dart';
 export 'src/client/projection.dart' show projectAuthPayload;
 export 'src/client/public_config.dart';
 export 'src/client/session.dart';

@@ -56,11 +56,44 @@ const organizations = [
   { id: 'org-alex', name: 'Alexandria Labs', slug: 'alexandria-labs', logo: null, metadata: null, createdAt: '2026-07-12T08:00:00.000Z' },
 ];
 
+const privacy = {
+  notices: [{
+    noticeId: '33333333-3333-4333-8333-333333333333',
+    noticeVersionId: '44444444-4444-4444-8444-444444444444',
+    code: 'service_privacy',
+    version: 3,
+    title: { en: 'How Cairo Studio uses your data', ar: 'كيفية استخدام استوديو القاهرة لبياناتك' },
+    body: {
+      en: 'We use account data to provide secure access. Product research is optional and can be withdrawn at any time.',
+      ar: 'نستخدم بيانات الحساب لتوفير وصول آمن. أبحاث المنتج اختيارية ويمكن سحب الموافقة في أي وقت.',
+    },
+    digest: { en: 'a'.repeat(64), ar: 'b'.repeat(64) },
+    activityCodes: ['tenant_authentication', 'product_research'],
+    purposeCodes: ['product_research'],
+    effectiveFrom: '2026-08-27T10:00:00.000Z',
+  }],
+  consentPurposes: [{
+    purposeId: '55555555-5555-4555-8555-555555555555',
+    purposeVersionId: '66666666-6666-4666-8666-666666666666',
+    code: 'product_research',
+    version: 2,
+    title: { en: 'Product research', ar: 'أبحاث المنتج' },
+    description: {
+      en: 'Share pseudonymous usage patterns to improve the product.',
+      ar: 'مشاركة أنماط استخدام مستعارة لتحسين المنتج.',
+    },
+    digest: { en: 'c'.repeat(64), ar: 'd'.repeat(64) },
+    activityCodes: ['product_research'],
+    dataCategories: ['usage'],
+  }],
+};
+
 function createPreviewFetch(
   signedIn: boolean,
   consentRequired: boolean,
   primaryColor: string,
   configUnavailable: boolean,
+  privacyEnabled: boolean,
 ): typeof fetch {
   return async (input: RequestInfo | URL): Promise<Response> => {
     const url = new URL(String(input));
@@ -99,6 +132,33 @@ function createPreviewFetch(
         locale: 'en',
         badge: false,
         configVersion: 1,
+        ...(privacyEnabled ? { privacy } : {}),
+      });
+    }
+    if (path.endsWith('/privacy/consent-decisions')) {
+      return Response.json({
+        preferences: [{
+          purposeId: privacy.consentPurposes[0]!.purposeId,
+          purposeVersionId: privacy.consentPurposes[0]!.purposeVersionId,
+          code: privacy.consentPurposes[0]!.code,
+          state: 'granted',
+          updatedAt: '2026-08-27T10:00:00.000Z',
+          decidedAt: '2026-08-27T10:00:00.000Z',
+        }],
+      });
+    }
+    if (path.endsWith('/privacy/rights')) {
+      return Response.json({
+        requests: [{
+          id: '77777777-7777-4777-8777-777777777777',
+          rightType: 'access',
+          state: 'in_progress',
+          locale: 'en',
+          receivedAt: '2026-08-25T10:00:00.000Z',
+          acknowledgedAt: '2026-08-25T11:00:00.000Z',
+          fulfilmentDeadline: '2026-09-24T10:00:00.000Z',
+          completedAt: null,
+        }],
       });
     }
     if (path.endsWith('/get-session')) return Response.json(signedIn ? { user, session } : null);
@@ -130,10 +190,10 @@ function createPreviewFetch(
   };
 }
 
-export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; children: React.ReactNode }) {
+export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; children: React.ReactNode }) {
   const previewFetch = React.useMemo(
-    () => createPreviewFetch(signedIn, consentRequired, primaryColor, configUnavailable),
-    [configUnavailable, consentRequired, primaryColor, signedIn],
+    () => createPreviewFetch(signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled),
+    [configUnavailable, consentRequired, primaryColor, privacyEnabled, signedIn],
   );
   return (
     <AuthOwlProvider

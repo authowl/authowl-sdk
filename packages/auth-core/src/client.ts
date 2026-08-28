@@ -10,6 +10,7 @@ import type { AccountClient } from './account-client';
 import type { OrganizationClient } from './organization-client';
 import type { OrganizationMembership } from './organization-membership';
 import { createAuthHttpClient } from './http-client';
+import { createPrivacyClient, type PrivacyClient } from './privacy-client';
 
 /**
  * The narrow, portable surface of the underlying auth client that this SDK
@@ -274,6 +275,24 @@ export interface EmailSignUpOptions {
    * this automatically when it renders the consent checkbox.
    */
   consentVersion?: number;
+  /**
+   * Exact published notice versions rendered by the sign-up surface, together
+   * with purpose-specific choices. Current <SignUp/> builds this from public
+   * config automatically; headless clients should echo the same projection.
+   */
+  privacyEvidence?: {
+    locale: 'en' | 'ar';
+    correlationId: string;
+    noticeVersionIds: string[];
+    consentDecisions: Array<{
+      purposeCode: string;
+      purposeVersionId: string;
+      noticeVersionId: string;
+      decision: 'granted' | 'refused';
+      guardianRequired: boolean;
+      guardianEvidenceId: string | null;
+    }>;
+  };
 }
 
 export interface WaitlistJoinOptions {
@@ -670,6 +689,8 @@ export interface AuthOwlClient {
   account: AccountClient;
   /** Signed-in organization, membership, role, and invitation actions. */
   organization: OrganizationClient;
+  /** Signed-in privacy preferences and data-subject-rights actions. */
+  privacy: PrivacyClient;
   signIn: {
     /**
      * Email + password sign-in. For a two-factor-enrolled user the result is a
@@ -890,6 +911,7 @@ export function createAuthOwlClient(config: ResolvedAuthConfig): AuthOwlClient {
     config,
     `${new URL(config.apiUrl).origin}/api/projects/${config.decoded.projectId}`,
   );
+  const privacyClient = createPrivacyClient(waitlistHttp);
   // Backend-JWT cache records carry identity and template claim fields. EVERY
   // action that can mutate those claims, establish or replace identity, revoke
   // a session, or drop the account clears all entries before dispatch. Redirect
@@ -906,6 +928,7 @@ export function createAuthOwlClient(config: ResolvedAuthConfig): AuthOwlClient {
     getConsentStatus: () => getConsentStatus(config),
     acceptConsent: (version: number) => acceptConsent(config, version),
     getToken: tokenClient.getToken,
+    privacy: privacyClient,
     waitlist: {
       join: (params: WaitlistJoinOptions, fetchOptions?: ActionFetchOptions) =>
         waitlistHttp.request<WaitlistJoinData>('/waitlist', {
@@ -965,6 +988,7 @@ export function createAuthOwlClient(config: ResolvedAuthConfig): AuthOwlClient {
     | 'getConsentStatus'
     | 'acceptConsent'
     | 'getToken'
+    | 'privacy'
     | 'waitlist'
     | 'account'
     | 'signIn'

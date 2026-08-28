@@ -471,6 +471,12 @@ describe('native client boundary', () => {
     expect('sso' in client.signIn).toBe(false);
     expect('passkey' in client.signIn).toBe(false);
     expect('addPasskey' in client.passkey).toBe(false);
+    expect(client.privacy).toMatchObject({
+      listConsentPreferences: expect.any(Function),
+      recordConsent: expect.any(Function),
+      listRightsRequests: expect.any(Function),
+      createRightsRequest: expect.any(Function),
+    });
 
     const invalid = await (
       client.signIn.social as unknown as (

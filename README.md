@@ -141,7 +141,7 @@ only from `@authowl/core/server` and works in Node and worker Web Crypto runtime
 
 ## What's in the box
 
-- **Components:** `SignIn`, `SignUp`, `PhoneOTP`, `UserButton`, `UserProfile`, `SocialButtons`, `MagicLinkForm`,
+- **Components:** `SignIn`, `SignUp`, `PrivacyCenter`, `PhoneOTP`, `UserButton`, `UserProfile`, `SocialButtons`, `MagicLinkForm`,
   `EmailOtpForm`, `PasskeyButton`, `PasskeyManager`, `MFAEnrollment`, `MFAChallenge`,
   `BackupCodesManager`, `ForgotPassword`, `ResetPassword`, `VerifyEmail`, `ConsentGate`,
   `OrganizationSwitcher`, `OrganizationList`, `CreateOrganization`, `OrganizationProfile`,

@@ -12,6 +12,7 @@ import { RecoverySection } from './user-profile/RecoverySection';
 import { SessionsSection } from './user-profile/SessionsSection';
 import { SocialSection } from './user-profile/SocialSection';
 import { UserProfileModal } from './user-profile/UserProfileModal';
+import { PrivacyCenter } from './PrivacyCenter';
 import { AuthOwlBadge } from './AuthOwlBadge';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { resolveProjectCapabilities } from '../project-capabilities';
@@ -57,6 +58,7 @@ const SECTION_KEYS: Record<UserProfileSection, MessageKey> = {
   passkeys: 'userProfile.nav.passkeys',
   mfa: 'userProfile.nav.mfa',
   recovery: 'userProfile.nav.recovery',
+  privacy: 'userProfile.nav.privacy',
   danger: 'userProfile.nav.danger',
 };
 
@@ -87,6 +89,7 @@ export function UserProfile(props: UserProfileProps = {}) {
   const recoveryEnabled = capabilities.backupCodes && user?.twoFactorEnabled === true;
   const deletionEnabled = capabilities.accountDeletion;
   const socialEnabled = (config?.socialProviders?.length ?? 0) > 0;
+  const privacyEnabled = config?.privacy !== undefined;
   const sections = React.useMemo<readonly UserProfileSection[]>(
     () => userProfileSectionsFor({
       password: passwordEnabled,
@@ -95,8 +98,9 @@ export function UserProfile(props: UserProfileProps = {}) {
       recovery: recoveryEnabled,
       accountDeletion: deletionEnabled,
       social: socialEnabled,
+      privacy: privacyEnabled,
     }),
-    [deletionEnabled, mfaEnabled, passkeysEnabled, passwordEnabled, recoveryEnabled, socialEnabled],
+    [deletionEnabled, mfaEnabled, passkeysEnabled, passwordEnabled, privacyEnabled, recoveryEnabled, socialEnabled],
   );
 
   React.useEffect(() => {
@@ -205,6 +209,7 @@ function UserProfileBody({
         {active === 'passkeys' && <PasskeysSection allowAdd={capabilities.passkeyAdd} />}
         {active === 'mfa' && <MfaSection />}
         {active === 'recovery' && <RecoverySection />}
+        {active === 'privacy' && <PrivacyCenter />}
         {active === 'danger' && <DeleteAccountSection onDeleted={onDeleted} />}
       </div>
     </div>

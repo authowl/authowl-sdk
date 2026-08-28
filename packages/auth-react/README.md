@@ -31,7 +31,7 @@ function Page() {
 }
 ```
 
-**Components**: `<SignIn />`, `<SignUp />`, `<PhoneOTP />`, `<SocialButtons />`, `<MagicLinkForm />`,
+**Components**: `<SignIn />`, `<SignUp />`, `<PrivacyCenter />`, `<PhoneOTP />`, `<SocialButtons />`, `<MagicLinkForm />`,
 `<EmailOtpForm />`, `<PasskeyButton />`, `<PasskeyManager />`, `<ForgotPassword />`,
 `<ResetPassword />`, `<VerifyEmail />`, `<VerificationPending />`, `<MFAEnrollment />`,
 `<MFAChallenge />`, `<Waitlist />`, `<ConsentGate />`, `<UserButton />`, `<SignOutButton />`,
@@ -39,7 +39,7 @@ function Page() {
 `<OrganizationSwitcher />`, `<OrganizationList />`, `<CreateOrganization />`,
 `<OrganizationProfile />`, `<GoogleOneTap />`.
 
-**Hooks**: `useUser`, `useSession`, `useSignIn`, `useSignUp`, `useSignOut`,
+**Hooks**: `useUser`, `useSession`, `useSignIn`, `useSignUp`, `useSignOut`, `usePrivacy`,
 `usePasskeys`, `usePasswordReset`, `useEmailVerification`, `useMFA`, `useConsent`,
 `usePublicConfig`, `useWaitlist`.
 
@@ -47,6 +47,15 @@ When the environment's acquisition mode is `waitlist`, `<SignUp />` automaticall
 renders email enrollment instead of account-creation methods. `<Waitlist />` is
 also available as a standalone surface. Both use the same public endpoint,
 privacy-safe accepted state, and action-bound Turnstile challenge.
+
+When the environment publishes privacy notices, `<SignUp />` renders their exact
+English or Arabic versions and submits immutable delivery evidence with the
+account-creation request. Optional consent purposes are off by default and are
+recorded separately from terms acceptance. Signed-in users can use
+`<PrivacyCenter />` to change those choices, withdraw a grant immediately, read
+current notices, submit data-rights requests, and track request status. The same
+operations are available headlessly through `usePrivacy()` or
+`client.privacy` from `@authowl/core`.
 
 The sign-up, sign-in, and account-management components also follow the
 project's identity lifecycle policy. This includes separate sign-up and sign-in

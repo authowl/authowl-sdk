@@ -3,7 +3,13 @@
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 
-import { resolveProjectCapabilities } from '@authowl/core/native';
+import {
+  buildPrivacySignUpEvidence,
+  createIdempotencyKey,
+  resolveProjectCapabilities,
+  type Locale,
+  type PublicConfig,
+} from '@authowl/core/native';
 
 import { useLocale, useServerError, useT } from '../i18n';
 import { useAuthOwlClient, usePublicConfig } from '../provider';
@@ -27,7 +33,7 @@ export interface SignUpProps {
 /** Create an account with an email address and password. */
 export function SignUp({ onSignedUp, structuredName = false, theme = defaultTheme }: SignUpProps) {
   const t = useT();
-  const { direction } = useLocale();
+  const { locale, direction } = useLocale();
   const toMessage = useServerError();
   const client = useAuthOwlClient();
   const config = usePublicConfig();
@@ -42,11 +48,19 @@ export function SignUp({ onSignedUp, structuredName = false, theme = defaultThem
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [acceptedConsent, setAcceptedConsent] = useState(false);
+  const [grantedPurposeCodes, setGrantedPurposeCodes] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [privacyCorrelationId] = useState(createIdempotencyKey);
 
   const legal = config.data?.legal;
+  const privacy = config.data?.privacy;
   useEffect(() => {
     setAcceptedConsent(false);
   }, [legal?.version]);
+  useEffect(() => {
+    setGrantedPurposeCodes(new Set());
+  }, [privacy]);
 
   const useStructuredName = structuredName || capabilities.firstLastName;
 
@@ -72,6 +86,16 @@ export function SignUp({ onSignedUp, structuredName = false, theme = defaultThem
       password,
       name: displayName,
       ...(legal?.required ? { consentVersion: legal.version } : {}),
+      ...(privacy && privacy.notices.length > 0
+        ? {
+            privacyEvidence: buildPrivacySignUpEvidence(
+              privacy,
+              locale,
+              grantedPurposeCodes,
+              privacyCorrelationId,
+            ),
+          }
+        : {}),
       ...(useStructuredName
         ? { firstName: firstName.trim(), lastName: lastName.trim() }
         : {}),
@@ -211,6 +235,25 @@ export function SignUp({ onSignedUp, structuredName = false, theme = defaultThem
         </View>
       ) : null}
 
+      {privacy && (privacy.notices.length > 0 || privacy.consentPurposes.length > 0) ? (
+        <NativePrivacySignUpEvidence
+          privacy={privacy}
+          locale={locale}
+          direction={direction}
+          grantedPurposeCodes={grantedPurposeCodes}
+          onPurposeChange={(purposeCode, granted) => {
+            setGrantedPurposeCodes((current) => {
+              const next = new Set(current);
+              if (granted) next.add(purposeCode);
+              else next.delete(purposeCode);
+              return next;
+            });
+          }}
+          theme={theme}
+          disabled={busy}
+        />
+      ) : null}
+
       <FormError message={error} theme={theme} />
 
       <SubmitButton
@@ -222,6 +265,112 @@ export function SignUp({ onSignedUp, structuredName = false, theme = defaultThem
         theme={theme}
         testID="authowl-signup-submit"
       />
+    </View>
+  );
+}
+
+type PrivacyConfig = NonNullable<PublicConfig['privacy']>;
+
+function NativePrivacySignUpEvidence({
+  privacy,
+  locale,
+  direction,
+  grantedPurposeCodes,
+  onPurposeChange,
+  theme,
+  disabled,
+}: {
+  privacy: PrivacyConfig;
+  locale: Locale;
+  direction: 'ltr' | 'rtl';
+  grantedPurposeCodes: ReadonlySet<string>;
+  onPurposeChange: (purposeCode: string, granted: boolean) => void;
+  theme: AuthOwlTheme;
+  disabled: boolean;
+}) {
+  const t = useT();
+  return (
+    <View
+      style={{
+        gap: theme.spacing,
+        borderWidth: 1,
+        borderColor: theme.border,
+        borderRadius: theme.radius,
+        backgroundColor: theme.surface,
+        padding: theme.spacing,
+      }}
+      testID="authowl-signup-privacy-evidence"
+    >
+      <View style={{ gap: 4 }}>
+        <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>
+          {t('privacy.signup.title')}
+        </Text>
+        <Text style={{ color: theme.mutedText, fontSize: 13, lineHeight: 19 }}>
+          {t('privacy.signup.description')}
+        </Text>
+      </View>
+
+      {privacy.notices.map((notice) => (
+        <View
+          key={notice.noticeVersionId}
+          style={{ gap: 4, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 10 }}
+        >
+          <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600', writingDirection: direction }}>
+            {notice.title[locale]}
+          </Text>
+          <Text style={{ color: theme.mutedText, fontSize: 12, lineHeight: 18, writingDirection: direction }}>
+            {notice.body[locale]}
+          </Text>
+        </View>
+      ))}
+
+      {privacy.consentPurposes.length > 0 ? (
+        <View style={{ gap: 8 }}>
+          <Text style={{ color: theme.text, fontSize: 13, fontWeight: '600' }}>
+            {t('privacy.signup.optional')}
+          </Text>
+          {privacy.consentPurposes.map((purpose) => {
+            const granted = grantedPurposeCodes.has(purpose.code);
+            return (
+              <Pressable
+                key={purpose.purposeVersionId}
+                testID={`authowl-signup-purpose-${purpose.code}`}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: granted, disabled }}
+                disabled={disabled}
+                onPress={() => onPurposeChange(purpose.code, !granted)}
+                style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}
+              >
+                <View
+                  style={{
+                    width: 18,
+                    height: 18,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: granted ? theme.accent : theme.border,
+                    borderRadius: 4,
+                    backgroundColor: granted ? theme.accent : theme.background,
+                  }}
+                >
+                  {granted ? <Text style={{ color: theme.accentText, fontSize: 13 }}>✓</Text> : null}
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ color: theme.text, fontSize: 13, fontWeight: '600', writingDirection: direction }}>
+                    {purpose.title[locale]}
+                  </Text>
+                  <Text style={{ color: theme.mutedText, fontSize: 12, lineHeight: 17, writingDirection: direction }}>
+                    {purpose.description[locale]}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
+          <Text style={{ color: theme.mutedText, fontSize: 12, lineHeight: 18 }}>
+            {t('privacy.signup.choiceNote')}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }

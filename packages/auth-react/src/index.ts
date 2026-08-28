@@ -15,6 +15,7 @@ export {
   useAuth,
   useAuthClient,
   useAccount,
+  usePrivacy,
   useSession,
   useUser,
   useOrganization,
@@ -34,6 +35,7 @@ export {
 export type {
   UseAuthResult,
   UseAccountResult,
+  UsePrivacyResult,
   UseOrganizationResult,
   UseOrganizationInvitationResult,
   InvitationPromptStatus,
@@ -110,6 +112,8 @@ export { UserButton } from './components/UserButton';
 export { UserProfile } from './components/UserProfile';
 export type { UserProfileProps } from './components/UserProfile';
 export type { UserProfileSection } from './components/user-profile/model';
+export { PrivacyCenter } from './components/PrivacyCenter';
+export type { PrivacyCenterProps } from './components/PrivacyCenter';
 export { OrganizationSwitcher } from './components/OrganizationSwitcher';
 export type { OrganizationSwitcherProps } from './components/OrganizationSwitcher';
 export { InvitationPrompt } from './components/InvitationPrompt';

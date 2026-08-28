@@ -462,7 +462,8 @@ void main() {
       );
     });
 
-    test('sends the accepted consent version during sign-up', () async {
+    test('sends accepted legal and exact privacy evidence during sign-up',
+        () async {
       final recorder = Recorder((_) => http.Response(
             jsonEncode({'sessionCreated': false}),
             200,
@@ -479,10 +480,118 @@ void main() {
         password: 'correct horse',
         name: 'Mona',
         consentVersion: 7,
+        privacyEvidence: const <String, Object?>{
+          'locale': 'en',
+          'correlationId': '55555555-5555-4555-8555-555555555555',
+          'noticeVersionIds': <String>['22222222-2222-4222-8222-222222222222'],
+          'consentDecisions': <Object?>[],
+        },
       );
 
       final body = jsonDecode(recorder.requests.first.body) as Map;
       expect(body['consentVersion'], 7);
+      expect((body['privacyEvidence'] as Map)['locale'], 'en');
+      await client.dispose();
+    });
+
+    test(
+        'lists typed consent preferences through the authenticated project API',
+        () async {
+      final storage = InMemoryAuthOwlStorage();
+      final recorder = Recorder((request) => http.Response(
+            jsonEncode({
+              'preferences': [
+                {
+                  'purposeId': 'purpose_1',
+                  'purposeVersionId': 'purpose_version_1',
+                  'code': 'research',
+                  'state': 'granted',
+                  'updatedAt': '2026-08-27T10:00:00.000Z',
+                  'decidedAt': '2026-08-27T09:00:00.000Z',
+                }
+              ],
+            }),
+            200,
+          ));
+      final client = AuthOwlClient(
+        publishableKey: publishableKey,
+        apiUrl: 'https://api.authowl.dev',
+        storage: storage,
+        httpClient: recorder.client,
+      );
+      await storage.write('authowl.session.$projectId', 'tok_privacy');
+
+      final result = await client.privacy.listConsentPreferences();
+
+      expect(result.data!.single.code, 'research');
+      expect(result.data!.single.state, AuthOwlConsentState.granted);
+      expect(
+        recorder.requests.single.url.path,
+        '/api/projects/$projectId/privacy/consent-decisions',
+      );
+      expect(recorder.requests.single.headers['cookie'],
+          '$secureCookie=tok_privacy');
+      await client.dispose();
+    });
+
+    test('records exact consent evidence and creates typed rights requests',
+        () async {
+      final recorder = Recorder((request) {
+        if (request.url.path.endsWith('/privacy/consent-decisions')) {
+          return http.Response(
+            jsonEncode({
+              'recorded': true,
+              'decision': 'withdrawn',
+              'decidedAt': '2026-08-27T10:00:00.000Z',
+            }),
+            200,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'request': {
+              'id': 'request_1',
+              'rightType': 'consent_withdrawal',
+              'state': 'received',
+              'locale': 'ar',
+              'receivedAt': '2026-08-27T10:00:00.000Z',
+              'acknowledgedAt': null,
+              'fulfilmentDeadline': '2026-09-27T10:00:00.000Z',
+              'completedAt': null,
+            },
+          }),
+          200,
+        );
+      });
+      final client = AuthOwlClient(
+        publishableKey: publishableKey,
+        apiUrl: 'https://api.authowl.dev',
+        storage: InMemoryAuthOwlStorage(),
+        httpClient: recorder.client,
+      );
+
+      final consent = await client.privacy.recordConsent(
+        purposeCode: 'research',
+        purposeVersionId: 'purpose_version_1',
+        noticeVersionId: 'notice_version_1',
+        decision: AuthOwlConsentState.withdrawn,
+        locale: AuthOwlPrivacyLocale.ar,
+        correlationId: '55555555-5555-4555-8555-555555555555',
+      );
+      final rights = await client.privacy.createRightsRequest(
+        rightType: AuthOwlPrivacyRight.consentWithdrawal,
+        locale: AuthOwlPrivacyLocale.ar,
+      );
+
+      expect(consent.data, AuthOwlConsentState.withdrawn);
+      final consentBody = jsonDecode(recorder.requests.first.body) as Map;
+      expect(consentBody['purposeVersionId'], 'purpose_version_1');
+      expect(consentBody['noticeVersionId'], 'notice_version_1');
+      expect(consentBody['locale'], 'ar');
+      expect(rights.data!.rightType, AuthOwlPrivacyRight.consentWithdrawal);
+      expect(rights.data!.state, AuthOwlPrivacyRequestState.received);
+      final rightsBody = jsonDecode(recorder.requests.last.body) as Map;
+      expect(rightsBody['rightType'], 'consent_withdrawal');
       await client.dispose();
     });
 
