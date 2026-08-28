@@ -195,6 +195,11 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // registry and outgoing request header measure 22.1kb after combining with the
 // new MCP and sign-in-memory surfaces. The 23kb row preserves roughly 0.9kb of
 // regression headroom rather than hiding the combined cost in a retry.
+// PDPL managed surfaces (2026-08-28) keep both ceilings unchanged. Privacy
+// sign-up evidence now has a focused Core subpath, and the privacy center plus
+// organization administration surfaces load on demand behind stable component
+// wrappers. The initial React payload measures 72.0kb and Core remains below
+// 23kb, so the compliance features ship without taxing unrelated auth screens.
 
 const BUDGETS = [
   {

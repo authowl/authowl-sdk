@@ -7,8 +7,6 @@ import { useT } from '../i18n';
 
 type PrivacyConfig = NonNullable<PublicConfig['privacy']>;
 
-export { buildPrivacySignUpEvidence } from '@authowl/core';
-
 export function PrivacySignUpEvidence({
   privacy,
   locale,

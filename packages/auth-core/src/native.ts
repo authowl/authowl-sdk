@@ -41,8 +41,8 @@ export { resolveConfig, type AuthConfig, type ResolvedAuthConfig } from './confi
 export { getPublicConfig, type PublicConfig } from './public-config';
 export { LOCALES, directionFor, isLocale, type Locale } from './i18n';
 export { createIdempotencyKey } from './idempotency';
+export { buildPrivacySignUpEvidence } from './privacy-evidence';
 export {
-  buildPrivacySignUpEvidence,
   type CreatePrivacyRightsRequestOptions,
   type PrivacyClient,
   type PrivacyConsentPreference,

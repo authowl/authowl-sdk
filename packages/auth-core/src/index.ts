@@ -188,8 +188,6 @@ export {
 } from './public-config';
 export { createIdempotencyKey } from './idempotency';
 export {
-  buildPrivacySignUpEvidence,
-  createPrivacyClient,
   type CreatePrivacyRightsRequestOptions,
   type PrivacyClient,
   type PrivacyConsentPreference,

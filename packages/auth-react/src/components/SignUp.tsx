@@ -17,7 +17,7 @@ import { resolveProjectCapabilities } from '../project-capabilities';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { InvitationBanner } from './InvitationBanner';
 import { PublicConfigError } from './PublicConfigError';
-import { buildPrivacySignUpEvidence, PrivacySignUpEvidence } from './PrivacySignUpEvidence';
+import { PrivacySignUpEvidence } from './PrivacySignUpEvidence';
 
 export type SignUpProps = {
   redirectTo?: string;
@@ -101,6 +101,14 @@ export function SignUp({
     }
     setSubmitting(true);
     try {
+      const privacyEvidence = config?.privacy && config.privacy.notices.length > 0
+        ? (await import('@authowl/core/privacy')).buildPrivacySignUpEvidence(
+            config.privacy,
+            locale,
+            grantedPurposeCodes,
+            privacyCorrelationId,
+          )
+        : undefined;
       const res = await authChallenge.run(AUTH_CHALLENGE_ACTIONS.signUp, (options) =>
         signUp(
           {
@@ -120,16 +128,7 @@ export function SignUp({
               : {}),
             callbackURL: verifyEmailUrl,
             consentVersion: legal?.required ? legal.version : undefined,
-            ...(config?.privacy && config.privacy.notices.length > 0
-              ? {
-                  privacyEvidence: buildPrivacySignUpEvidence(
-                    config.privacy,
-                    locale,
-                    grantedPurposeCodes,
-                    privacyCorrelationId,
-                  ),
-                }
-              : {}),
+            ...(privacyEvidence ? { privacyEvidence } : {}),
           },
           options,
         ),

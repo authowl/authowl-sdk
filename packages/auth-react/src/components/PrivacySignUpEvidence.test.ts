@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PublicConfig } from '@authowl/core';
-import { buildPrivacySignUpEvidence } from './PrivacySignUpEvidence';
+import { buildPrivacySignUpEvidence } from '@authowl/core/privacy';
 
 const privacy: NonNullable<PublicConfig['privacy']> = {
   notices: [{
