@@ -6,8 +6,8 @@ const PK = 'pk_live_11111111-1111-1111-1111-111111111111_abcdefghij0123456789';
 const PROJECT_ID = '11111111-1111-1111-1111-111111111111';
 const APPLICATION_ID = '22222222-2222-4222-8222-222222222222';
 
-function cfg(fetchImpl: typeof fetch) {
-  return resolveConfig({ publishableKey: PK, apiUrl: 'https://auth.example.com', fetch: fetchImpl });
+function cfg(fetchImpl: typeof fetch, apiUrl = 'https://auth.example.com') {
+  return resolveConfig({ publishableKey: PK, apiUrl, fetch: fetchImpl });
 }
 
 function publicConfigFixture(): PublicConfig {
@@ -86,6 +86,86 @@ describe('getPublicConfig', () => {
     expect(url).toBe(`https://auth.example.com/api/projects/${PROJECT_ID}/public-config`);
     expect(new Headers(init.headers).get('x-publishable-key')).toBe(PK);
     expect(init.credentials).toBe('omit');
+  });
+
+  it('accepts a canonical JWT issuer when hosted auth uses a tenant origin', async () => {
+    const hostedOrigin = `https://${PROJECT_ID}.accounts.authowl.dev`;
+    const canonicalIssuer = `https://authowl.dev/api/projects/${PROJECT_ID}/auth`;
+    const body = {
+      ...publicConfigFixture(),
+      authBaseUrl: `${hostedOrigin}/api/projects/${PROJECT_ID}/auth`,
+      jwtIssuer: {
+        issuer: canonicalIssuer,
+        jwksUrl: `${canonicalIssuer}/jwks`,
+        aud: PROJECT_ID,
+      },
+    };
+    const fetchImpl = vi.fn(async () => Response.json(body)) as unknown as typeof fetch;
+
+    await expect(getPublicConfig(cfg(fetchImpl, hostedOrigin))).resolves.toEqual(body);
+  });
+
+  it.each([
+    [
+      'an issuer path for another environment',
+      {
+        issuer: `https://authowl.dev/api/projects/${APPLICATION_ID}/auth`,
+        jwksUrl: `https://authowl.dev/api/projects/${APPLICATION_ID}/auth/jwks`,
+        aud: PROJECT_ID,
+      },
+    ],
+    [
+      'an issuer path below the environment auth endpoint',
+      {
+        issuer: `https://authowl.dev/api/projects/${PROJECT_ID}/auth/token`,
+        jwksUrl: `https://authowl.dev/api/projects/${PROJECT_ID}/auth/token/jwks`,
+        aud: PROJECT_ID,
+      },
+    ],
+    [
+      'a JWKS URL outside the issuer',
+      {
+        issuer: `https://authowl.dev/api/projects/${PROJECT_ID}/auth`,
+        jwksUrl: `https://keys.example.com/api/projects/${PROJECT_ID}/auth/jwks`,
+        aud: PROJECT_ID,
+      },
+    ],
+    [
+      'an insecure remote issuer',
+      {
+        issuer: `http://authowl.dev/api/projects/${PROJECT_ID}/auth`,
+        jwksUrl: `http://authowl.dev/api/projects/${PROJECT_ID}/auth/jwks`,
+        aud: PROJECT_ID,
+      },
+    ],
+    [
+      'an issuer with a query',
+      {
+        issuer: `https://authowl.dev/api/projects/${PROJECT_ID}/auth?tenant=other`,
+        jwksUrl: `https://authowl.dev/api/projects/${PROJECT_ID}/auth/jwks`,
+        aud: PROJECT_ID,
+      },
+    ],
+    [
+      'an audience for another environment',
+      {
+        issuer: `https://authowl.dev/api/projects/${PROJECT_ID}/auth`,
+        jwksUrl: `https://authowl.dev/api/projects/${PROJECT_ID}/auth/jwks`,
+        aud: APPLICATION_ID,
+      },
+    ],
+  ])('rejects %s', async (_case, jwtIssuer) => {
+    const hostedOrigin = `https://${PROJECT_ID}.accounts.authowl.dev`;
+    const fetchImpl = vi.fn(async () => Response.json({
+      ...publicConfigFixture(),
+      authBaseUrl: `${hostedOrigin}/api/projects/${PROJECT_ID}/auth`,
+      jwtIssuer,
+    })) as unknown as typeof fetch;
+
+    await expect(getPublicConfig(cfg(fetchImpl, hostedOrigin))).rejects.toMatchObject({
+      name: 'TransportError',
+      kind: 'invalid_response',
+    });
   });
 
   it('throws on a non-2xx response', async () => {
