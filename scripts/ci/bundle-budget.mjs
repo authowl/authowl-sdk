@@ -200,6 +200,12 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // organization administration surfaces load on demand behind stable component
 // wrappers. The initial React payload measures 72.0kb and Core remains below
 // 23kb, so the compliance features ship without taxing unrelated auth screens.
+// Hosted auth canonical issuers (2026-08-31) raise Core 23->24. The decoder now
+// accepts the stable platform issuer when a hosted or custom account portal uses
+// a different origin, while retaining exact project path, JWKS, audience, and
+// HTTPS checks. Main measured 22.9961kb, leaving only four bytes of headroom;
+// the fix measures 23.0264kb (+31 bytes). The new row restores roughly 1kb of
+// regression headroom. React remains inside its existing ceiling.
 
 const BUDGETS = [
   {
@@ -209,7 +215,7 @@ const BUDGETS = [
   },
   {
     entry: 'packages/auth-core/dist/index.js',
-    maxGzipKb: 23,
+    maxGzipKb: 24,
     label: '@authowl/core (framework-neutral fetch/state client)',
   },
 ];

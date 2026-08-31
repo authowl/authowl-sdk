@@ -31,7 +31,11 @@ export type PublicConfig = {
   environmentId: string;
   /** Environment class that determines key prefixes and billing treatment. */
   environmentType: EnvironmentType;
-  /** Canonical authentication endpoint for this environment. */
+  /**
+   * Authentication endpoint used by this SDK instance. Hosted portals and
+   * custom domains keep this same-origin even when the stable JWT issuer uses
+   * the platform's canonical origin.
+   */
   authBaseUrl: string;
   /**
    * Public acquisition mode. Optional only for rolling compatibility with
@@ -179,8 +183,8 @@ export type PublicConfig = {
    * JWT issuer (server contract CONTRACTS §8). Non-null only when the project's
    * issuer toggle is on: exactly what a third-party verifier needs (Convex
    * `auth.config.ts` = `{ type: "customJwt", issuer, jwks: jwksUrl,
-   * applicationID: aud, algorithm: "ES256" }`). `getToken` mints from
-   * `<issuer>/token`.
+   * applicationID: aud, algorithm: "ES256" }`). The issuer remains stable when
+   * `authBaseUrl` follows a hosted or custom account-portal origin.
    */
   jwtIssuer: { issuer: string; jwksUrl: string; aud: string } | null;
   /**
@@ -206,8 +210,7 @@ export type PublicConfig = {
  * project that simply has a method disabled.
  */
 export async function getPublicConfig(config: ResolvedAuthConfig): Promise<PublicConfig> {
-  const origin = new URL(config.apiUrl).origin;
-  const url = `${origin}/api/projects/${config.decoded.projectId}/public-config`;
+  const url = `${config.apiUrl}/api/projects/${config.decoded.projectId}/public-config`;
 
   return requireOk(
     await requestPublishableJson(config, url, {
@@ -227,7 +230,7 @@ function decodePublicConfig(
   const environmentId = row.environmentId;
   const environmentType = row.environmentType;
   const expectedAuthBaseUrl =
-    `${new URL(config.apiUrl).origin}/api/projects/${config.decoded.projectId}/auth`;
+    `${config.apiUrl}/api/projects/${config.decoded.projectId}/auth`;
   if (
     typeof row.applicationId !== 'string' ||
     !isUuid(row.applicationId) ||
@@ -294,10 +297,14 @@ function decodePublicConfig(
   }
   if (row.jwtIssuer !== null) {
     const jwt = asObject(row.jwtIssuer);
+    const issuer = new URL(jwt.issuer as string);
+    const expectedIssuer =
+      `${issuer.origin}/api/projects/${config.decoded.projectId}/auth`;
     if (
-      jwt.issuer !== expectedAuthBaseUrl
-      || jwt.jwksUrl !== `${expectedAuthBaseUrl}/jwks`
+      jwt.issuer !== expectedIssuer
+      || jwt.jwksUrl !== `${expectedIssuer}/jwks`
       || jwt.aud !== config.decoded.projectId
+      || (issuer.protocol !== 'https:' && issuer.origin !== config.apiUrl)
     ) throw invalidPublicConfig();
   }
   if (row.signUp !== undefined) {
