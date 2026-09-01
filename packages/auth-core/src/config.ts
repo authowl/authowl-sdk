@@ -77,7 +77,11 @@ export function resolveConfig(input: AuthConfig): ResolvedAuthConfig {
   // The host's fetch goes IN and is not reachable again: resolving a config is
   // the one moment the SDK gets to decide what every later request runs on.
   const { fetch: sessionFetch, ...session } = createSessionTransport(
-    target.decoded.projectId,
+    {
+      projectId: target.decoded.projectId,
+      projectBaseURL: target.projectBaseURL,
+      publishableKey: target.publishableKey,
+    },
     input.fetch,
   );
   return {

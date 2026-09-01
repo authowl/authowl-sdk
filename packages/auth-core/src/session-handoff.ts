@@ -1,7 +1,7 @@
 import type { ResolvedAuthConfig } from './config';
 import type { AuthHttpClient } from './http-client';
 import type { SocialSignInOptions, SsoSignInOptions } from './client';
-import type { SessionTokenStore } from './session-token';
+import type { SessionBinding } from './session-transport';
 import { isBrowserRuntime } from './browser-runtime';
 
 /**
@@ -209,7 +209,7 @@ export function takeHandoffCode(expectedCode?: string): string | null {
  */
 export async function completeCrossSiteSignIn(
   http: AuthHttpClient,
-  tokens: SessionTokenStore,
+  binding: SessionBinding,
   capturedCode?: string,
 ): Promise<boolean> {
   if (!isBrowserRuntime()) return false;
@@ -234,7 +234,7 @@ export async function completeCrossSiteSignIn(
   // Remembered, because nothing in a redirect flow can say otherwise: there is
   // no `rememberMe` on a social or SSO sign-in, and the engine mints a
   // persistent session for both.
-  tokens.beginSession({ remember: true });
+  await binding.prepareSession({ remember: true });
   // The shared client, not a bare fetch: this is the one request that
   // establishes the session, so it needs the transport's deadline above all -
   // the first session read awaits this promise, and a hung exchange with no

@@ -193,11 +193,16 @@ describe('completeCrossSiteSignIn', () => {
   /** A fresh store per test: it is a module-level singleton per project. */
   let handoffProjects = 0;
   const freshTokens = () => sessionTokenStore(`handoff-${(handoffProjects += 1)}`);
+  const bindingFor = (tokens = freshTokens()) => ({
+    tokens,
+    probe: vi.fn() as never,
+    prepareSession: vi.fn(async (start) => tokens.beginSession(start)),
+  });
 
   it('does nothing when the page load carries no code', async () => {
     const http = httpStub();
 
-    expect(await completeCrossSiteSignIn(http as never, freshTokens())).toBe(false);
+    expect(await completeCrossSiteSignIn(http as never, bindingFor())).toBe(false);
     expect(http.request).not.toHaveBeenCalled();
   });
 
@@ -207,7 +212,7 @@ describe('completeCrossSiteSignIn', () => {
     window.history.replaceState(null, '', '/welcome#authowl_code=code-1');
     const http = httpStub();
 
-    expect(await completeCrossSiteSignIn(http as never, freshTokens())).toBe(true);
+    expect(await completeCrossSiteSignIn(http as never, bindingFor())).toBe(true);
 
     const [path, options] = http.request.mock.calls[0]!;
     expect(path).toBe('/session/exchange');
@@ -223,7 +228,7 @@ describe('completeCrossSiteSignIn', () => {
     tokens.beginRead().recordCookieVerdict(true);
     expect(tokens.wantsToken()).toBe(false);
 
-    await completeCrossSiteSignIn(httpStub() as never, tokens);
+    await completeCrossSiteSignIn(httpStub() as never, bindingFor(tokens));
 
     // The code is single-use and the exchange response is the ONLY one carrying
     // this session. Arriving here unable to accept a token means burning the
@@ -237,7 +242,7 @@ describe('completeCrossSiteSignIn', () => {
     await beginCrossSiteSignIn(config, { kind: 'social', provider: 'google' });
     window.history.replaceState(null, '', '/w#authowl_code=code-1');
 
-    expect(await completeCrossSiteSignIn(httpStub({ error: { code: 'INVALID_SESSION_CODE' } }) as never, freshTokens()))
+    expect(await completeCrossSiteSignIn(httpStub({ error: { code: 'INVALID_SESSION_CODE' } }) as never, bindingFor()))
       .toBe(false);
     // A verifier left behind would be offered against the NEXT flow's code.
     expect(document.cookie).not.toContain('authowl_handoff_verifier=');
@@ -248,7 +253,7 @@ describe('completeCrossSiteSignIn', () => {
 
     // This runs on page load, before any app code, so it must never reject: the
     // shared client turns a network failure or a timeout into `{ error }`.
-    await expect(completeCrossSiteSignIn(httpStub({ error: { code: 'NETWORK' } }) as never, freshTokens()))
+    await expect(completeCrossSiteSignIn(httpStub({ error: { code: 'NETWORK' } }) as never, bindingFor()))
       .resolves.toBe(false);
   });
 
@@ -262,7 +267,7 @@ describe('completeCrossSiteSignIn', () => {
     window.history.replaceState(null, '', '/w#authowl_code=code-1');
     const http = httpStub();
 
-    expect(await completeCrossSiteSignIn(http as never, freshTokens())).toBe(false);
+    expect(await completeCrossSiteSignIn(http as never, bindingFor())).toBe(false);
     expect(http.request).not.toHaveBeenCalled();
   });
 });

@@ -175,9 +175,12 @@ pnpm test:storybook  # real Chromium smoke, interaction, and axe checks
 - **Publishable keys** (`pk_test_…` in development, `pk_live_…` in production)
   are safe to embed in client code. They are scoped to an environment and to
   specific origins, both enforced server-side.
-- **Session tokens** live only in `HttpOnly + Secure + SameSite=None` cookies.
-  Browser session state, action responses, and device lists expose stable ids
-  and safe metadata, never the durable token.
+- **Session tokens** stay in `HttpOnly + Secure + SameSite=None` partitioned
+  cookies whenever the browser proves that transport works. Browsers that block
+  the cookie use the only viable fallback: an SDK-held token bound to a
+  non-extractable, per-origin P-256 key. A copied token is not sufficient to use
+  that session. Browser session state, action results, and device lists never
+  expose either credential.
 - `getToken()` is deliberately separate: it mints a short-lived, memory-only
   backend JWT for a configured verifier and never reveals the browser session
   cookie value.

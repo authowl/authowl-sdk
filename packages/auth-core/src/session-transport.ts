@@ -33,7 +33,14 @@
  * fetch left on a resolved config to reach for by mistake.
  */
 import { sessionTokenStore, type SessionTokenStore } from './session-token';
+import type { SessionStart } from './session-token';
+import type { SessionProofKey } from './session-proof-client';
 import type { TransportFetch } from './transport';
+
+const SESSION_PROOF_HEADER = 'x-authowl-session-proof';
+const SESSION_BINDING_HEADER = 'x-authowl-session-binding';
+const SESSION_BINDING_PROOF_HEADER = 'x-authowl-session-binding-proof';
+const proofClient = () => import('./session-proof-client');
 
 /**
  * Everything about this project's session that is NOT the ordinary fetch.
@@ -57,6 +64,8 @@ export type SessionBinding = {
   readonly probe: TransportFetch;
   /** The store the fetch above attaches from, and the lifecycle the doors drive. */
   readonly tokens: SessionTokenStore;
+  /** Decide cookie-only or sender-bound bearer transport before a session mint. */
+  prepareSession(start: SessionStart): Promise<void>;
 };
 
 export type SessionTransport = SessionBinding & {
@@ -90,12 +99,53 @@ function inheritedHeaders(input: RequestInfo | URL, init: RequestInit | undefine
  * arrives after configuration still works.
  */
 export function createSessionTransport(
-  projectId: string,
+  target: {
+    projectId: string;
+    projectBaseURL: string;
+    publishableKey: string;
+  },
   provided?: typeof fetch,
 ): SessionTransport {
-  const tokens = sessionTokenStore(projectId);
+  const tokens = sessionTokenStore(target.projectId);
   const base = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
     (provided ?? globalThis.fetch)(input, init);
+  const clientOrigin = typeof globalThis.location === 'object'
+    && typeof globalThis.location.origin === 'string'
+    && globalThis.location.origin !== 'null'
+    ? globalThis.location.origin
+    : null;
+  let pendingBinding: { key: SessionProofKey; nonce: string } | null = null;
+  let pendingCookieOnly = false;
+
+  const projectHeaders = (): Headers => new Headers({
+    'x-publishable-key': target.publishableKey,
+  });
+
+  async function abandon(headers: Headers): Promise<void> {
+    const authorization = headers.get('authorization');
+    if (!authorization) return;
+    await proofClient().then((proof) => proof.abandonSession(
+      base,
+      `${target.projectBaseURL}/session/abandon`,
+      projectHeaders(),
+      authorization,
+    ));
+  }
+
+  async function prepareSession(start: SessionStart): Promise<void> {
+    pendingBinding = null;
+    pendingCookieOnly = false;
+    const prepared = await proofClient().then((proof) => proof.prepareSenderConstrainedSession({
+      tokens,
+      start,
+      clientOrigin,
+      fetcher: base,
+      projectBaseURL: target.projectBaseURL,
+      headers: projectHeaders(),
+    }));
+    pendingBinding = prepared.binding;
+    pendingCookieOnly = prepared.cookieOnly;
+  }
 
   // Branded straight off `base`: "session detached" IS the undecorated fetch.
   const probe = base as TransportFetch;
@@ -121,14 +171,87 @@ export function createSessionTransport(
 
     const headers = inheritedHeaders(input, init);
     const declared = tokens.declareOn(headers);
+    const authorization = headers.get('authorization');
+    const method = (init?.method
+      ?? (typeof input === 'object' && input !== null && 'method' in input
+        ? (input as Request).method
+        : 'GET')).toUpperCase();
+    const url = typeof input === 'string'
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url;
+    if (declared && clientOrigin) {
+      let carriesAuthorization = Boolean(authorization);
+      if (authorization) {
+        const token = authorization.replace(/^Bearer\s+/i, '');
+        const expected = tokens.bindingThumbprint();
+        if (expected) {
+          try {
+            headers.set(SESSION_PROOF_HEADER, await proofClient().then(
+              (proof) => proof.createStoredSessionProof({
+                origin: clientOrigin,
+                expectedThumbprint: expected,
+                method,
+                url,
+                token,
+              }),
+            ));
+          } catch {
+            await abandon(headers);
+            tokens.endSession();
+            headers.delete('authorization');
+            headers.delete(SESSION_PROOF_HEADER);
+            headers.delete(SESSION_BINDING_HEADER);
+            headers.delete(SESSION_BINDING_PROOF_HEADER);
+            carriesAuthorization = false;
+          }
+        }
+      }
+      if (pendingBinding) {
+        const binding = pendingBinding;
+        headers.set(SESSION_BINDING_HEADER, binding.nonce);
+        headers.set(
+          carriesAuthorization ? SESSION_BINDING_PROOF_HEADER : SESSION_PROOF_HEADER,
+          await proofClient().then(
+            (proof) => proof.createSessionProof({
+              key: binding.key,
+              method,
+              url,
+              token: binding.nonce,
+            }),
+          ),
+        );
+      }
+    }
     const response = await base(input, { ...init, headers });
     // Only a declared request can be answered with a token or a challenge, and
     // only a declared request should be trusted to hand us either.
-    if (declared) tokens.observe(response.headers);
+    if (declared) {
+      const recoveryResponse = response.status === 401
+        && authorization
+        && (
+          new URL(url).pathname.endsWith('/get-session')
+          || new URL(url).pathname.endsWith('/sign-out')
+        );
+      if (recoveryResponse) {
+        await abandon(headers);
+        tokens.endSession();
+        pendingBinding = null;
+        pendingCookieOnly = false;
+      } else {
+        tokens.observe(response.headers);
+        if (response.headers.has('set-auth-token')) {
+          if (pendingCookieOnly) tokens.completeCookieTransport();
+          pendingBinding = null;
+          pendingCookieOnly = false;
+        }
+      }
+    }
     return response;
   };
 
   // The brand is minted here and nowhere else outside `withoutSessionTransport`,
   // in the module whose whole subject is what it means. See `TransportFetch`.
-  return { fetch: withSession as TransportFetch, probe, tokens };
+  return { fetch: withSession as TransportFetch, probe, tokens, prepareSession };
 }

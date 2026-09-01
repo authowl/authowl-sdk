@@ -236,11 +236,17 @@ to sign in again and retry the action. Organization ownership conflicts return
 `ORGANIZATION_LAST_OWNER`. Disabled and cross-project resources return 404.
 Public metadata is server-authored. Unsafe metadata is end-user-owned and must
 be treated as untrusted. Private metadata has no browser SDK surface.
-Durable browser session tokens stay in HttpOnly cookies and never appear in
-`@authowl/react`'s `useSession()`, action results, or `listSessions()`. Core
-exposes only the framework-neutral `client.sessionStore`. Session management uses
-stable session ids. This is distinct from `getToken()`, which intentionally
-mints a short-lived backend JWT and caches it in memory only.
+Durable browser session tokens stay in HttpOnly cookies whenever the browser
+proves that its cross-site partition keeps them. A browser that blocks that
+cookie receives a bearer fallback bound at mint time to a non-extractable P-256
+key stored for the tenant application's origin. Every later request carries a
+fresh method-, URL-, and token-bound proof, so copying the token alone is not
+enough to replay the session. Losing the browser key revokes only that session
+and requires sign-in again. No token appears in `@authowl/react`'s
+`useSession()`, action results, or `listSessions()`. Core exposes only the
+framework-neutral `client.sessionStore`. Session management uses stable session
+ids. This is distinct from `getToken()`, which intentionally mints a short-lived
+backend JWT and caches it in memory only.
 
 ## Protected public-auth actions
 
