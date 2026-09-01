@@ -84,6 +84,12 @@ honor project branding or an explicit `appearance.primaryColor` override.
 presence — it is a UX helper, **not** an authorization boundary. Always authorize
 on the server with `auth()`, which re-validates against the auth service.
 
+For bearer-token route handlers, `@authowl/next/server` also re-exports
+`requireAuth`, `requirePermission`, `requireGrant`, and `requireOrg`. They throw
+a typed `AuthorizationError` with status 401 or 403 and never replace your own
+tenant-scope and resource-ownership checks. Cookie-backed pages and route
+handlers should continue to use `auth()`.
+
 See the [complete Next.js guide](https://authowl.dev/docs/sdks/next) for provider
 setup, server authorization, middleware boundaries, and environment variables.
 

@@ -140,6 +140,41 @@ redirects, abort after five seconds, stream at most 64 KiB, and accept at most
 `code`; authorization helpers `has()` and `hasPermission()` continue to fail
 closed for token failures while surfacing configuration failures.
 
+For route handlers, prefer the throwing gates so a forgotten boolean check
+cannot accidentally allow the request:
+
+```ts
+import {
+  isAuthorizationError,
+  requirePermission,
+} from '@authowl/core/server';
+
+try {
+  const identity = await requirePermission(bearerToken, 'org:invoices:read');
+
+  const invoice = await db.invoice.find(invoiceId);
+  if (
+    identity.claims.org_id !== organizationId
+    || invoice.organizationId !== organizationId
+    || invoice.userId !== identity.sub
+  ) {
+    return new Response('Forbidden', { status: 403 });
+  }
+} catch (error) {
+  if (isAuthorizationError(error)) {
+    return new Response(error.message, { status: error.status });
+  }
+  throw error;
+}
+```
+
+`requireAuth`, `requirePermission`, `requireGrant`, and `requireOrg` return a
+verified identity or throw `AuthorizationError`. Missing and invalid tokens
+share one 401 response. A verified caller without the required authority gets
+403. JWKS outages and server misconfiguration remain operational errors rather
+than being mislabeled as bad credentials. These gates verify identity and token
+claims only - your query must still enforce tenant scope and resource ownership.
+
 ## Headless account and organization management
 
 Use the AuthOwl-owned `account` and `organization` namespaces when you are
