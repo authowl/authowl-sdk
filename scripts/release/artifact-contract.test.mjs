@@ -157,8 +157,8 @@ try {
     assert.equal(isReleaseVersion(version), false, version);
   }
   const goUnit = releaseUnits().find((unit) => unit.ecosystem === 'go');
-  assert.equal(goUnit?.version, '0.2.0');
-  assert.equal(goUnit?.tag, 'sdks/go/v0.2.0');
+  assert.equal(goUnit?.version, '0.3.0');
+  assert.equal(goUnit?.tag, 'sdks/go/v0.3.0');
   assert.equal(goUnit?.publishable, true);
   assert.equal(stripDelimitedSections('Devcoat <<script>>', '<', '>'), 'Devcoat ');
   assert.equal(stripDelimitedSections('Devcoat ((website))', '(', ')'), 'Devcoat ');
