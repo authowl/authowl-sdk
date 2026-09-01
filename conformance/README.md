@@ -12,14 +12,14 @@ membership, and response-projection vectors.
 
 | File | Cases | Covers |
 |---|--:|---|
-| `jwt-verify.json` | 54 | ES256 verification: signature, `iss`/`aud`/`exp`/`nbf`, token purpose and `typ`, `alg` confusion, malformed structure, membership decoding |
+| `jwt-verify.json` | 56 | ES256 verification: signature, `iss`/`aud`/`exp`/`nbf`, token purpose and `typ`, bound and unbound `cnf.jkt`, `alg` confusion, malformed structure, membership decoding |
 | `jwks-parse.json` | 20 | JWKS hardening: private-member leakage, `key_ops`, unexpected members, wrong curve, duplicate `kid`, key-count ceiling |
 | `webhook-verify.json` | 26 | HMAC-SHA256 signatures, rotation overlap, replay window, malformed headers, config errors |
 | `membership-has.json` | 20 | `has()` / `hasPermission()`, AND semantics, the teams-absent rule |
 | `publishable-key.json` | 14 | Key decoding, the `sk_` refusal, and project-id canonicalisation |
 | `cookie-name.json` | 7 | Session cookie-name derivation |
 | `response-projection.json` | 18 | Browser-safe response projection and secret-field stripping |
-| | **159** | |
+| | **161** | |
 
 ## The invariants worth stating out loud
 
@@ -37,6 +37,10 @@ reimplementation, which is exactly why they are pinned:
 - **Token purpose and `typ` are one contract.** Access tokens require
   `at+jwt`; other declared purposes require `JWT`. ID tokens are rejected by
   default, and every organization-authority helper requires a session token.
+- **Project-token confirmation is additive.** Bound project JWTs retain the
+  exact `cnf.jkt` thumbprint after verification, while unbound tokens omit the
+  claim. Proof enforcement is a separate verifier contract and is not inferred
+  from claim presence alone.
 - **An absent `teams` claim is not "any team".** A token minted before teams
   shipped must never satisfy a `teamId` query.
 - **Untrusted input degrades to `false`; local misconfiguration raises.** A bad

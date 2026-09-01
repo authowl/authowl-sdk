@@ -67,6 +67,7 @@ const PROJECT_ID_MIXED_CASE = PROJECT_ID.toUpperCase();
 const ISSUER = `https://api.authowl.dev/api/projects/${PROJECT_ID}/auth`;
 const AUDIENCE = PROJECT_ID;
 const JWKS_URI = `${ISSUER}/jwks`;
+const SESSION_JKT = b64url(Buffer.alloc(32, 0x42));
 const AUTHORIZATION_MEMBERSHIP = {
   role: 'member',
   permissions: ['org:reports:read'],
@@ -271,6 +272,20 @@ jwtCase(
   }),
   { ok: true, sub: 'user_2p9xKq', membership: AUTHORIZATION_MEMBERSHIP },
   { authorization: { permission: 'org:reports:read', expect: true } },
+);
+jwtCase(
+  'an unbound project session token omits key confirmation',
+  makeToken({ claims: baseClaims({ token_use: 'session' }) }),
+  { ok: true, sub: 'user_2p9xKq', membership: null },
+  { confirmationJkt: null },
+);
+jwtCase(
+  'a sender-constrained project session token carries key confirmation',
+  makeToken({
+    claims: baseClaims({ token_use: 'session', cnf: { jkt: SESSION_JKT } }),
+  }),
+  { ok: true, sub: 'user_2p9xKq', membership: null },
+  { confirmationJkt: SESSION_JKT },
 );
 jwtCase(
   'a declared template token is accepted by the default verifier',

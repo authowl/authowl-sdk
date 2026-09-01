@@ -85,6 +85,17 @@ final class ConformanceTest extends TestCase
         $verified = $verifier->verify($case->token);
         self::assertSame($case->expect->sub, $verified->subject);
 
+        if (property_exists($case, 'confirmationJkt')) {
+            if ($case->confirmationJkt === null) {
+                self::assertArrayNotHasKey('cnf', $verified->claims);
+            } else {
+                self::assertEquals(
+                    (object) ['jkt' => $case->confirmationJkt],
+                    $verified->claims['cnf'] ?? null,
+                );
+            }
+        }
+
         if ($case->expect->membership === null) {
             self::assertNull($verified->membership);
 

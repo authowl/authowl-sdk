@@ -70,6 +70,20 @@ fn token_verification() {
 
             let actual = serde_json::to_value(&verified.membership).expect("serialize membership");
             assert_eq!(actual, expected["membership"], "{name}: membership");
+            if let Some(expected_jkt) = case.get("confirmationJkt") {
+                if expected_jkt.is_null() {
+                    assert!(
+                        !verified.claims.contains_key("cnf"),
+                        "{name}: confirmation should be absent"
+                    );
+                } else {
+                    let actual_jkt = verified
+                        .claims
+                        .get("cnf")
+                        .and_then(|value| value.get("jkt"));
+                    assert_eq!(actual_jkt, Some(expected_jkt), "{name}: confirmation");
+                }
+            }
             if let Some(authorization) = case.get("authorization") {
                 let permission = authorization["permission"]
                     .as_str()
@@ -93,7 +107,7 @@ fn token_verification() {
         }
         checked += 1;
     }
-    assert_eq!(checked, 54, "unexpected token vector count");
+    assert_eq!(checked, 56, "unexpected token vector count");
 }
 
 #[test]

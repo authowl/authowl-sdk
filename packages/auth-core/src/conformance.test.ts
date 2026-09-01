@@ -53,6 +53,7 @@ describe('conformance: project token verification', () => {
       clockToleranceSeconds?: number;
       tokenUse?: 'session' | 'template' | 'access' | 'id';
       requireTokenUse?: boolean;
+      confirmationJkt?: string | null;
       authorization?: { permission: string; expect: boolean };
       expect:
         | { ok: true; sub: string | null; membership: unknown }
@@ -101,6 +102,13 @@ describe('conformance: project token verification', () => {
       const verified = await verifyProjectToken(testCase.token, options);
       expect(verified.sub).toBe(testCase.expect.sub);
       expect(verified.membership).toEqual(testCase.expect.membership);
+      if (Object.hasOwn(testCase, 'confirmationJkt')) {
+        if (testCase.confirmationJkt === null) {
+          expect(verified.claims.cnf).toBeUndefined();
+        } else {
+          expect(verified.claims.cnf).toEqual({ jkt: testCase.confirmationJkt });
+        }
+      }
       if (testCase.authorization) {
         await expect(hasVerifiedGrant(
           testCase.token,

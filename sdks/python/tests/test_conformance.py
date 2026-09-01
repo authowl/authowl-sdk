@@ -66,6 +66,12 @@ def test_token_verification(case: dict[str, Any]) -> None:
     verified = verifier.verify(case["token"])
     assert verified.subject == expected["sub"]
 
+    if "confirmationJkt" in case:
+        if case["confirmationJkt"] is None:
+            assert "cnf" not in verified.claims
+        else:
+            assert verified.claims.get("cnf") == {"jkt": case["confirmationJkt"]}
+
     if expected["membership"] is None:
         assert verified.membership is None
     else:
