@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use authowl::{
     decode_publishable_key, parse_jwks, session_cookie_name, verify_webhook, KeyError, Membership,
-    Query, StaticKeySource, Verifier, WebhookInput,
+    Query, StaticKeySource, TokenUse, Verifier, WebhookInput,
 };
 use serde_json::Value;
 
@@ -42,8 +42,20 @@ fn token_verification() {
         let keys =
             StaticKeySource::from_document(&vectors["jwks"]).expect("parse conformance JWKS");
         let tolerance = case["clockToleranceSeconds"].as_u64().unwrap_or(60);
-        let verifier = Verifier::with_clock_tolerance(&issuer, &audience, keys, tolerance)
+        let mut verifier = Verifier::with_clock_tolerance(&issuer, &audience, keys, tolerance)
             .unwrap_or_else(|error| panic!("{name}: build verifier: {error}"));
+        if let Some(token_use) = case["tokenUse"].as_str() {
+            let token_use = match token_use {
+                "session" => TokenUse::Session,
+                "template" => TokenUse::Template,
+                "access" => TokenUse::Access,
+                "id" => TokenUse::Id,
+                other => panic!("{name}: unknown vector token use {other}"),
+            };
+            verifier = verifier.with_token_use(token_use);
+        }
+        verifier =
+            verifier.with_required_token_use(case["requireTokenUse"].as_bool().unwrap_or(false));
 
         let now = case["now"].as_i64().expect("now");
         let result = verifier.verify_at(case["token"].as_str().unwrap_or_default(), now);
@@ -58,6 +70,21 @@ fn token_verification() {
 
             let actual = serde_json::to_value(&verified.membership).expect("serialize membership");
             assert_eq!(actual, expected["membership"], "{name}: membership");
+            if let Some(authorization) = case.get("authorization") {
+                let permission = authorization["permission"]
+                    .as_str()
+                    .expect("authorization permission");
+                let allowed = verifier.has_at(
+                    case["token"].as_str().unwrap_or_default(),
+                    &Query::permission(permission),
+                    now,
+                );
+                assert_eq!(
+                    allowed,
+                    authorization["expect"].as_bool().unwrap(),
+                    "{name}: authorization"
+                );
+            }
         } else {
             let error = result
                 .err()
@@ -66,7 +93,7 @@ fn token_verification() {
         }
         checked += 1;
     }
-    assert_eq!(checked, 39, "unexpected token vector count");
+    assert_eq!(checked, 54, "unexpected token vector count");
 }
 
 #[test]

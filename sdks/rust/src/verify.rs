@@ -23,6 +23,15 @@ pub const DEFAULT_CLOCK_TOLERANCE_SECONDS: u64 = 60;
 /// authorization, so it is refused as a configuration error.
 pub const MAX_CLOCK_TOLERANCE_SECONDS: u64 = 300;
 
+/// The declared purpose of a project JWT.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TokenUse {
+    Session,
+    Template,
+    Access,
+    Id,
+}
+
 /// The result of a successful verification.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VerifiedToken {
@@ -40,6 +49,8 @@ pub struct Verifier<K: KeySource> {
     audience: String,
     keys: K,
     clock_tolerance_seconds: u64,
+    token_use: Option<TokenUse>,
+    require_token_use: bool,
 }
 
 // Hand-written so a `KeySource` need not be `Debug` itself, and so the key
@@ -50,6 +61,8 @@ impl<K: KeySource> std::fmt::Debug for Verifier<K> {
             .field("issuer", &self.issuer)
             .field("audience", &self.audience)
             .field("clock_tolerance_seconds", &self.clock_tolerance_seconds)
+            .field("token_use", &self.token_use)
+            .field("require_token_use", &self.require_token_use)
             .finish_non_exhaustive()
     }
 }
@@ -89,7 +102,21 @@ impl<K: KeySource> Verifier<K> {
             audience,
             keys,
             clock_tolerance_seconds,
+            token_use: None,
+            require_token_use: false,
         })
+    }
+
+    /// Narrow verification to one declared token purpose.
+    pub fn with_token_use(mut self, token_use: TokenUse) -> Self {
+        self.token_use = Some(token_use);
+        self
+    }
+
+    /// Reject legacy tokens that do not carry a `token_use` claim.
+    pub fn with_required_token_use(mut self, required: bool) -> Self {
+        self.require_token_use = required;
+        self
     }
 
     /// Verify a token against the system clock.
@@ -110,6 +137,15 @@ impl<K: KeySource> Verifier<K> {
     /// then claims - so a token with a bad signature always reports as a
     /// signature failure even when its claims are also invalid.
     pub fn verify_at(&self, token: &str, now: i64) -> Result<VerifiedToken, VerificationError> {
+        self.verify_at_for_token_use(token, now, self.token_use)
+    }
+
+    fn verify_at_for_token_use(
+        &self,
+        token: &str,
+        now: i64,
+        accepted_token_use: Option<TokenUse>,
+    ) -> Result<VerifiedToken, VerificationError> {
         if token.is_empty() {
             return Err(VerificationError::new(
                 ErrorCode::TokenMalformed,
@@ -195,6 +231,12 @@ impl<K: KeySource> Verifier<K> {
                 "token audience mismatch",
             ));
         }
+        validate_token_use(
+            header.get("typ"),
+            claims.get("token_use"),
+            accepted_token_use,
+            self.require_token_use,
+        )?;
 
         Ok(VerifiedToken {
             subject: claims.get("sub").and_then(Value::as_str).map(str::to_owned),
@@ -218,7 +260,7 @@ impl<K: KeySource> Verifier<K> {
     }
 
     pub fn has_at(&self, token: &str, query: &Query<'_>, now: i64) -> bool {
-        match self.verify_at(token, now) {
+        match self.verify_at_for_token_use(token, now, Some(TokenUse::Session)) {
             Ok(verified) => verified.membership.is_some_and(|m| m.has(query)),
             Err(_) => false,
         }
@@ -228,6 +270,50 @@ impl<K: KeySource> Verifier<K> {
     pub fn has_permission(&self, token: &str, permission: &str) -> bool {
         self.has(token, &Query::permission(permission))
     }
+}
+
+fn validate_token_use(
+    typ: Option<&Value>,
+    raw: Option<&Value>,
+    accepted: Option<TokenUse>,
+    required: bool,
+) -> Result<(), VerificationError> {
+    let unsupported = || {
+        VerificationError::new(
+            ErrorCode::TokenUseUnsupported,
+            "token purpose is missing or unsupported",
+        )
+    };
+    let Some(raw) = raw else {
+        if required || typ.and_then(Value::as_str) != Some("JWT") {
+            return Err(unsupported());
+        }
+        return Ok(());
+    };
+    let Some(value) = raw.as_str() else {
+        return Err(unsupported());
+    };
+    let use_kind = match value {
+        "session" => TokenUse::Session,
+        "template" => TokenUse::Template,
+        "access" => TokenUse::Access,
+        "id" => TokenUse::Id,
+        _ => return Err(unsupported()),
+    };
+    if accepted.is_none() && use_kind == TokenUse::Id
+        || accepted.is_some_and(|expected| expected != use_kind)
+    {
+        return Err(unsupported());
+    }
+    let expected_typ = if use_kind == TokenUse::Access {
+        "at+jwt"
+    } else {
+        "JWT"
+    };
+    if typ.and_then(Value::as_str) != Some(expected_typ) {
+        return Err(unsupported());
+    }
+    Ok(())
 }
 
 fn decode_segment(segment: &str) -> Result<Map<String, Value>, VerificationError> {

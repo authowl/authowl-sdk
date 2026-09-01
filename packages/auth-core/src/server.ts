@@ -5,6 +5,7 @@ import {
   verifyValidatedProjectToken,
   type ValidatedVerifyProjectTokenOptions,
   type VerifiedProjectToken,
+  type ProjectTokenUse,
 } from './token-verify';
 import { resolveConfig } from './config';
 import { membershipHas, membershipHasPermission, type HasParams } from './organization-membership';
@@ -33,6 +34,7 @@ export {
   TokenVerificationError,
   type TokenVerificationErrorCode,
   type VerifiedProjectToken,
+  type ProjectTokenUse,
 } from './token-verify';
 export type { OrganizationMembership, HasParams } from './organization-membership';
 export { AuthorizationError };
@@ -47,6 +49,8 @@ export { isAuthorizationError, type AuthorizationFailureReason } from './require
  */
 type VerifyTokenConfigCommon = {
   clockToleranceSeconds?: number;
+  tokenUse?: ProjectTokenUse;
+  requireTokenUse?: boolean;
 };
 
 export type VerifyTokenConfig =
@@ -82,6 +86,8 @@ const VERIFY_CONFIG_ENDPOINT_KEYS = [
 const VERIFY_CONFIG_KEYS = new Set<string>([
   ...VERIFY_CONFIG_ENDPOINT_KEYS,
   'clockToleranceSeconds',
+  'tokenUse',
+  'requireTokenUse',
 ]);
 
 function resolveVerifyConfig(config?: VerifyTokenConfig): ValidatedVerifyProjectTokenOptions {
@@ -119,6 +125,8 @@ function resolveVerifyConfig(config?: VerifyTokenConfig): ValidatedVerifyProject
       jwksUri: config.jwksUri,
       audience: config.audience,
       clockToleranceSeconds: config.clockToleranceSeconds,
+      tokenUse: config.tokenUse,
+      requireTokenUse: config.requireTokenUse,
     });
   }
 
@@ -148,7 +156,15 @@ function resolveVerifyConfig(config?: VerifyTokenConfig): ValidatedVerifyProject
     jwksUri: `${resolved.projectBaseURL}/jwks`,
     audience: resolved.decoded.projectId,
     clockToleranceSeconds: config?.clockToleranceSeconds,
+    tokenUse: config?.tokenUse,
+    requireTokenUse: config?.requireTokenUse,
   }, resolved.decoded.env === 'test');
+}
+
+function requireSessionToken(
+  config: ValidatedVerifyProjectTokenOptions,
+): ValidatedVerifyProjectTokenOptions {
+  return { ...config, tokenUse: 'session' };
 }
 
 /**
@@ -184,7 +200,7 @@ export async function has(
   // verification failure (bad/expired/wrong-audience token) fails closed.
   const verifyConfig = resolveVerifyConfig(config);
   try {
-    const verified = await verifyValidatedProjectToken(token, verifyConfig);
+    const verified = await verifyValidatedProjectToken(token, requireSessionToken(verifyConfig));
     return membershipHas(verified.membership, params);
   } catch {
     return false;
@@ -201,7 +217,7 @@ export async function hasPermission(
   // a real verification failure fails closed.
   const verifyConfig = resolveVerifyConfig(config);
   try {
-    const verified = await verifyValidatedProjectToken(token, verifyConfig);
+    const verified = await verifyValidatedProjectToken(token, requireSessionToken(verifyConfig));
     return membershipHasPermission(verified.membership, params.permission);
   } catch {
     return false;
@@ -280,7 +296,9 @@ export async function requirePermission(
 ): Promise<VerifiedProjectToken> {
   const verifyConfig = resolveVerifyConfig(config);
   return requirePermissionWith(
-    (value) => verifyValidatedProjectToken(value, verifyConfig), token, permission,
+    (value) => verifyValidatedProjectToken(value, requireSessionToken(verifyConfig)),
+    token,
+    permission,
   );
 }
 
@@ -298,7 +316,11 @@ export async function requireGrant(
   config?: VerifyTokenConfig,
 ): Promise<VerifiedProjectToken> {
   const verifyConfig = resolveVerifyConfig(config);
-  return requireGrantWith((value) => verifyValidatedProjectToken(value, verifyConfig), token, params);
+  return requireGrantWith(
+    (value) => verifyValidatedProjectToken(value, requireSessionToken(verifyConfig)),
+    token,
+    params,
+  );
 }
 
 /**
@@ -323,6 +345,8 @@ export async function requireOrg(
 ): Promise<VerifiedProjectToken> {
   const verifyConfig = resolveVerifyConfig(config);
   return requireOrgWith(
-    (value) => verifyValidatedProjectToken(value, verifyConfig), token, organizationId,
+    (value) => verifyValidatedProjectToken(value, requireSessionToken(verifyConfig)),
+    token,
+    organizationId,
   );
 }

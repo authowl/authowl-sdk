@@ -140,6 +140,16 @@ redirects, abort after five seconds, stream at most 64 KiB, and accept at most
 `code`; authorization helpers `has()` and `hasPermission()` continue to fail
 closed for token failures while surfacing configuration failures.
 
+Token purpose is enforced together with the JOSE media type. The general
+verifier accepts declared `session`, `template`, and `access` tokens, rejects ID
+tokens by default, and requires `typ: at+jwt` for access tokens (`typ: JWT` for
+every other purpose). Use `tokenUse: 'access'` to narrow an API verifier to one
+kind, and `requireTokenUse: true` after every issuer in your estate emits the
+claim. Legacy tokens without `token_use` remain temporarily compatible only
+when their `typ` is `JWT`. The authority helpers `has()`, `hasPermission()`,
+`requirePermission()`, `requireGrant()`, and `requireOrg()` always require a
+session token, even if a broader verifier configuration is supplied.
+
 For route handlers, prefer the throwing gates so a forgotten boolean check
 cannot accidentally allow the request:
 

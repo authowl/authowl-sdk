@@ -1,6 +1,15 @@
 import { createHmac, generateKeyPairSync, sign as nodeSign, type KeyObject } from 'node:crypto';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { has, hasPermission, verifyToken, TokenVerificationError } from './server';
+import {
+  has,
+  hasPermission,
+  requireAuth,
+  requireGrant,
+  requireOrg,
+  requirePermission,
+  verifyToken,
+  TokenVerificationError,
+} from './server';
 
 /**
  * The REAL server-side authorization primitive (plan §5): `has()` over a
@@ -135,6 +144,40 @@ describe('server has() over a verified token', () => {
     expect(await has(token, { permission: 'org:billing:read' }, config)).toBe(true);
     expect(await hasPermission(token, { permission: 'org:sys_memberships:create' }, config)).toBe(true);
     expect(await has(token, { role: 'billing_manager' }, config)).toBe(true);
+  });
+
+  it('reserves every authority gate for session tokens', async () => {
+    const session = buildToken({ payload: { token_use: 'session', org_id: 'org-1' } });
+    const access = buildToken({
+      header: { typ: 'at+jwt' },
+      payload: { token_use: 'access', org_id: 'org-1' },
+    });
+
+    await expect(requirePermission(session, 'org:billing:read', config)).resolves.toMatchObject({
+      sub: 'user-1',
+    });
+    await expect(requireGrant(session, { role: 'billing_manager' }, config)).resolves.toMatchObject({
+      sub: 'user-1',
+    });
+    await expect(requireOrg(session, 'org-1', config)).resolves.toMatchObject({ sub: 'user-1' });
+
+    expect(await has(access, { permission: 'org:billing:read' }, config)).toBe(false);
+    await expect(requirePermission(access, 'org:billing:read', config)).rejects.toMatchObject({
+      status: 401,
+      reason: 'unauthenticated',
+    });
+    await expect(requireGrant(access, { role: 'billing_manager' }, config)).rejects.toMatchObject({
+      status: 401,
+      reason: 'unauthenticated',
+    });
+    await expect(requireOrg(access, 'org-1', config)).rejects.toMatchObject({
+      status: 401,
+      reason: 'unauthenticated',
+    });
+
+    // Identity-only verification remains deliberately generic. API middleware
+    // can narrow it with tokenUse when it expects an access token.
+    await expect(requireAuth(access, config)).resolves.toMatchObject({ sub: 'user-1' });
   });
 
   it('denies a permission or role the membership does not carry', async () => {

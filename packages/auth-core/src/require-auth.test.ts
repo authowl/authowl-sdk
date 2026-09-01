@@ -109,6 +109,7 @@ describe('requireAuth', () => {
       'TOKEN_ALGORITHM_UNSUPPORTED',
       'TOKEN_SIGNATURE_INVALID',
       'TOKEN_CLAIM_INVALID',
+      'TOKEN_USE_UNSUPPORTED',
       // A kid outside the published set: AuthOwl publishes rotated keys for 30
       // days, so this token is far older than that, or forged.
       'JWKS_KEY_NOT_FOUND',

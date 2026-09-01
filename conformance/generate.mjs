@@ -1,8 +1,8 @@
 /**
  * Regenerates the language-neutral AuthOwl conformance vectors.
  *
- * The vectors under `vectors/` are the SINGLE source of truth for the five pure
- * primitives every AuthOwl SDK must implement identically, in every language:
+ * The vectors under `vectors/` are the SINGLE source of truth for the shared
+ * security primitives. Each SDK runs the vectors applicable to its runtime:
  *
  *   1. project JWT verification (ES256 over JWKS, iss/aud/exp/nbf)
  *   2. JWKS document parsing (the hardening rules in token-verify.ts)
@@ -67,6 +67,10 @@ const PROJECT_ID_MIXED_CASE = PROJECT_ID.toUpperCase();
 const ISSUER = `https://api.authowl.dev/api/projects/${PROJECT_ID}/auth`;
 const AUDIENCE = PROJECT_ID;
 const JWKS_URI = `${ISSUER}/jwks`;
+const AUTHORIZATION_MEMBERSHIP = {
+  role: 'member',
+  permissions: ['org:reports:read'],
+};
 
 function privateKeyOf(jwk) {
   return createPrivateKey({ key: { kty: 'EC', crv: 'P-256', ...jwk }, format: 'jwk' });
@@ -252,6 +256,116 @@ jwtCase(
   'a second published key is selected by kid',
   makeToken({ claims: baseClaims(), key: SECONDARY, kid: SECONDARY_KID }),
   { ok: true, sub: 'user_2p9xKq', membership: null },
+);
+
+// ---------------------------------------------------------------------------
+// Token purpose and JOSE media type. Absent `token_use` remains accepted for
+// old on-prem servers unless strict mode is requested. Present-and-wrong is
+// always rejected, which closes confusion as soon as a server emits the claim.
+// ---------------------------------------------------------------------------
+
+jwtCase(
+  'a declared session token is accepted by the default verifier',
+  makeToken({
+    claims: baseClaims({ token_use: 'session', membership: AUTHORIZATION_MEMBERSHIP }),
+  }),
+  { ok: true, sub: 'user_2p9xKq', membership: AUTHORIZATION_MEMBERSHIP },
+  { authorization: { permission: 'org:reports:read', expect: true } },
+);
+jwtCase(
+  'a declared template token is accepted by the default verifier',
+  makeToken({
+    claims: baseClaims({ token_use: 'template', membership: AUTHORIZATION_MEMBERSHIP }),
+  }),
+  { ok: true, sub: 'user_2p9xKq', membership: AUTHORIZATION_MEMBERSHIP },
+  { authorization: { permission: 'org:reports:read', expect: false } },
+);
+jwtCase(
+  'an access token requires and accepts at+jwt',
+  makeToken({
+    header: { typ: 'at+jwt' },
+    claims: baseClaims({ token_use: 'access', membership: AUTHORIZATION_MEMBERSHIP }),
+  }),
+  { ok: true, sub: 'user_2p9xKq', membership: AUTHORIZATION_MEMBERSHIP },
+  { authorization: { permission: 'org:reports:read', expect: false } },
+);
+jwtCase(
+  'an ID token is rejected by the default backend verifier',
+  makeToken({ claims: baseClaims({ token_use: 'id' }) }),
+  { ok: false, code: 'TOKEN_USE_UNSUPPORTED' },
+);
+jwtCase(
+  'an explicitly narrowed ID-token verifier accepts an ID token',
+  makeToken({ claims: baseClaims({ token_use: 'id' }) }),
+  { ok: true, sub: 'user_2p9xKq', membership: null },
+  { tokenUse: 'id' },
+);
+jwtCase(
+  'a present unknown token purpose is always rejected',
+  makeToken({ claims: baseClaims({ token_use: 'mystery' }) }),
+  { ok: false, code: 'TOKEN_USE_UNSUPPORTED' },
+);
+jwtCase(
+  'a present non-string token purpose is always rejected',
+  makeToken({ claims: baseClaims({ token_use: null }) }),
+  { ok: false, code: 'TOKEN_USE_UNSUPPORTED' },
+);
+jwtCase(
+  'a declared session token with at+jwt is rejected',
+  makeToken({
+    header: { typ: 'at+jwt' },
+    claims: baseClaims({ token_use: 'session' }),
+  }),
+  { ok: false, code: 'TOKEN_USE_UNSUPPORTED' },
+);
+jwtCase(
+  'a declared access token with JWT typ is rejected',
+  makeToken({ claims: baseClaims({ token_use: 'access' }) }),
+  { ok: false, code: 'TOKEN_USE_UNSUPPORTED' },
+);
+jwtCase(
+  'an untyped legacy token with the wrong typ is rejected',
+  makeToken({ header: { typ: 'at+jwt' }, claims: baseClaims() }),
+  { ok: false, code: 'TOKEN_USE_UNSUPPORTED' },
+);
+jwtCase(
+  'a narrowed session verifier accepts a session token',
+  makeToken({ claims: baseClaims({ token_use: 'session' }) }),
+  { ok: true, sub: 'user_2p9xKq', membership: null },
+  { tokenUse: 'session' },
+);
+jwtCase(
+  'a narrowed session verifier rejects a template token',
+  makeToken({ claims: baseClaims({ token_use: 'template' }) }),
+  { ok: false, code: 'TOKEN_USE_UNSUPPORTED' },
+  { tokenUse: 'session' },
+);
+jwtCase(
+  'a narrowed access verifier accepts an access token',
+  makeToken({
+    header: { typ: 'at+jwt' },
+    claims: baseClaims({ token_use: 'access' }),
+  }),
+  { ok: true, sub: 'user_2p9xKq', membership: null },
+  { tokenUse: 'access' },
+);
+jwtCase(
+  'a narrowed verifier tolerates an untyped legacy token by default',
+  makeToken({ claims: baseClaims() }),
+  { ok: true, sub: 'user_2p9xKq', membership: null },
+  { tokenUse: 'session' },
+);
+jwtCase(
+  'strict token purpose rejects an untyped legacy token',
+  makeToken({ claims: baseClaims() }),
+  { ok: false, code: 'TOKEN_USE_UNSUPPORTED' },
+  { tokenUse: 'session', requireTokenUse: true },
+);
+jwtCase(
+  'strict default verification rejects an untyped legacy token',
+  makeToken({ claims: baseClaims() }),
+  { ok: false, code: 'TOKEN_USE_UNSUPPORTED' },
+  { requireTokenUse: true },
 );
 
 // ---------------------------------------------------------------------------
@@ -1181,7 +1295,7 @@ const projectionCases = [
 const header = {
   $comment:
     'GENERATED by conformance/generate.mjs - do not edit by hand. Committed artifact: '
-    + 'every AuthOwl SDK re-verifies these vectors from scratch in its own test suite.',
+    + 'each applicable AuthOwl SDK re-verifies these vectors from scratch in its own test suite.',
 };
 
 async function emit(name, body) {

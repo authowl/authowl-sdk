@@ -51,6 +51,8 @@ def test_token_verification(case: dict[str, Any]) -> None:
         audience=JWT["audience"],
         keys=StaticKeySource(JWT["jwks"]),
         clock_tolerance_seconds=case.get("clockToleranceSeconds", 60),
+        token_use=case.get("tokenUse"),
+        require_token_use=case.get("requireTokenUse", False),
         now=lambda: float(case["now"]),
     )
     expected = case["expect"]
@@ -80,6 +82,31 @@ def test_token_verification(case: dict[str, Any]) -> None:
             None if verified.membership.teams is None else list(verified.membership.teams)
         )
         assert actual_teams == expected_teams
+    authorization = case.get("authorization")
+    if authorization is not None:
+        assert verifier.has(
+            case["token"], permission=authorization["permission"]
+        ) is authorization["expect"]
+
+
+def test_token_use_configuration_is_validated() -> None:
+    with pytest.raises(TokenVerificationError) as invalid_use:
+        Verifier(
+            issuer=JWT["issuer"],
+            audience=JWT["audience"],
+            keys=StaticKeySource(JWT["jwks"]),
+            token_use="refresh",
+        )
+    assert invalid_use.value.code.value == "TOKEN_CONFIG_INVALID"
+
+    with pytest.raises(TokenVerificationError) as invalid_required:
+        Verifier(
+            issuer=JWT["issuer"],
+            audience=JWT["audience"],
+            keys=StaticKeySource(JWT["jwks"]),
+            require_token_use="yes",  # type: ignore[arg-type]
+        )
+    assert invalid_required.value.code.value == "TOKEN_CONFIG_INVALID"
 
 
 # ---------------------------------------------------------------------------

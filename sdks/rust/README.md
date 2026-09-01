@@ -34,10 +34,19 @@ Use `verify_at(token, unix_seconds)` to supply the clock explicitly — taking t
 timestamp as a parameter rather than injecting a closure keeps the verifier free
 of interior mutability and makes tests deterministic.
 
+The general verifier accepts declared session, template, and access tokens,
+but rejects ID tokens by default. Access tokens must carry `typ: at+jwt`; every
+other token kind must carry `typ: JWT`. Legacy tokens without `token_use` are
+tolerated only with `typ: JWT` until strict mode is enabled. Narrow with
+`with_token_use(TokenUse::Access)` and enable strict migration with
+`with_required_token_use(true)`.
+
 ## Authorize a request
 
 `has` is the real authorization primitive. It **fails closed**: an invalid,
 tampered, expired, or wrong-audience token returns `false`.
+It always requires a session token, so an access, template, or ID token cannot
+be used as an organization-authority credential.
 
 ```rust
 if !verifier.has(token, &Query::permission("org:billing:read")) {
@@ -95,7 +104,7 @@ AuthOwl SDK. Match on the code, never the message.
 cargo test
 ```
 
-Runs the shared 125-vector corpus from `conformance/vectors`. If a case fails,
+Runs the shared 159-vector corpus from `conformance/vectors`. If a case fails,
 this implementation has diverged from the contract — the fix belongs in the code,
 not the vector. See `conformance/README.md`.
 

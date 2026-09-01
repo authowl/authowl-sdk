@@ -31,6 +31,8 @@ MAX_CLOCK_TOLERANCE_SECONDS = 300
 
 _SEGMENT = re.compile(r"^[A-Za-z0-9_-]+$")
 _SIGNATURE = re.compile(r"^[A-Za-z0-9_-]{86}$")
+_TOKEN_USES = frozenset({"session", "template", "access", "id"})
+_MISSING = object()
 
 
 @dataclass(frozen=True)
@@ -90,6 +92,8 @@ class Verifier:
         audience: str,
         keys: KeySource,
         clock_tolerance_seconds: int = DEFAULT_CLOCK_TOLERANCE_SECONDS,
+        token_use: str | None = None,
+        require_token_use: bool = False,
         now: Callable[[], float] = time.time,
     ) -> None:
         if not issuer or not audience or keys is None:
@@ -105,13 +109,28 @@ class Verifier:
                 "clock_tolerance_seconds must be an integer from 0 through 300.",
                 ErrorCode.TOKEN_CONFIG_INVALID,
             )
+        if token_use is not None and token_use not in _TOKEN_USES:
+            raise TokenVerificationError(
+                "token_use must be session, template, access, or id.",
+                ErrorCode.TOKEN_CONFIG_INVALID,
+            )
+        if not isinstance(require_token_use, bool):
+            raise TokenVerificationError(
+                "require_token_use must be a boolean.", ErrorCode.TOKEN_CONFIG_INVALID
+            )
         self.issuer = issuer
         self.audience = audience
         self.keys = keys
         self.clock_tolerance_seconds = clock_tolerance_seconds
+        self.token_use = token_use
+        self.require_token_use = require_token_use
         self._now = now
 
     def verify(self, token: str) -> VerifiedToken:
+        """Verify a project JWT using this verifier's configured token purpose."""
+        return self._verify(token, self.token_use)
+
+    def _verify(self, token: str, accepted_token_use: str | None) -> VerifiedToken:
         """Verify a project JWT and return its subject, membership, and claims.
 
         Checks run in a deliberate order - structure, algorithm, key, signature,
@@ -191,6 +210,24 @@ class Verifier:
                 "Token audience mismatch.", ErrorCode.TOKEN_CLAIM_INVALID
             )
 
+        raw_token_use = claims.get("token_use", _MISSING)
+        if raw_token_use is _MISSING:
+            if self.require_token_use or header.get("typ") != "JWT":
+                raise TokenVerificationError(
+                    "Token purpose is missing or unsupported.",
+                    ErrorCode.TOKEN_USE_UNSUPPORTED,
+                )
+        elif (
+            not isinstance(raw_token_use, str)
+            or raw_token_use not in _TOKEN_USES
+            or (accepted_token_use is None and raw_token_use == "id")
+            or (accepted_token_use is not None and raw_token_use != accepted_token_use)
+            or header.get("typ") != ("at+jwt" if raw_token_use == "access" else "JWT")
+        ):
+            raise TokenVerificationError(
+                "Token purpose is missing or unsupported.", ErrorCode.TOKEN_USE_UNSUPPORTED
+            )
+
         subject = claims.get("sub")
         return VerifiedToken(
             subject=subject if isinstance(subject, str) else None,
@@ -214,7 +251,7 @@ class Verifier:
         backend silently denying everything is far worse to debug.
         """
         try:
-            verified = self.verify(token)
+            verified = self._verify(token, "session")
         except TokenVerificationError as error:
             if error.code is ErrorCode.TOKEN_CONFIG_INVALID:
                 raise

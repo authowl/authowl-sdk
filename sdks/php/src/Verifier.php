@@ -17,6 +17,7 @@ use AuthOwl\Exception\TokenVerificationException;
 final class Verifier
 {
     public const DEFAULT_CLOCK_TOLERANCE_SECONDS = 60;
+    private const TOKEN_USES = ['session', 'template', 'access', 'id'];
     /**
      * A tolerance beyond this keeps revoked tokens alive too long to be called
      * authorization, so it is refused as a configuration error.
@@ -32,6 +33,8 @@ final class Verifier
         private readonly KeySource $keys,
         public readonly int $clockToleranceSeconds = self::DEFAULT_CLOCK_TOLERANCE_SECONDS,
         ?callable $clock = null,
+        public readonly ?string $tokenUse = null,
+        public readonly bool $requireTokenUse = false,
     ) {
         if ($issuer === '' || $audience === '') {
             throw new TokenVerificationException(
@@ -42,6 +45,12 @@ final class Verifier
         if ($clockToleranceSeconds < 0 || $clockToleranceSeconds > self::MAX_CLOCK_TOLERANCE_SECONDS) {
             throw new TokenVerificationException(
                 'clockToleranceSeconds must be an integer from 0 through 300.',
+                ErrorCode::TokenConfigInvalid
+            );
+        }
+        if ($tokenUse !== null && !in_array($tokenUse, self::TOKEN_USES, true)) {
+            throw new TokenVerificationException(
+                'tokenUse must be session, template, access, or id.',
                 ErrorCode::TokenConfigInvalid
             );
         }
@@ -56,6 +65,11 @@ final class Verifier
      * signature failure even when its claims are also invalid.
      */
     public function verify(string $token): VerifiedToken
+    {
+        return $this->verifyForTokenUse($token, $this->tokenUse);
+    }
+
+    private function verifyForTokenUse(string $token, ?string $acceptedTokenUse): VerifiedToken
     {
         if ($token === '') {
             throw new TokenVerificationException(
@@ -144,6 +158,27 @@ final class Verifier
                 ErrorCode::TokenClaimInvalid
             );
         }
+        $hasTokenUse = array_key_exists('token_use', $claims);
+        $tokenUse = $claims['token_use'] ?? null;
+        if (!$hasTokenUse) {
+            if ($this->requireTokenUse || ($header['typ'] ?? null) !== 'JWT') {
+                throw new TokenVerificationException(
+                    'Token purpose is missing or unsupported.',
+                    ErrorCode::TokenUseUnsupported
+                );
+            }
+        } elseif (
+            !is_string($tokenUse)
+            || !in_array($tokenUse, self::TOKEN_USES, true)
+            || ($acceptedTokenUse === null && $tokenUse === 'id')
+            || ($acceptedTokenUse !== null && $tokenUse !== $acceptedTokenUse)
+            || ($header['typ'] ?? null) !== ($tokenUse === 'access' ? 'at+jwt' : 'JWT')
+        ) {
+            throw new TokenVerificationException(
+                'Token purpose is missing or unsupported.',
+                ErrorCode::TokenUseUnsupported
+            );
+        }
 
         $subject = $claims['sub'] ?? null;
 
@@ -169,7 +204,7 @@ final class Verifier
         ?string $teamId = null,
     ): bool {
         try {
-            $verified = $this->verify($token);
+            $verified = $this->verifyForTokenUse($token, 'session');
         } catch (TokenVerificationException) {
             return false;
         }

@@ -19,6 +19,7 @@ enum ErrorCode: string
     case TokenAlgorithmUnsupported = 'TOKEN_ALGORITHM_UNSUPPORTED';
     case TokenSignatureInvalid = 'TOKEN_SIGNATURE_INVALID';
     case TokenClaimInvalid = 'TOKEN_CLAIM_INVALID';
+    case TokenUseUnsupported = 'TOKEN_USE_UNSUPPORTED';
     case JwksFetchFailed = 'JWKS_FETCH_FAILED';
     case JwksFetchTimeout = 'JWKS_FETCH_TIMEOUT';
     case JwksHttpError = 'JWKS_HTTP_ERROR';

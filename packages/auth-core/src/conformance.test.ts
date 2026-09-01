@@ -5,9 +5,9 @@
  * `@authowl/core` is the REFERENCE implementation: the vectors were derived from
  * the semantics in this directory, so if this suite ever fails, either the
  * vectors or this implementation moved and the other SDKs are about to diverge.
- * The Go, Python, PHP, Rust and Dart/Flutter SDKs each run this same corpus in
- * their own test framework - that is what keeps `has()` failing closed
- * identically in six languages.
+ * Go, Python, PHP, and Rust run the backend vectors in their own test framework.
+ * Dart/Flutter runs the client vectors it implements. That division keeps
+ * server verification aligned without inventing a browser-side JWT verifier.
  */
 
 import { readFileSync } from 'node:fs';
@@ -21,6 +21,7 @@ import { sessionCookieName } from './cookie';
 import { decodePublishableKey } from './key-decode';
 import { membershipHas, membershipHasPermission } from './organization-membership';
 import { verifyWebhook } from './webhook';
+import { has as hasVerifiedGrant } from './server';
 
 const VECTORS = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -50,6 +51,9 @@ describe('conformance: project token verification', () => {
       token: string;
       now: number;
       clockToleranceSeconds?: number;
+      tokenUse?: 'session' | 'template' | 'access' | 'id';
+      requireTokenUse?: boolean;
+      authorization?: { permission: string; expect: boolean };
       expect:
         | { ok: true; sub: string | null; membership: unknown }
         | { ok: false; code: string };
@@ -87,12 +91,23 @@ describe('conformance: project token verification', () => {
       ...(testCase.clockToleranceSeconds === undefined
         ? {}
         : { clockToleranceSeconds: testCase.clockToleranceSeconds }),
+      ...(testCase.tokenUse === undefined ? {} : { tokenUse: testCase.tokenUse }),
+      ...(testCase.requireTokenUse === undefined
+        ? {}
+        : { requireTokenUse: testCase.requireTokenUse }),
     };
 
     if (testCase.expect.ok) {
       const verified = await verifyProjectToken(testCase.token, options);
       expect(verified.sub).toBe(testCase.expect.sub);
       expect(verified.membership).toEqual(testCase.expect.membership);
+      if (testCase.authorization) {
+        await expect(hasVerifiedGrant(
+          testCase.token,
+          { permission: testCase.authorization.permission },
+          options,
+        )).resolves.toBe(testCase.authorization.expect);
+      }
     } else {
       await expect(verifyProjectToken(testCase.token, options)).rejects.toMatchObject({
         name: 'TokenVerificationError',

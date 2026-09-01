@@ -45,6 +45,6 @@ pub use jwks::{
 pub use key::{decode_publishable_key, Environment, PublishableKey};
 pub use membership::{membership_has, membership_has_permission, Membership, Query};
 pub use verify::{
-    VerifiedToken, Verifier, DEFAULT_CLOCK_TOLERANCE_SECONDS, MAX_CLOCK_TOLERANCE_SECONDS,
+    TokenUse, VerifiedToken, Verifier, DEFAULT_CLOCK_TOLERANCE_SECONDS, MAX_CLOCK_TOLERANCE_SECONDS,
 };
 pub use webhook::{verify_webhook, WebhookInput};
