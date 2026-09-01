@@ -17,7 +17,7 @@ a deploy twice is safe.
 
 ```bash
 # what would a deploy do right now?
-node scripts/release/sdk-manifest.mjs --registry-state --go-version 0.1.0
+node scripts/release/sdk-manifest.mjs --registry-state
 ```
 
 ## Prepare versions
@@ -42,9 +42,9 @@ The release commit must have a completely clean worktree, including no untracked
 files.
 
 The non-JavaScript SDKs are versioned by hand, in `sdks/python/pyproject.toml`,
-`sdks/rust/Cargo.toml` and `sdks/flutter/pubspec.yaml`. The Go SDK has no
-manifest at all: its version is whatever tag you cut, so it is passed to the
-deploy as an input.
+`sdks/rust/Cargo.toml`, `sdks/flutter/pubspec.yaml`, and `sdks/go/VERSION`.
+The Go SDK has no registry manifest, so the release workflow reads this small
+version file and creates the matching module tag.
 
 ## Deploy from GitHub Actions
 
@@ -58,7 +58,6 @@ workflow). It refuses to run from any other ref. Inputs:
 | `python` | `true` | Publish `sdks/python` |
 | `rust` | `true` | Publish `sdks/rust` |
 | `flutter` | `true` | Push the tag that publishes `sdks/flutter` |
-| `go_version` | empty | Version to tag the Go module with, e.g. `0.1.0` |
 | `dist_tag` | `latest` | npm dist-tag; use `next` for a prerelease channel |
 | `tags` | `true` | Push Git tags and create GitHub Releases for what shipped |
 
@@ -81,7 +80,7 @@ git push origin '@authowl/core@0.13.0'
 ```
 
 Go is the exception in the other direction: it has no registry, so its tag *is*
-the release and is always cut when `go_version` is set. The Flutter tag is a
+the release and is cut from the version in `sdks/go/VERSION`. The Flutter tag is a
 request to publish, so `deploy.yml` pushes it without creating a Release;
 `publish-flutter.yml` creates that Release once pub.dev has actually accepted
 the version.
@@ -96,8 +95,8 @@ Two consequences worth knowing:
   the byte-for-byte integrity comparison that `release:publish` performs against
   the registry. A deploy is not a tamper check; `ci.yml` runs the gate on every
   push to `main`.
-- Setting `go_version` while `tags` is off, or under `dry_run`, releases nothing
-  for Go. The run warns about it.
+- Turning `tags` off, or leaving `dry_run` on, releases nothing for Go because
+  the module tag is the release.
 
 ### The Flutter SDK is published by its tag
 

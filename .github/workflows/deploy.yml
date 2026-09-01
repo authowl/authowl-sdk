@@ -402,12 +402,13 @@ jobs:
           done <"$RUNNER_TEMP/release-tags"
 
       - name: Warm the Go module proxy
-        if: inputs.go_version != ''
         env:
-          GO_VERSION: ${{ inputs.go_version }}
+          PLAN: ${{ needs.plan.outputs.plan }}
         run: |
           set -euo pipefail
           module='github.com/authowl/authowl-sdk/sdks/go'
+          GO_VERSION=$(printf '%s' "$PLAN" | jq -er \
+            '.units[] | select(.id == "go:authowl") | .version')
           # The proxy fetches a version the first time anyone asks for it. Ask
           # now, so `go get` works the moment this run finishes.
           for attempt in 1 2 3 4 5; do

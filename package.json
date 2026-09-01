@@ -66,7 +66,7 @@
   },
   "packageManager": "pnpm@10.34.5",
   "//pnpm.auditConfig": [
-    "Three advisories in the Expo toolchain, ignored deliberately and scoped to",
+    "Two advisories in the Expo toolchain, ignored deliberately and scoped to",
     "their exact GHSA ids. None of them is in anything we publish.",
     "",
     "@authowl/expo declares expo-secure-store as a PEER dependency and passes",
@@ -77,8 +77,7 @@
     "toolchain whether or not we exist.",
     "",
     "GHSA-w3rx-r6r6-pgpr and GHSA-5p2g-fcmc-qvqq (image-size, ICNS and JXL/HEIF",
-    "denial of service) CANNOT be fixed: patched versions are <0.0.0, meaning no",
-    "release exists without the flaw, and 2.0.2 is the newest published. Reached",
+    "denial of service) have no patched release. Reached",
     "through metro at BUILD time, parsing an asset the developer added to their",
     "own project. Revisit when image-size ships any fixed release.",
     "",
