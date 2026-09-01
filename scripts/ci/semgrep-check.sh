@@ -198,9 +198,13 @@ scan_volume="$(
     --label "${AUTHOWL_SDK_CI_RUN_LABEL}=${semgrep_run_id}"
 )"
 
-# Fetching is isolated from source. The scanner later re-verifies the
-# canonical policy and runs without a network.
+# Materialize the reviewed policy snapshot into the private scan volume. The
+# registry aliases are mutable and their CDN edges can serve different pack
+# revisions at the same moment, so a checksum around a live fetch is still a
+# nondeterministic release input. The compressed copies are repository-owned,
+# license-noted below, and re-verified semantically before every scan.
 docker run --rm \
+  --network none \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
   --cap-drop ALL \
@@ -211,31 +215,20 @@ docker run --rm \
   --env TYPESCRIPT_RULES_CANONICAL_SHA256="${TYPESCRIPT_RULES_CANONICAL_SHA256}" \
   --env OWASP_RULES_CANONICAL_SHA256="${OWASP_RULES_CANONICAL_SHA256}" \
   --mount "type=bind,src=${repo_root}/scripts/ci/semgrep-rules-digest.py,dst=/ci/semgrep-rules-digest.py,readonly" \
+  --mount "type=bind,src=${repo_root}/scripts/ci/semgrep-policy,dst=/ci/policy,readonly" \
   --mount "type=volume,src=${scan_volume},dst=/workspace" \
   "${SEMGREP_IMAGE}" \
   sh -euc '
     mkdir -p /workspace/rules /workspace/src
     python3 -I /ci/semgrep-rules-digest.py --self-test
-    curl --fail --silent --show-error \
-      --proto "=https" \
-      --tlsv1.2 \
-      --connect-timeout 10 \
-      --max-time 30 \
-      --max-filesize 5242880 \
-      https://semgrep.dev/c/p/typescript \
-      --output /workspace/rules/typescript.yml
+    base64 -d /ci/policy/typescript.json.gz.b64 \
+      | gzip -dc > /workspace/rules/typescript.yml
     python3 -I /ci/semgrep-rules-digest.py \
       /workspace/rules/typescript.yml \
       "${TYPESCRIPT_RULES_CANONICAL_SHA256}"
 
-    curl --fail --silent --show-error \
-      --proto "=https" \
-      --tlsv1.2 \
-      --connect-timeout 10 \
-      --max-time 30 \
-      --max-filesize 5242880 \
-      https://semgrep.dev/c/p/owasp-top-ten \
-      --output /workspace/rules/owasp-top-ten.yml
+    base64 -d /ci/policy/owasp-top-ten.json.gz.b64 \
+      | gzip -dc > /workspace/rules/owasp-top-ten.yml
     python3 -I /ci/semgrep-rules-digest.py \
       /workspace/rules/owasp-top-ten.yml \
       "${OWASP_RULES_CANONICAL_SHA256}"
