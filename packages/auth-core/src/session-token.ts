@@ -150,6 +150,7 @@ import {
 import { localStore, readFrom, sessionStore, writeTo } from './web-storage';
 
 const TOKEN_KEY = 'authowl.session-token';
+const BINDING_KEY = 'authowl.session-binding';
 const COOKIE_VERDICT_KEY = 'authowl.cookie-transport';
 const COOKIES_WORK = 'ok';
 const BEARER_REQUIRED = 'bearer';
@@ -164,6 +165,8 @@ const BEARER_REQUIRED = 'bearer';
  */
 export const sessionTokenStorageKey = (projectId: string): string =>
   `${TOKEN_KEY}.${projectId}`;
+export const sessionBindingStorageKey = (projectId: string): string =>
+  `${BINDING_KEY}.${projectId}`;
 export const cookieVerdictStorageKey = (projectId: string): string =>
   `${COOKIE_VERDICT_KEY}.${projectId}`;
 
@@ -299,6 +302,8 @@ export type SessionTokenStore = {
    * needs the credential in hand.
    */
   hasToken(): boolean;
+  /** Thumbprint paired with the current token, or null for a legacy unbound session. */
+  bindingThumbprint(): string | null;
   /**
    * Put this request on the transport - EVERY header, or none of them.
    *
@@ -403,6 +408,12 @@ export type SessionTokenStore = {
    * the old session is actually over.
    */
   beginSession(start: SessionStart): void;
+  /** Select the safer cookie-only path before a new session is minted. */
+  useCookieTransport(): void;
+  /** Drop a previous bearer only after its replacement cookie was delivered. */
+  completeCookieTransport(): void;
+  /** Select bearer delivery and remember which browser key the new token binds to. */
+  useBoundBearerTransport(thumbprint: string, keyIsPersistent: boolean): void;
   /**
    * A session ENDS here, unconditionally: this is sign-out, the one ending a
    * response states plainly, and it means "end whatever is in play".
@@ -417,6 +428,7 @@ export type SessionTokenStore = {
 
 function createStore(projectId: string): SessionTokenStore {
   const tokenKey = sessionTokenStorageKey(projectId);
+  const bindingKey = sessionBindingStorageKey(projectId);
   const verdictKey = cookieVerdictStorageKey(projectId);
   // Built here, and reachable only through this store, so nothing can attach the
   // challenge to a request without the declaration that makes the server read it
@@ -425,6 +437,8 @@ function createStore(projectId: string): SessionTokenStore {
   const challenge = createChallengeStore(projectId);
 
   let token: string | null = null;
+  let bindingThumbprint: string | null = null;
+  let pendingBindingThumbprint: string | null = null;
   /** Where the token currently HELD actually lives. Set only by `hydrate`. */
   let ephemeral = false;
   /**
@@ -490,10 +504,15 @@ function createStore(projectId: string): SessionTokenStore {
     return null;
   }
 
+  function hydrateBinding(): string | null {
+    return readFrom(sessionStore(), bindingKey) ?? readFrom(localStore(), bindingKey);
+  }
+
   // Eagerly, not on first use: `setToken` persists through `ephemeral`, so an
   // `observe` that lands before anything has read the token would otherwise
   // write against a placement nothing had established.
   token = hydrate();
+  bindingThumbprint = token === null ? null : hydrateBinding();
   // A stored token under an unmeasured browser is a question that has to be
   // settled at this page load rather than at the next sign-in, because on the
   // integrations that produce it there may not BE a next sign-in - the leaked
@@ -546,11 +565,14 @@ function createStore(projectId: string): SessionTokenStore {
    */
   function persistToken(): void {
     const stored = verdict === 'bearer' ? token : null;
+    const storedBinding = stored === null ? null : bindingThumbprint;
     const [keep, drop] = ephemeral
       ? [sessionStore(), localStore()]
       : [localStore(), sessionStore()];
     writeTo(drop, tokenKey, null);
+    writeTo(drop, bindingKey, null);
     writeTo(keep, tokenKey, stored);
+    writeTo(keep, bindingKey, storedBinding);
   }
 
   /**
@@ -562,6 +584,12 @@ function createStore(projectId: string): SessionTokenStore {
     if (next !== null && pendingEphemeral !== null) {
       ephemeral = pendingEphemeral;
       pendingEphemeral = null;
+    }
+    if (next !== null && pendingBindingThumbprint !== null) {
+      bindingThumbprint = pendingBindingThumbprint;
+      pendingBindingThumbprint = null;
+    } else if (next === null) {
+      bindingThumbprint = null;
     }
     token = next;
     persistToken();
@@ -614,7 +642,10 @@ function createStore(projectId: string): SessionTokenStore {
    * reachable from here only for a second store instance in this same tab.
    */
   function currentToken(): string | null {
-    if (token === null) token = hydrate();
+    if (token === null) {
+      token = hydrate();
+      bindingThumbprint = token === null ? null : hydrateBinding();
+    }
     return token;
   }
 
@@ -639,7 +670,10 @@ function createStore(projectId: string): SessionTokenStore {
    */
   function liveToken(): string | null {
     const stored = hydrate();
-    if (stored !== null) token = stored;
+    if (stored !== null) {
+      token = stored;
+      bindingThumbprint = hydrateBinding();
+    }
     return token;
   }
 
@@ -680,6 +714,7 @@ function createStore(projectId: string): SessionTokenStore {
   function endCurrentSession(): void {
     generation += 1;
     pendingEphemeral = null;
+    pendingBindingThumbprint = null;
     // Back to the default rather than left as the last session set it:
     // `ephemeral` describes a session, and the next one has not said yet.
     ephemeral = false;
@@ -710,6 +745,10 @@ function createStore(projectId: string): SessionTokenStore {
 
   return {
     hasToken: () => currentToken() !== null,
+    bindingThumbprint: () => {
+      currentToken();
+      return bindingThumbprint;
+    },
     declareOn(headers) {
       // The caller's own `Authorization` wins, and suppresses the declaration
       // with it. Declaring here would tell the server to read THEIR bearer as a
@@ -851,6 +890,25 @@ function createStore(projectId: string): SessionTokenStore {
       // email- or phone-OTP sign-in, which defers to it.
       challenge.clear();
       armVerdict();
+    },
+    useCookieTransport() {
+      // Never drop an existing bearer session before the request replacing it
+      // has succeeded. Re-authentication endpoints may need that authority.
+      if (currentToken() !== null) return;
+      pendingBindingThumbprint = null;
+      setVerdict('cookies');
+    },
+    completeCookieTransport() {
+      setVerdict('cookies');
+      setToken(null);
+    },
+    useBoundBearerTransport(thumbprint, keyIsPersistent) {
+      if (!thumbprint) throw new Error('A session proof thumbprint is required.');
+      pendingBindingThumbprint = thumbprint;
+      // A token must never outlive the private key that makes it usable. When
+      // IndexedDB is blocked, both are limited to this tab.
+      if (!keyIsPersistent) pendingEphemeral = true;
+      setVerdict('bearer');
     },
     endSession: endCurrentSession,
   };

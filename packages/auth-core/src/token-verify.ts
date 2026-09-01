@@ -34,6 +34,27 @@ export interface VerifyProjectTokenOptions {
   audience: string;
   /** Clock skew tolerance for exp/nbf, in seconds (default 60). */
   clockToleranceSeconds?: number;
+  /**
+   * Narrow verification to one declared token purpose. When omitted, session,
+   * template, and access tokens are accepted; ID tokens are never accepted by
+   * default on this backend authorization surface.
+   */
+  tokenUse?: ProjectTokenUse;
+  /** Reject legacy tokens that do not carry `token_use` (default false). */
+  requireTokenUse?: boolean;
+}
+
+export type ProjectTokenUse = 'session' | 'template' | 'access' | 'id';
+
+const PROJECT_TOKEN_USES = new Set<string>([
+  'session',
+  'template',
+  'access',
+  'id',
+]);
+
+function isProjectTokenUse(value: unknown): value is ProjectTokenUse {
+  return typeof value === 'string' && PROJECT_TOKEN_USES.has(value);
 }
 
 declare const VALIDATED_TOKEN_OPTIONS: unique symbol;
@@ -58,6 +79,7 @@ export type TokenVerificationErrorCode =
   | 'TOKEN_ALGORITHM_UNSUPPORTED'
   | 'TOKEN_SIGNATURE_INVALID'
   | 'TOKEN_CLAIM_INVALID'
+  | 'TOKEN_USE_UNSUPPORTED'
   | 'JWKS_FETCH_FAILED'
   | 'JWKS_FETCH_TIMEOUT'
   | 'JWKS_HTTP_ERROR'
@@ -394,6 +416,24 @@ export function validateProjectTokenOptions(
     );
   }
   if (
+    options.tokenUse !== undefined
+    && !isProjectTokenUse(options.tokenUse)
+  ) {
+    throw new TokenVerificationError(
+      'Token verifier tokenUse is invalid.',
+      'TOKEN_CONFIG_INVALID',
+    );
+  }
+  if (
+    options.requireTokenUse !== undefined
+    && typeof options.requireTokenUse !== 'boolean'
+  ) {
+    throw new TokenVerificationError(
+      'Token verifier requireTokenUse must be a boolean.',
+      'TOKEN_CONFIG_INVALID',
+    );
+  }
+  if (
     options.clockToleranceSeconds !== undefined
     && (
       !Number.isInteger(options.clockToleranceSeconds)
@@ -505,6 +545,29 @@ export async function verifyValidatedProjectToken(
   // `aud` stays unconditional: it is always required to match.
   if (!audienceMatches(claims.aud, options.audience)) {
     throw new TokenVerificationError('Token audience mismatch.', 'TOKEN_CLAIM_INVALID');
+  }
+
+  const tokenUse = claims.token_use;
+  if (tokenUse === undefined) {
+    if (options.requireTokenUse === true || header.typ !== 'JWT') {
+      throw new TokenVerificationError(
+        'Token purpose is missing or unsupported.',
+        'TOKEN_USE_UNSUPPORTED',
+      );
+    }
+  } else {
+    if (
+      !isProjectTokenUse(tokenUse)
+      || (options.tokenUse === undefined
+        ? tokenUse === 'id'
+        : tokenUse !== options.tokenUse)
+      || header.typ !== (tokenUse === 'access' ? 'at+jwt' : 'JWT')
+    ) {
+      throw new TokenVerificationError(
+        'Token purpose is missing or unsupported.',
+        'TOKEN_USE_UNSUPPORTED',
+      );
+    }
   }
 
   return {

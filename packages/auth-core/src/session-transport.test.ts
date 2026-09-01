@@ -301,6 +301,12 @@ function responseFor({
   twoFactorRequired,
 }: EngineRequest): EngineResponse {
   const path = url.pathname;
+  // This fake models an older self-hosted server. The new SDK must preserve the
+  // legacy measured transport only when the additive capability route is truly
+  // absent, never for an auth or network failure.
+  if (path.endsWith('/session/cookie-capability')) {
+    return { status: 404, payload: { code: 'NOT_FOUND' } };
+  }
   /** An endpoint that answers 401 to anyone the INGRESS rule did not authenticate. */
   const guarded = (payload: unknown): EngineResponse =>
     session

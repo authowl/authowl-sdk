@@ -140,6 +140,51 @@ redirects, abort after five seconds, stream at most 64 KiB, and accept at most
 `code`; authorization helpers `has()` and `hasPermission()` continue to fail
 closed for token failures while surfacing configuration failures.
 
+Token purpose is enforced together with the JOSE media type. The general
+verifier accepts declared `session`, `template`, and `access` tokens, rejects ID
+tokens by default, and requires `typ: at+jwt` for access tokens (`typ: JWT` for
+every other purpose). Use `tokenUse: 'access'` to narrow an API verifier to one
+kind, and `requireTokenUse: true` after every issuer in your estate emits the
+claim. Legacy tokens without `token_use` remain temporarily compatible only
+when their `typ` is `JWT`. The authority helpers `has()`, `hasPermission()`,
+`requirePermission()`, `requireGrant()`, and `requireOrg()` always require a
+session token, even if a broader verifier configuration is supplied.
+
+For route handlers, prefer the throwing gates so a forgotten boolean check
+cannot accidentally allow the request:
+
+```ts
+import {
+  isAuthorizationError,
+  requirePermission,
+} from '@authowl/core/server';
+
+try {
+  const identity = await requirePermission(bearerToken, 'org:invoices:read');
+
+  const invoice = await db.invoice.find(invoiceId);
+  if (
+    identity.claims.org_id !== organizationId
+    || invoice.organizationId !== organizationId
+    || invoice.userId !== identity.sub
+  ) {
+    return new Response('Forbidden', { status: 403 });
+  }
+} catch (error) {
+  if (isAuthorizationError(error)) {
+    return new Response(error.message, { status: error.status });
+  }
+  throw error;
+}
+```
+
+`requireAuth`, `requirePermission`, `requireGrant`, and `requireOrg` return a
+verified identity or throw `AuthorizationError`. Missing and invalid tokens
+share one 401 response. A verified caller without the required authority gets
+403. JWKS outages and server misconfiguration remain operational errors rather
+than being mislabeled as bad credentials. These gates verify identity and token
+claims only - your query must still enforce tenant scope and resource ownership.
+
 ## Headless account and organization management
 
 Use the AuthOwl-owned `account` and `organization` namespaces when you are
@@ -191,11 +236,17 @@ to sign in again and retry the action. Organization ownership conflicts return
 `ORGANIZATION_LAST_OWNER`. Disabled and cross-project resources return 404.
 Public metadata is server-authored. Unsafe metadata is end-user-owned and must
 be treated as untrusted. Private metadata has no browser SDK surface.
-Durable browser session tokens stay in HttpOnly cookies and never appear in
-`@authowl/react`'s `useSession()`, action results, or `listSessions()`. Core
-exposes only the framework-neutral `client.sessionStore`. Session management uses
-stable session ids. This is distinct from `getToken()`, which intentionally
-mints a short-lived backend JWT and caches it in memory only.
+Durable browser session tokens stay in HttpOnly cookies whenever the browser
+proves that its cross-site partition keeps them. A browser that blocks that
+cookie receives a bearer fallback bound at mint time to a non-extractable P-256
+key stored for the tenant application's origin. Every later request carries a
+fresh method-, URL-, and token-bound proof, so copying the token alone is not
+enough to replay the session. Losing the browser key revokes only that session
+and requires sign-in again. No token appears in `@authowl/react`'s
+`useSession()`, action results, or `listSessions()`. Core exposes only the
+framework-neutral `client.sessionStore`. Session management uses stable session
+ids. This is distinct from `getToken()`, which intentionally mints a short-lived
+backend JWT and caches it in memory only.
 
 ## Protected public-auth actions
 

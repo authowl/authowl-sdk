@@ -24,6 +24,16 @@ const DefaultClockTolerance = 60 * time.Second
 // keeps revoked tokens alive too long to be called authorization.
 const MaxClockTolerance = 300 * time.Second
 
+// TokenUse declares the purpose a project JWT was minted for.
+type TokenUse string
+
+const (
+	TokenUseSession  TokenUse = "session"
+	TokenUseTemplate TokenUse = "template"
+	TokenUseAccess   TokenUse = "access"
+	TokenUseID       TokenUse = "id"
+)
+
 // VerifiedToken is the result of a successful verification.
 type VerifiedToken struct {
 	// Subject is the signed-in user id, or "" when the token carries no `sub`.
@@ -62,12 +72,22 @@ type Verifier struct {
 	// duration would let Go's zero value turn the strictest setting into the
 	// default one.
 	ClockTolerance *time.Duration
+	// TokenUse narrows verification to one declared purpose. The zero value
+	// accepts session, template, and access tokens, but never ID tokens.
+	TokenUse TokenUse
+	// RequireTokenUse rejects legacy tokens that carry no token_use claim.
+	RequireTokenUse bool
 	// Now is injectable for deterministic tests. Nil means time.Now.
 	Now func() time.Time
 }
 
 // ClockSkew returns a pointer for Verifier.ClockTolerance.
 func ClockSkew(d time.Duration) *time.Duration { return &d }
+
+func validTokenUse(tokenUse TokenUse) bool {
+	return tokenUse == "" || tokenUse == TokenUseSession || tokenUse == TokenUseTemplate ||
+		tokenUse == TokenUseAccess || tokenUse == TokenUseID
+}
 
 func (v *Verifier) now() time.Time {
 	if v.Now != nil {
@@ -163,11 +183,22 @@ func readMembership(claims map[string]any) *Membership {
 // claims - so a token with a bad signature always reports as a signature
 // failure even when its claims are also invalid.
 func (v *Verifier) Verify(ctx context.Context, token string) (*VerifiedToken, error) {
+	return v.verifyForTokenUse(ctx, token, v.TokenUse)
+}
+
+func (v *Verifier) verifyForTokenUse(
+	ctx context.Context,
+	token string,
+	accepted TokenUse,
+) (*VerifiedToken, error) {
 	if v.Issuer == "" || v.Audience == "" || v.Keys == nil {
 		return nil, verr(ErrTokenConfigInvalid, "verifier requires Issuer, Audience, and Keys")
 	}
 	if v.ClockTolerance != nil && (*v.ClockTolerance < 0 || *v.ClockTolerance > MaxClockTolerance) {
 		return nil, verr(ErrTokenConfigInvalid, "ClockTolerance must be between 0 and 300 seconds")
+	}
+	if !validTokenUse(accepted) {
+		return nil, verr(ErrTokenConfigInvalid, "TokenUse is invalid")
 	}
 	if token == "" {
 		return nil, verr(ErrTokenMalformed, "a token string is required")
@@ -239,6 +270,12 @@ func (v *Verifier) Verify(ctx context.Context, token string) (*VerifiedToken, er
 	if !audienceMatches(claims["aud"], v.Audience) {
 		return nil, verr(ErrTokenClaimInvalid, "token audience mismatch")
 	}
+	rawTokenUse, hasTokenUse := claims["token_use"]
+	if err := validateTokenUse(
+		header["typ"], rawTokenUse, hasTokenUse, accepted, v.RequireTokenUse,
+	); err != nil {
+		return nil, err
+	}
 
 	subject, _ := claims["sub"].(string)
 	return &VerifiedToken{
@@ -246,6 +283,30 @@ func (v *Verifier) Verify(ctx context.Context, token string) (*VerifiedToken, er
 		Membership: readMembership(claims),
 		Claims:     claims,
 	}, nil
+}
+
+func validateTokenUse(typ, raw any, present bool, accepted TokenUse, required bool) error {
+	if !present {
+		if required || typ != "JWT" {
+			return verr(ErrTokenUseUnsupported, "token purpose is missing or unsupported")
+		}
+		return nil
+	}
+	value, ok := raw.(string)
+	use := TokenUse(value)
+	if !ok || (use != TokenUseSession && use != TokenUseTemplate &&
+		use != TokenUseAccess && use != TokenUseID) ||
+		(accepted == "" && use == TokenUseID) || (accepted != "" && use != accepted) {
+		return verr(ErrTokenUseUnsupported, "token purpose is missing or unsupported")
+	}
+	expectedTyp := "JWT"
+	if use == TokenUseAccess {
+		expectedTyp = "at+jwt"
+	}
+	if typ != expectedTyp {
+		return verr(ErrTokenUseUnsupported, "token purpose is missing or unsupported")
+	}
+	return nil
 }
 
 // Has verifies the token and evaluates the query against its membership.
@@ -258,7 +319,10 @@ func (v *Verifier) Has(ctx context.Context, token string, query Query) (bool, er
 	if v.Issuer == "" || v.Audience == "" || v.Keys == nil {
 		return false, verr(ErrTokenConfigInvalid, "verifier requires Issuer, Audience, and Keys")
 	}
-	verified, err := v.Verify(ctx, token)
+	if !validTokenUse(v.TokenUse) {
+		return false, verr(ErrTokenConfigInvalid, "TokenUse is invalid")
+	}
+	verified, err := v.verifyForTokenUse(ctx, token, TokenUseSession)
 	if err != nil {
 		if CodeOf(err) == ErrTokenConfigInvalid {
 			return false, err

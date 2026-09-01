@@ -14,6 +14,7 @@ const (
 	ErrTokenAlgorithmUnsupported ErrorCode = "TOKEN_ALGORITHM_UNSUPPORTED"
 	ErrTokenSignatureInvalid     ErrorCode = "TOKEN_SIGNATURE_INVALID"
 	ErrTokenClaimInvalid         ErrorCode = "TOKEN_CLAIM_INVALID"
+	ErrTokenUseUnsupported       ErrorCode = "TOKEN_USE_UNSUPPORTED"
 	ErrJWKSFetchFailed           ErrorCode = "JWKS_FETCH_FAILED"
 	ErrJWKSFetchTimeout          ErrorCode = "JWKS_FETCH_TIMEOUT"
 	ErrJWKSHTTPError             ErrorCode = "JWKS_HTTP_ERROR"

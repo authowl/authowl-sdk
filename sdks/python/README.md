@@ -34,11 +34,20 @@ print(verified.subject, verified.membership)
 `RemoteKeySource` caches the project's JWKS for five minutes and survives key
 rotation by forcing a single rate-limited refetch when it meets an unknown `kid`.
 
+The general verifier accepts declared session, template, and access tokens,
+but rejects ID tokens by default. Access tokens must carry `typ: at+jwt`; every
+other token kind must carry `typ: JWT`. Pass `token_use="access"` to narrow a
+verifier, then `require_token_use=True` after every issuer emits the claim.
+Legacy tokens without `token_use` are tolerated only with `typ: JWT` during
+migration.
+
 ## Authorize a request
 
 `has()` is the real authorization primitive. It **fails closed**: an invalid,
 tampered, expired, or wrong-audience token returns `False` rather than raising,
 so a caller that forgets to handle errors still denies.
+It always requires a session token, so an access, template, or ID token cannot
+be used as an organization-authority credential.
 
 ```python
 if not verifier.has(token, permission="org:billing:read"):
@@ -100,7 +109,7 @@ def billing(user=Depends(require_permission("org:billing:read", verifier=verifie
 
 ## Conformance
 
-Every AuthOwl SDK runs one shared corpus of 125 vectors covering JWT
+AuthOwl SDKs run one shared corpus of 159 vectors covering JWT
 verification, JWKS hardening, cookie naming, key decoding, membership
 evaluation, and webhook signatures. Run it with:
 

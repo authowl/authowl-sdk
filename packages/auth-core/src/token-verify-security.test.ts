@@ -158,6 +158,24 @@ describe('public verifier configuration boundary', () => {
       has(token(), { permission: 'org:billing:read' }, invalidClock),
     ).rejects.toMatchObject({ code: 'TOKEN_CONFIG_INVALID' });
 
+    const invalidTokenUse = {
+      publishableKey: TEST_KEY,
+      apiUrl: 'https://auth.example.com',
+      tokenUse: 'refresh',
+    } as unknown as VerifyTokenConfig;
+    await expect(
+      has(token(), { permission: 'org:billing:read' }, invalidTokenUse),
+    ).rejects.toMatchObject({ code: 'TOKEN_CONFIG_INVALID' });
+
+    const invalidStrictFlag = {
+      publishableKey: TEST_KEY,
+      apiUrl: 'https://auth.example.com',
+      requireTokenUse: 'yes',
+    } as unknown as VerifyTokenConfig;
+    await expect(
+      has(token(), { permission: 'org:billing:read' }, invalidStrictFlag),
+    ).rejects.toMatchObject({ code: 'TOKEN_CONFIG_INVALID' });
+
     await expect(
       has('not-a-jwt', { permission: 'org:billing:read' }, {
         publishableKey: TEST_KEY,

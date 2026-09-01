@@ -10,13 +10,11 @@ gate_cpus() {
 }
 
 readonly SEMGREP_IMAGE='semgrep/semgrep@sha256:06938c1f365d3f67b8cedd8bc117607ae64253f88a0e768e9da9408548927dd6'
-# Semgrep aliases may reorder equivalent YAML, and its CDN may briefly serve
-# the previous and current policy in different regions. These digests pin the
-# parsed policies after mapping keys and top-level rules are canonicalized.
-# Keep at most the current and previous reviewed digest during a rollout.
-readonly TYPESCRIPT_RULES_CURRENT_SHA256='df75b4b45dfa077a2acf35a55fd0d5bed7387bfe738d42dcb90f528bb32d84cf'
-readonly TYPESCRIPT_RULES_PREVIOUS_SHA256='0076f9c45f88fff4b8a9a79155b6605da2a278b23ccd08b4465625aec5cf3f68'
-readonly OWASP_RULES_CURRENT_SHA256='ff70fa78bea18475e09e9b5148003c84f62ad6bc1e1f0ee050721e8d0a643082'
+# Semgrep aliases may reorder equivalent YAML. These digests pin the parsed
+# policy after mapping keys and top-level rules are placed in canonical order.
+# Any semantic policy update remains a reviewed checksum change.
+readonly TYPESCRIPT_RULES_CANONICAL_SHA256='df75b4b45dfa077a2acf35a55fd0d5bed7387bfe738d42dcb90f528bb32d84cf'
+readonly OWASP_RULES_CANONICAL_SHA256='ff70fa78bea18475e09e9b5148003c84f62ad6bc1e1f0ee050721e8d0a643082'
 readonly MAX_TARGET_BYTES=5000000
 
 mode="${1:-scan}"
@@ -200,9 +198,13 @@ scan_volume="$(
     --label "${AUTHOWL_SDK_CI_RUN_LABEL}=${semgrep_run_id}"
 )"
 
-# Fetching is isolated from source. The scanner later re-verifies the
-# canonical policy and runs without a network.
+# Materialize the reviewed policy snapshot into the private scan volume. The
+# registry aliases are mutable and their CDN edges can serve different pack
+# revisions at the same moment, so a checksum around a live fetch is still a
+# nondeterministic release input. The compressed copies are repository-owned,
+# license-noted below, and re-verified semantically before every scan.
 docker run --rm \
+  --network none \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
   --cap-drop ALL \
@@ -210,39 +212,26 @@ docker run --rm \
   --memory 256m \
   --cpus "$(gate_cpus 1)" \
   --pids-limit 64 \
-  --env TYPESCRIPT_RULES_CURRENT_SHA256="${TYPESCRIPT_RULES_CURRENT_SHA256}" \
-  --env TYPESCRIPT_RULES_PREVIOUS_SHA256="${TYPESCRIPT_RULES_PREVIOUS_SHA256}" \
-  --env OWASP_RULES_CURRENT_SHA256="${OWASP_RULES_CURRENT_SHA256}" \
+  --env TYPESCRIPT_RULES_CANONICAL_SHA256="${TYPESCRIPT_RULES_CANONICAL_SHA256}" \
+  --env OWASP_RULES_CANONICAL_SHA256="${OWASP_RULES_CANONICAL_SHA256}" \
   --mount "type=bind,src=${repo_root}/scripts/ci/semgrep-rules-digest.py,dst=/ci/semgrep-rules-digest.py,readonly" \
+  --mount "type=bind,src=${repo_root}/scripts/ci/semgrep-policy,dst=/ci/policy,readonly" \
   --mount "type=volume,src=${scan_volume},dst=/workspace" \
   "${SEMGREP_IMAGE}" \
   sh -euc '
     mkdir -p /workspace/rules /workspace/src
     python3 -I /ci/semgrep-rules-digest.py --self-test
-    curl --fail --silent --show-error \
-      --proto "=https" \
-      --tlsv1.2 \
-      --connect-timeout 10 \
-      --max-time 30 \
-      --max-filesize 5242880 \
-      https://semgrep.dev/c/p/typescript \
-      --output /workspace/rules/typescript.yml
+    base64 -d /ci/policy/typescript.json.gz.b64 \
+      | gzip -dc > /workspace/rules/typescript.yml
     python3 -I /ci/semgrep-rules-digest.py \
       /workspace/rules/typescript.yml \
-      "${TYPESCRIPT_RULES_CURRENT_SHA256}" \
-      "${TYPESCRIPT_RULES_PREVIOUS_SHA256}"
+      "${TYPESCRIPT_RULES_CANONICAL_SHA256}"
 
-    curl --fail --silent --show-error \
-      --proto "=https" \
-      --tlsv1.2 \
-      --connect-timeout 10 \
-      --max-time 30 \
-      --max-filesize 5242880 \
-      https://semgrep.dev/c/p/owasp-top-ten \
-      --output /workspace/rules/owasp-top-ten.yml
+    base64 -d /ci/policy/owasp-top-ten.json.gz.b64 \
+      | gzip -dc > /workspace/rules/owasp-top-ten.yml
     python3 -I /ci/semgrep-rules-digest.py \
       /workspace/rules/owasp-top-ten.yml \
-      "${OWASP_RULES_CURRENT_SHA256}"
+      "${OWASP_RULES_CANONICAL_SHA256}"
   '
 
 # Stage only tracked and non-ignored untracked files. The scanner never sees
@@ -281,9 +270,8 @@ docker run --rm \
   --env SEMGREP_SETTINGS_FILE=/tmp/semgrep-settings.yml \
   --env SEMGREP_VERSION_CACHE_PATH=/tmp/semgrep-version \
   --env GIT_CONFIG_GLOBAL=/tmp/gitconfig \
-  --env TYPESCRIPT_RULES_CURRENT_SHA256="${TYPESCRIPT_RULES_CURRENT_SHA256}" \
-  --env TYPESCRIPT_RULES_PREVIOUS_SHA256="${TYPESCRIPT_RULES_PREVIOUS_SHA256}" \
-  --env OWASP_RULES_CURRENT_SHA256="${OWASP_RULES_CURRENT_SHA256}" \
+  --env TYPESCRIPT_RULES_CANONICAL_SHA256="${TYPESCRIPT_RULES_CANONICAL_SHA256}" \
+  --env OWASP_RULES_CANONICAL_SHA256="${OWASP_RULES_CANONICAL_SHA256}" \
   --env MAX_TARGET_BYTES="${MAX_TARGET_BYTES}" \
   --mount "type=volume,src=${scan_volume},dst=/workspace,readonly" \
   --mount "type=bind,src=${repo_root}/scripts/ci/semgrep-rules-digest.py,dst=/ci/semgrep-rules-digest.py,readonly" \
@@ -292,11 +280,10 @@ docker run --rm \
   sh -euc '
     python3 -I /ci/semgrep-rules-digest.py \
       /workspace/rules/typescript.yml \
-      "${TYPESCRIPT_RULES_CURRENT_SHA256}" \
-      "${TYPESCRIPT_RULES_PREVIOUS_SHA256}"
+      "${TYPESCRIPT_RULES_CANONICAL_SHA256}"
     python3 -I /ci/semgrep-rules-digest.py \
       /workspace/rules/owasp-top-ten.yml \
-      "${OWASP_RULES_CURRENT_SHA256}"
+      "${OWASP_RULES_CANONICAL_SHA256}"
 
     umask 077
     scan_status=0

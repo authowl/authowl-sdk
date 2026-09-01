@@ -48,11 +48,18 @@ func TestConformanceTokenVerification(t *testing.T) {
 		Audience string          `json:"audience"`
 		JWKS     json.RawMessage `json:"jwks"`
 		Cases    []struct {
-			Name                  string `json:"name"`
-			Token                 string `json:"token"`
-			Now                   int64  `json:"now"`
-			ClockToleranceSeconds *int   `json:"clockToleranceSeconds"`
-			Expect                struct {
+			Name                  string          `json:"name"`
+			Token                 string          `json:"token"`
+			Now                   int64           `json:"now"`
+			ClockToleranceSeconds *int            `json:"clockToleranceSeconds"`
+			TokenUse              string          `json:"tokenUse"`
+			RequireTokenUse       bool            `json:"requireTokenUse"`
+			ConfirmationJKT       json.RawMessage `json:"confirmationJkt"`
+			Authorization         *struct {
+				Permission string `json:"permission"`
+				Expect     bool   `json:"expect"`
+			} `json:"authorization"`
+			Expect struct {
 				OK         bool            `json:"ok"`
 				Sub        *string         `json:"sub"`
 				Membership json.RawMessage `json:"membership"`
@@ -80,6 +87,8 @@ func TestConformanceTokenVerification(t *testing.T) {
 					time.Duration(*testCase.ClockToleranceSeconds) * time.Second,
 				)
 			}
+			verifier.TokenUse = TokenUse(testCase.TokenUse)
+			verifier.RequireTokenUse = testCase.RequireTokenUse
 
 			verified, err := verifier.Verify(context.Background(), testCase.Token)
 
@@ -110,7 +119,63 @@ func TestConformanceTokenVerification(t *testing.T) {
 			if got := normalize(t, verified.Membership); !reflect.DeepEqual(got, wantMembership) {
 				t.Fatalf("membership: want %#v, got %#v", wantMembership, got)
 			}
+			if testCase.ConfirmationJKT != nil {
+				if string(testCase.ConfirmationJKT) == "null" {
+					if _, present := verified.Claims["cnf"]; present {
+						t.Fatal("confirmation: expected cnf to be absent")
+					}
+				} else {
+					var wantJKT string
+					if err := json.Unmarshal(testCase.ConfirmationJKT, &wantJKT); err != nil {
+						t.Fatalf("parse expected confirmation: %v", err)
+					}
+					confirmation, ok := verified.Claims["cnf"].(map[string]any)
+					if !ok || confirmation["jkt"] != wantJKT {
+						t.Fatalf("confirmation: want %q, got %#v", wantJKT, verified.Claims["cnf"])
+					}
+				}
+			}
+			if testCase.Authorization != nil {
+				allowed, err := verifier.Has(
+					context.Background(),
+					testCase.Token,
+					Query{Permission: Match(testCase.Authorization.Permission)},
+				)
+				if err != nil {
+					t.Fatalf("authorization: %v", err)
+				}
+				if allowed != testCase.Authorization.Expect {
+					t.Fatalf("authorization: want %v, got %v", testCase.Authorization.Expect, allowed)
+				}
+			}
 		})
+	}
+}
+
+func TestTokenUseConfigurationIsValidated(t *testing.T) {
+	var vectors struct {
+		Issuer   string          `json:"issuer"`
+		Audience string          `json:"audience"`
+		JWKS     json.RawMessage `json:"jwks"`
+	}
+	loadVectors(t, "jwt-verify.json", &vectors)
+	keys, err := NewStaticKeySource(vectors.JWKS)
+	if err != nil {
+		t.Fatalf("parse conformance JWKS: %v", err)
+	}
+	verifier := &Verifier{
+		Issuer:   vectors.Issuer,
+		Audience: vectors.Audience,
+		Keys:     keys,
+		TokenUse: TokenUse("refresh"),
+	}
+	_, err = verifier.Verify(context.Background(), "not-a-token")
+	if got := CodeOf(err); got != ErrTokenConfigInvalid {
+		t.Fatalf("Verify: want %s, got %s (%v)", ErrTokenConfigInvalid, got, err)
+	}
+	_, err = verifier.Has(context.Background(), "not-a-token", Query{})
+	if got := CodeOf(err); got != ErrTokenConfigInvalid {
+		t.Fatalf("Has: want %s, got %s (%v)", ErrTokenConfigInvalid, got, err)
 	}
 }
 

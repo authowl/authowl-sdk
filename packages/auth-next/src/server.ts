@@ -31,6 +31,28 @@ export {
   type HasParams,
 } from '@authowl/core/server';
 
+/**
+ * The same boundary in gate form: these throw {@link AuthorizationError}
+ * instead of returning a boolean, so a route handler reads as a guard clause
+ * and a forgotten `if` cannot silently allow the request through.
+ *
+ * `status` is 401 when no usable token was presented and 403 when a verified
+ * token lacked the authority, which are different answers and should not be
+ * collapsed.
+ *
+ * They still cannot check resource ownership - that comparison needs your data
+ * and lives in your handler.
+ */
+export {
+  requireAuth,
+  requireGrant,
+  requireOrg,
+  requirePermission,
+  isAuthorizationError,
+  AuthorizationError,
+  type AuthorizationFailureReason,
+} from '@authowl/core/server';
+
 export type Session = {
   user: {
     id: string;

@@ -2,22 +2,24 @@
 
 One set of vectors. Every implementation gives the same answer, or CI fails.
 
-`vectors/` is the **single source of truth** for the security primitives every
-AuthOwl SDK must implement identically, in every language. Each SDK re-verifies
-the committed vectors from scratch in its own test framework, so `has()` fails
-closed the same way in TypeScript, Go, Python, PHP, Rust, and Dart/Flutter.
+`vectors/` is the **single source of truth** for shared security primitives.
+Each SDK re-verifies every vector that belongs to its runtime. The five backend
+verifiers run the JWT and JWKS corpus. Flutter is a browser client and therefore
+does not expose a server JWT verifier, but it runs the client-side key, cookie,
+membership, and response-projection vectors.
 
 ## What is covered
 
 | File | Cases | Covers |
 |---|--:|---|
-| `jwt-verify.json` | 38 | ES256 verification: signature, `iss`/`aud`/`exp`/`nbf`, `alg` confusion, malformed structure, membership decoding |
+| `jwt-verify.json` | 56 | ES256 verification: signature, `iss`/`aud`/`exp`/`nbf`, token purpose and `typ`, bound and unbound `cnf.jkt`, `alg` confusion, malformed structure, membership decoding |
 | `jwks-parse.json` | 20 | JWKS hardening: private-member leakage, `key_ops`, unexpected members, wrong curve, duplicate `kid`, key-count ceiling |
 | `webhook-verify.json` | 26 | HMAC-SHA256 signatures, rotation overlap, replay window, malformed headers, config errors |
 | `membership-has.json` | 20 | `has()` / `hasPermission()`, AND semantics, the teams-absent rule |
 | `publishable-key.json` | 14 | Key decoding, the `sk_` refusal, and project-id canonicalisation |
 | `cookie-name.json` | 7 | Session cookie-name derivation |
-| | **125** | |
+| `response-projection.json` | 18 | Browser-safe response projection and secret-field stripping |
+| | **161** | |
 
 ## The invariants worth stating out loud
 
@@ -32,6 +34,13 @@ reimplementation, which is exactly why they are pinned:
   the HS256-confusion attack structurally impossible rather than merely unlikely.
 - **`exp` and `iss` are required, not skip-if-absent.** A token with no expiry
   would never fail closed on its own.
+- **Token purpose and `typ` are one contract.** Access tokens require
+  `at+jwt`; other declared purposes require `JWT`. ID tokens are rejected by
+  default, and every organization-authority helper requires a session token.
+- **Project-token confirmation is additive.** Bound project JWTs retain the
+  exact `cnf.jkt` thumbprint after verification, while unbound tokens omit the
+  claim. Proof enforcement is a separate verifier contract and is not inferred
+  from claim presence alone.
 - **An absent `teams` claim is not "any team".** A token minted before teams
   shipped must never satisfy a `teamId` query.
 - **Untrusted input degrades to `false`; local misconfiguration raises.** A bad
@@ -84,7 +93,7 @@ node conformance/generate.mjs
 The vectors are a **committed artifact**, not a build output. Regenerating mints
 fresh ECDSA signatures (ECDSA is randomised), so the JSON changes on every run
 even when nothing semantic did — that is expected and harmless, because
-correctness is established by the seven suites re-verifying the committed bytes,
+correctness is established by the SDK suites re-verifying the committed bytes,
 not by byte-comparing a regeneration. Regenerate only when adding or changing
 cases.
 

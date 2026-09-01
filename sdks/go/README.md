@@ -40,10 +40,19 @@ fmt.Println(verified.Subject, verified.Membership)
 `RemoteKeySource` caches the JWKS for five minutes and survives key rotation by
 forcing a single rate-limited refetch when it meets an unknown `kid`.
 
+The general verifier accepts declared session, template, and access tokens,
+but rejects ID tokens by default. Access tokens must carry `typ: at+jwt`; every
+other token kind must carry `typ: JWT`. Set `TokenUse: authowl.TokenUseAccess`
+to narrow a verifier to access tokens, then set `RequireTokenUse: true` after
+all of your issuers emit the claim. Legacy tokens without `token_use` are
+tolerated only with `typ: JWT` during migration.
+
 ## Authorize a request
 
 `Has` is the real authorization primitive. It **fails closed**: an invalid,
 tampered, expired, or wrong-audience token returns `false`, not an error.
+It always requires a session token, so an access, template, or ID token cannot
+be used as an organization-authority credential.
 
 ```go
 ok, err := verifier.Has(ctx, token, authowl.Query{
@@ -115,7 +124,7 @@ the message.
 go test ./...
 ```
 
-Runs the shared 125-vector corpus from `conformance/vectors`. If a case fails,
+Runs the shared 159-vector corpus from `conformance/vectors`. If a case fails,
 this implementation has diverged from the contract — the fix belongs in the code,
 not the vector. See `conformance/README.md`.
 

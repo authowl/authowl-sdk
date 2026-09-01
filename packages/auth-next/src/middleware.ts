@@ -4,6 +4,38 @@ import { sessionCookieName } from '@authowl/core/server';
 import { appSessionCookieNames } from './bridge-contract';
 
 /**
+ * Emitted once per process, in development only.
+ *
+ * The doc comment above has always said this is not an authorization boundary,
+ * and a doc comment is read by whoever goes looking. This is the one surface
+ * AuthOwl ships that LOOKS like auth middleware and verifies nothing, so it
+ * says so where someone who did not go looking will see it.
+ *
+ * It names both remedies because this middleware gates PAGES, and the
+ * page-side gate is `auth()`. Pointing a cookie-session app at `requireAuth()`
+ * would be sending it to a primitive that wants a bearer token it does not
+ * hold.
+ *
+ * Once per boot, not per request: a per-request warning in a dev server is
+ * noise that gets filtered, and filtered warnings are not warnings.
+ */
+let warnedNotAnAuthorizationBoundary = false;
+
+function warnNotAnAuthorizationBoundary(): void {
+  if (warnedNotAnAuthorizationBoundary) return;
+  if (process.env.NODE_ENV === 'production') return;
+  warnedNotAnAuthorizationBoundary = true;
+  console.warn(
+    '[authowl] createAuthRedirectMiddleware is a UX redirect, not authorization. '
+    + 'It checks that a cookie NAME is present and verifies nothing, so a client '
+    + 'can forge it. Gate pages and route handlers with auth(); gate '
+    + 'token-bearing API routes with requireAuth() or requirePermission() '
+    + 'from @authowl/core/server. '
+    + 'This warning is development-only and appears once.',
+  );
+}
+
+/**
  * Optional middleware factory for consumer Next.js apps that want to gate
  * routes by likely session presence for UX redirects only. This is not an
  * authorization boundary: a client can forge a cookie with the expected name,
@@ -18,6 +50,7 @@ export function createAuthRedirectMiddleware(opts: {
   loginPath?: string;
   protectedPaths?: RegExp[];
 }) {
+  warnNotAnAuthorizationBoundary();
   const { projectId } = decodePublishableKey(opts.publishableKey);
   // UX-only: this middleware has no auth API URL, so it cannot know whether the
   // server issues secure (__Secure-) cookies. Check both variants - a false

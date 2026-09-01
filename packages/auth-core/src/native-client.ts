@@ -33,7 +33,7 @@ import {
   type AuthHttpClient,
 } from './http-client';
 import { createSessionController } from './session-store';
-import type { SessionTokenStore } from './session-token';
+import type { SessionBinding } from './session-transport';
 import { isBrowserRuntime } from './browser-runtime';
 
 /**
@@ -69,7 +69,7 @@ function gateOnHandoff(
 const documentHandoffs = new Map<string, Promise<boolean>>();
 function redeemHandoffOnce(
   http: AuthHttpClient,
-  tokens: SessionTokenStore,
+  binding: SessionBinding,
   projectId: string,
 ): Promise<boolean> | undefined {
   // Keyed by project, not global: two providers for different projects on one
@@ -84,7 +84,7 @@ function redeemHandoffOnce(
     const code = new URLSearchParams(window.location.hash.slice(1)).get('authowl_code');
     if (!code) return undefined;
     handoff = import('./session-handoff').then(
-      (module) => module.completeCrossSiteSignIn(http, tokens, code),
+      (module) => module.completeCrossSiteSignIn(http, binding, code),
     );
     documentHandoffs.set(projectId, handoff);
   }
@@ -219,7 +219,7 @@ export function createAuthActionClient(
   // separate precisely to keep browser-only modules out of a bundle that cannot
   // run them, and `canUseCrossSiteTransport()` is false there anyway.
   const handoff = isBrowserRuntime()
-    ? redeemHandoffOnce(rawHttp, tokens, config.decoded.projectId)
+    ? redeemHandoffOnce(rawHttp, config.session, config.decoded.projectId)
     : undefined;
   // Gated at the CLIENT, not just at the session fetch. Everything that depends
   // on the session cookie shares this instance - `account.*`, `organization.*`,
@@ -269,8 +269,8 @@ export function createAuthActionClient(
    * Absent means remembered: that is the server contract, and guessing the
    * other way would silently sign people out on every reload.
    */
-  const beginSession = (params?: { rememberMe?: boolean }): void => {
-    tokens.beginSession({ remember: params?.rememberMe !== false });
+  const beginSession = (params?: { rememberMe?: boolean }): Promise<void> => {
+    return config.session.prepareSession({ remember: params?.rememberMe !== false });
   };
 
   return {
@@ -286,15 +286,15 @@ export function createAuthActionClient(
     ),
     privacy: createPrivacyClient(http),
     signIn: {
-      email: (params, fetchOptions) => {
-        beginSession(params);
+      email: async (params, fetchOptions) => {
+        await beginSession(params);
         return sessionMutation<EmailAuthData | TwoFactorRedirectData>(
           post('/sign-in/email', params, fetchOptions, decodeEmailSignIn),
           (data) => !('twoFactorRedirect' in data),
         );
       },
-      username: (params, fetchOptions) => {
-        beginSession(params);
+      username: async (params, fetchOptions) => {
+        await beginSession(params);
         return sessionMutation<EmailAuthData | TwoFactorRedirectData>(
           post('/sign-in/username', params, fetchOptions, decodeEmailSignIn),
           (data) => !('twoFactorRedirect' in data),
@@ -305,7 +305,7 @@ export function createAuthActionClient(
         // comes back through `/session/exchange`, which begins it again on the
         // return leg. Beginning here as well costs at most one measurement if
         // the user abandons the provider.
-        beginSession();
+        await beginSession();
         // The cross-site transport. Posting `/sign-in/social` writes the OAuth
         // `state` cookie from THIS page's context, and the provider's callback
         // reads it from the auth host's - two different cookie contexts in every
@@ -404,23 +404,23 @@ export function createAuthActionClient(
           fetchOptions,
           decodeMagicLink,
         ),
-      emailOtp: (params, fetchOptions) => {
-        beginSession();
+      emailOtp: async (params, fetchOptions) => {
+        await beginSession();
         return sessionMutation<EmailOtpAuthData>(
           post('/sign-in/email-otp', params, fetchOptions, decodeEmailOtpSignIn),
         );
       },
-      passkey: (params, fetchOptions) => {
+      passkey: async (params, fetchOptions) => {
         // Before the ceremony, not after it: the WebAuthn prompt sits between
         // this call and `/passkey/verify-authentication`, and that verify is the
         // request that has to declare the transport.
-        beginSession();
+        await beginSession();
         return passkeys.signIn(params, fetchOptions);
       },
     },
     signUp: {
-      email: (params, fetchOptions) => {
-        beginSession();
+      email: async (params, fetchOptions) => {
+        await beginSession();
         return sessionMutation<EmailSignUpData>(
           post('/sign-up/email', params, fetchOptions, decodeEmailSignUp),
           (data) => data.sessionCreated,
@@ -437,8 +437,8 @@ export function createAuthActionClient(
         ),
       // Verifying an email with an OTP signs the user in, so it mints like any
       // other door - including for a user who had no session before it.
-      verifyEmail: (params, fetchOptions) => {
-        beginSession();
+      verifyEmail: async (params, fetchOptions) => {
+        await beginSession();
         return sessionMutation<VerifyEmailOtpData>(
           post(
             '/email-otp/verify-email',
@@ -469,8 +469,8 @@ export function createAuthActionClient(
         ),
       // `PhoneOtpVerifyData.sessionCreated` is `true` in the type: this door
       // always mints, so it always begins a session.
-      verify: (params, fetchOptions) => {
-        beginSession();
+      verify: async (params, fetchOptions) => {
+        await beginSession();
         return sessionMutation<PhoneOtpVerifyData>(
           post('/phone-otp/verify', params, fetchOptions, decodePhoneOtpVerify),
         );

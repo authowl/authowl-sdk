@@ -12,9 +12,9 @@ library;
 /// The rule is narrow on purpose. Password reset and account deletion carry a
 /// `token` as an INPUT, and the separate short-lived `/token` JWT is a different
 /// credential entirely - stripping either would break a working flow. Behaviour
-/// is pinned by `conformance/vectors/response-projection.json`, which every
-/// AuthOwl SDK re-verifies, because a client that forgets one path leaks a
-/// session credential without failing anything else.
+/// is pinned by `conformance/vectors/response-projection.json`, which each
+/// browser SDK implementation re-verifies, because a client that forgets one
+/// path leaks a session credential without failing anything else.
 Object? projectAuthPayload(String path, Object? payload) {
   if (path == '/list-sessions' && payload is List) {
     return payload

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AuthOwl\Tests;
 
 use AuthOwl\Cookie;
+use AuthOwl\ErrorCode;
 use AuthOwl\Exception\ConfigurationException;
 use AuthOwl\Exception\MalformedPublishableKeyException;
 use AuthOwl\Exception\PublishableKeyRequiredException;
@@ -66,6 +67,8 @@ final class ConformanceTest extends TestCase
             keys: new StaticKeySource(json_encode($vectors->jwks, JSON_THROW_ON_ERROR)),
             clockToleranceSeconds: $case->clockToleranceSeconds ?? 60,
             clock: static fn (): float => (float) $case->now,
+            tokenUse: $case->tokenUse ?? null,
+            requireTokenUse: $case->requireTokenUse ?? false,
         );
 
         if (!$case->expect->ok) {
@@ -82,6 +85,17 @@ final class ConformanceTest extends TestCase
         $verified = $verifier->verify($case->token);
         self::assertSame($case->expect->sub, $verified->subject);
 
+        if (property_exists($case, 'confirmationJkt')) {
+            if ($case->confirmationJkt === null) {
+                self::assertArrayNotHasKey('cnf', $verified->claims);
+            } else {
+                self::assertEquals(
+                    (object) ['jkt' => $case->confirmationJkt],
+                    $verified->claims['cnf'] ?? null,
+                );
+            }
+        }
+
         if ($case->expect->membership === null) {
             self::assertNull($verified->membership);
 
@@ -94,6 +108,28 @@ final class ConformanceTest extends TestCase
         self::assertSame($case->expect->membership->permissions, $verified->membership->permissions);
         $expectedTeams = $case->expect->membership->teams ?? null;
         self::assertSame($expectedTeams, $verified->membership->teams);
+        if (isset($case->authorization)) {
+            self::assertSame(
+                $case->authorization->expect,
+                $verifier->has($case->token, permission: $case->authorization->permission)
+            );
+        }
+    }
+
+    public function testTokenUseConfigurationIsValidated(): void
+    {
+        $vectors = self::load('jwt-verify.json');
+        try {
+            new Verifier(
+                issuer: $vectors->issuer,
+                audience: $vectors->audience,
+                keys: new StaticKeySource(json_encode($vectors->jwks, JSON_THROW_ON_ERROR)),
+                tokenUse: 'refresh',
+            );
+            self::fail('expected invalid tokenUse configuration to be rejected');
+        } catch (TokenVerificationException $error) {
+            self::assertSame(ErrorCode::TokenConfigInvalid, $error->errorCode);
+        }
     }
 
     // -----------------------------------------------------------------------

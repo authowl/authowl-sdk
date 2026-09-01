@@ -36,10 +36,19 @@ echo $verified->subject;
 `RemoteKeySource` caches the JWKS for five minutes and survives key rotation by
 forcing a single rate-limited refetch when it meets an unknown `kid`.
 
+The general verifier accepts declared session, template, and access tokens,
+but rejects ID tokens by default. Access tokens must carry `typ: at+jwt`; every
+other token kind must carry `typ: JWT`. Pass `tokenUse: 'access'` to narrow a
+verifier, then `requireTokenUse: true` after every issuer emits the claim.
+Legacy tokens without `token_use` are tolerated only with `typ: JWT` during
+migration.
+
 ## Authorize a request
 
 `has()` is the real authorization primitive. It **fails closed**: an invalid,
 tampered, expired, or wrong-audience token returns `false` rather than throwing.
+It always requires a session token, so an access, template, or ID token cannot
+be used as an organization-authority credential.
 
 ```php
 if (!$verifier->has($token, permission: 'org:billing:read')) {
@@ -112,7 +121,7 @@ one. Match on the code, never the message.
 composer install && ./vendor/bin/phpunit
 ```
 
-Runs the shared 125-vector corpus from `conformance/vectors`. If a case fails,
+Runs the shared 159-vector corpus from `conformance/vectors`. If a case fails,
 this implementation has diverged from the contract — the fix belongs in the code,
 not the vector. See `conformance/README.md`.
 
