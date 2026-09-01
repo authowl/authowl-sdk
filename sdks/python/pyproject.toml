@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "authowl"
-version = "0.1.0"
+version = "0.2.0"
 description = "Server-side token verification and webhook helpers for AuthOwl, the multi-tenant auth SaaS."
 readme = "README.md"
 license = { text = "MIT" }
