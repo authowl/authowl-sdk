@@ -3,10 +3,16 @@ import {
   SESSION_TRANSPORT_BEARER,
   SESSION_TRANSPORT_HEADER,
   sessionCookieName,
-  type AuthConfig,
 } from '@authowl/core/server';
-import { appSessionCookieNames } from './bridge-contract';
-import { getAuthConfig, initAuthConfig } from './server-config';
+import {
+  AUTHOWL_SECRET_KEY_HEADER,
+  appSessionCookieNames,
+} from './bridge-contract';
+import {
+  getAuthConfig,
+  initAuthConfig,
+  type AuthOwlNextServerConfig,
+} from './server-config';
 
 export {
   createAuthOwlSessionBridge,
@@ -94,7 +100,7 @@ export class AuthServiceError extends Error {
  * every server-side call too (a server fetch has no Origin, but the publishable
  * key + bearer cookie still identify the project on the auth server).
  */
-export function initAuth(config: AuthConfig): void {
+export function initAuth(config: AuthOwlNextServerConfig): void {
   initAuthConfig(config);
 }
 
@@ -156,6 +162,9 @@ export async function auth(): Promise<Session> {
           ? {
               authorization: `Bearer ${bridgeToken}`,
               [SESSION_TRANSPORT_HEADER]: SESSION_TRANSPORT_BEARER,
+              ...(cfg.secretKey
+                ? { [AUTHOWL_SECRET_KEY_HEADER]: cfg.secretKey }
+                : {}),
             }
           : {}),
       },

@@ -1,23 +1,30 @@
 import { resolveAuthTarget, type AuthConfig } from '@authowl/core/server';
 
+export type AuthOwlNextServerConfig = AuthConfig & Readonly<{
+  secretKey?: string;
+}>;
+
 export type ServerAuthConfig = Readonly<{
   publishableKey: string;
   apiUrl: string;
   projectId: string;
+  secretKey?: string;
 }>;
 
-function serverConfig(config: AuthConfig): ServerAuthConfig {
+function serverConfig(config: AuthOwlNextServerConfig): ServerAuthConfig {
   const resolved = resolveAuthTarget(config);
+  const secretKey = config.secretKey ?? process.env.AUTHOWL_SECRET_KEY;
   return {
     publishableKey: resolved.publishableKey,
     apiUrl: resolved.apiUrl,
     projectId: resolved.decoded.projectId,
+    ...(secretKey ? { secretKey } : {}),
   };
 }
 
 let cachedConfig: ServerAuthConfig | null = null;
 
-export function initAuthConfig(config: AuthConfig): void {
+export function initAuthConfig(config: AuthOwlNextServerConfig): void {
   cachedConfig = serverConfig(config);
 }
 
@@ -36,7 +43,7 @@ export function getAuthConfig(): ServerAuthConfig {
   );
 }
 
-export function resolveAuthConfig(config?: AuthConfig): ServerAuthConfig {
+export function resolveAuthConfig(config?: AuthOwlNextServerConfig): ServerAuthConfig {
   if (!config) return getAuthConfig();
   return serverConfig(config);
 }
