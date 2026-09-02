@@ -36,6 +36,10 @@ import { sessionTokenStore, type SessionTokenStore } from './session-token';
 import type { SessionStart } from './session-token';
 import type { SessionProofKey } from './session-proof-client';
 import type { TransportFetch } from './transport';
+import {
+  sessionTransportIntegration,
+  type SessionTransportIntegration,
+} from './session-integration';
 
 const SESSION_PROOF_HEADER = 'x-authowl-session-proof';
 const SESSION_BINDING_HEADER = 'x-authowl-session-binding';
@@ -64,6 +68,8 @@ export type SessionBinding = {
   readonly probe: TransportFetch;
   /** The store the fetch above attaches from, and the lifecycle the doors drive. */
   readonly tokens: SessionTokenStore;
+  /** Framework adapter registered on the caller-supplied fetch, when present. */
+  readonly integration?: SessionTransportIntegration | null;
   /** Decide cookie-only or sender-bound bearer transport before a session mint. */
   prepareSession(start: SessionStart): Promise<void>;
 };
@@ -253,5 +259,11 @@ export function createSessionTransport(
 
   // The brand is minted here and nowhere else outside `withoutSessionTransport`,
   // in the module whose whole subject is what it means. See `TransportFetch`.
-  return { fetch: withSession as TransportFetch, probe, tokens, prepareSession };
+  return {
+    fetch: withSession as TransportFetch,
+    probe,
+    tokens,
+    integration: sessionTransportIntegration(provided),
+    prepareSession,
+  };
 }

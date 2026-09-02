@@ -36,7 +36,6 @@ function sessionStore(): {
         listeners.add(listener);
         return () => listeners.delete(listener);
       },
-      refresh: () => Promise.resolve(),
     },
     authenticate: () => settle({}),
     // What a required-MFA project returns for a correct password from a

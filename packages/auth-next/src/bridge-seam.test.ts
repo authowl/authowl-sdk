@@ -234,7 +234,7 @@ async function signInThroughNext(
   };
 }
 
-describe('the core-to-Next app session bridge seam', () => {
+describe('SDK-ENGINE SESSION BRIDGE CONTRACT', () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
