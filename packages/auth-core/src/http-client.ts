@@ -58,7 +58,7 @@ export interface AuthActionHelpers {
 /** Shared action semantics for POST bodies and successful mutation notification. */
 export function createAuthActionHelpers(
   http: AuthHttpClient,
-  notifyMutation: () => void,
+  notifyMutation: () => void | Promise<void>,
 ): AuthActionHelpers {
   return {
     post: <T>(
@@ -79,7 +79,7 @@ export function createAuthActionHelpers(
           || (result.data !== null && shouldNotify(result.data))
         )
       ) {
-        notifyMutation();
+        await notifyMutation();
       }
       return result;
     },

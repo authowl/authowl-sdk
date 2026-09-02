@@ -212,15 +212,21 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // policy keep the SDK UI aligned with the server's enforced boundary. React
 // measures 73.03kb, just 31 bytes above the old ceiling; the quarter-kilobyte
 // row records that cost explicitly while retaining narrow regression headroom.
+// Framework session projection (2026-09-02) raises Core 24->24.5 and React
+// 73.25->73.75. The sanctioned integration replaces a shadow transport and
+// URL-based lifecycle guessing in @authowl/next, while making successful
+// sign-in and sign-out wait for the app-origin HttpOnly session projection.
+// Measured baselines are 24.09kb in Core and 73.25kb through React; the new
+// ceilings retain roughly half a kilobyte of explicit regression headroom.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 73.25,
+    maxGzipKb: 73.75,
     label: '@authowl/react (provider + hooks + components)',
   },
   {
     entry: 'packages/auth-core/dist/index.js',
-    maxGzipKb: 24,
+    maxGzipKb: 24.5,
     label: '@authowl/core (framework-neutral fetch/state client)',
   },
 ];

@@ -16,6 +16,8 @@ Zero-config: set the env and call `auth()`.
 # .env.local
 AUTHOWL_PUBLISHABLE_KEY=pk_live_…
 AUTHOWL_API_URL=https://auth.yourdomain.com
+# Required only for the cross-origin bridge below. Keep it server-only.
+AUTHOWL_SECRET_KEY=sk_live_…
 ```
 
 ```ts
@@ -35,7 +37,9 @@ surface config errors at boot).
 When AuthOwl and your Next.js application use different parent domains, add the
 session bridge. It preserves AuthOwl's browser bearer fallback for browsers that
 block cross-site cookies while giving `auth()` a validated, host-only HttpOnly
-session on your application origin.
+session on your application origin. `AUTHOWL_SECRET_KEY` is required and must
+belong to the same project and environment with the `sessions:read` scope. It is
+used only by the server route and must never use a `NEXT_PUBLIC_` prefix.
 
 ```ts
 // app/api/authowl/session/route.ts

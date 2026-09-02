@@ -240,6 +240,11 @@ export type SessionStart = {
   remember: boolean;
 };
 
+/** Secret-free events for framework adapters that project the current session. */
+export type SessionLifecycleEvent =
+  | Readonly<{ type: 'beginSession'; remember: boolean }>
+  | Readonly<{ type: 'endSession' }>;
+
 /**
  * One session read, from the moment it is dispatched to the moment it answers.
  *
@@ -296,6 +301,8 @@ export type SessionRead = {
 };
 
 export type SessionTokenStore = {
+  /** Observe lifecycle changes without receiving the token or proof key. */
+  subscribeLifecycle(listener: (event: SessionLifecycleEvent) => void): () => void;
   /**
    * Whether a token is held. Deliberately not a getter for the token itself:
    * `declareOn` is the only thing that puts it on the wire, so nothing else
@@ -435,6 +442,18 @@ function createStore(projectId: string): SessionTokenStore {
   // - or, the direction that actually breaks sign-ins, attach the declaration
   // without the challenge.
   const challenge = createChallengeStore(projectId);
+  const lifecycleListeners = new Set<(event: SessionLifecycleEvent) => void>();
+
+  function emitLifecycle(event: SessionLifecycleEvent): void {
+    for (const listener of lifecycleListeners) {
+      try {
+        listener(event);
+      } catch {
+        // A framework projection is recovery machinery. It must never prevent
+        // core from beginning or ending the authoritative AuthOwl session.
+      }
+    }
+  }
 
   let token: string | null = null;
   let bindingThumbprint: string | null = null;
@@ -738,12 +757,17 @@ function createStore(projectId: string): SessionTokenStore {
     // release, and keeping the good one was how a Safari 18.4 user became
     // permanently unable to sign in on 18.5.
     armVerdict();
+    emitLifecycle({ type: 'endSession' });
   }
 
   /** One home for "is the token transport still in play", read by both callers below. */
   const wantsToken = () => verdict !== 'cookies';
 
   return {
+    subscribeLifecycle(listener) {
+      lifecycleListeners.add(listener);
+      return () => lifecycleListeners.delete(listener);
+    },
     hasToken: () => currentToken() !== null,
     bindingThumbprint: () => {
       currentToken();
@@ -890,6 +914,7 @@ function createStore(projectId: string): SessionTokenStore {
       // email- or phone-OTP sign-in, which defers to it.
       challenge.clear();
       armVerdict();
+      emitLifecycle({ type: 'beginSession', remember });
     },
     useCookieTransport() {
       // Never drop an existing bearer session before the request replacing it

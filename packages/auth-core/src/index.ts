@@ -9,6 +9,12 @@ export {
 } from './config';
 export { sessionChallengeIsEphemeral } from './session-challenge';
 export {
+  withSessionTransportIntegration,
+  type SessionTransportConnection,
+  type SessionTransportIntegration,
+} from './session-integration';
+export type { SessionLifecycleEvent } from './session-token';
+export {
   captureInvitationClaim,
   clearInvitationClaim,
   INVITATION_CLAIM_MAX_AGE_MS,

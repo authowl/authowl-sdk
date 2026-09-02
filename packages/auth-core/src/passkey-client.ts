@@ -85,7 +85,7 @@ export interface PasskeyCeremony {
 
 export function createPasskeyClient(
   http: AuthHttpClient,
-  sessionChanged: () => void,
+  sessionChanged: () => void | Promise<void>,
   ceremony: PasskeyCeremony,
 ) {
   const authenticationVerificationsInFlight =
@@ -137,7 +137,7 @@ export function createPasskeyClient(
             decode: decodePasskeyAuthentication,
           },
         );
-        if (verified.data) sessionChanged();
+        if (verified.data) await sessionChanged();
         return verified;
       })();
       authenticationVerificationsInFlight.set(response.id, verification);

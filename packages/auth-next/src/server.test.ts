@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const PROJECT_ID_MIXED = '2F1C9A84-6B3D-4E57-9A10-5C8D7E2B4F60';
 const PROJECT_ID = PROJECT_ID_MIXED.toLowerCase();
 const MIXED_CASE_KEY = `pk_live_${PROJECT_ID_MIXED}_A1b2C3d4E5f6G7h8I9j0`;
+const SECRET_KEY = `sk_live_${PROJECT_ID}_Z9y8X7w6V5u4T3s2R1q0`;
 
 // The api URL is https, so `auth()` derives the SECURE cookie mode - the name
 // the server sets in production.
@@ -28,7 +29,11 @@ describe('auth() project-id case', () => {
     sentCookie = undefined;
     sentUrl = undefined;
     sentHeaders = undefined;
-    initAuth({ publishableKey: MIXED_CASE_KEY, apiUrl: 'https://auth.example.com' });
+    initAuth({
+      publishableKey: MIXED_CASE_KEY,
+      secretKey: SECRET_KEY,
+      apiUrl: 'https://auth.example.com',
+    });
     vi.stubGlobal(
       'fetch',
       vi.fn(async (url: string, init: RequestInit) => {
@@ -90,6 +95,7 @@ describe('auth() project-id case', () => {
     expect(sentCookie).toBe('');
     expect(sentHeaders?.get('authorization')).toBe('Bearer bridge-token.sig');
     expect(sentHeaders?.get('x-authowl-session-transport')).toBe('bearer');
+    expect(sentHeaders?.get('x-authowl-secret-key')).toBe(SECRET_KEY);
   });
 
   it('prefers the native AuthOwl cookie when both transports are present', async () => {
@@ -103,6 +109,7 @@ describe('auth() project-id case', () => {
     expect(sentCookie).toBe(`${SERVER_COOKIE}=native-token`);
     expect(sentHeaders?.get('authorization')).toBeNull();
     expect(sentHeaders?.get('x-authowl-session-transport')).toBeNull();
+    expect(sentHeaders?.get('x-authowl-secret-key')).toBeNull();
   });
 
   it('reports native and bridge cookie presence without exposing cookie-name internals', async () => {

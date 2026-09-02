@@ -2,10 +2,15 @@
 
 import {
   resolveAuthTarget,
-  SESSION_TOKEN_HEADER,
-  sessionChallengeIsEphemeral,
+  withSessionTransportIntegration,
+  type SessionLifecycleEvent,
+  type SessionTransportConnection,
+  type SessionTransportIntegration,
 } from '@authowl/core';
-import { APP_SESSION_BRIDGE_HEADER } from './bridge-contract';
+import {
+  APP_SESSION_BRIDGE_CODE_MAX_LENGTH,
+  APP_SESSION_BRIDGE_HEADER,
+} from './bridge-contract';
 
 export class AuthOwlNextSessionBridgeError extends Error {
   readonly status?: number;
@@ -24,15 +29,6 @@ export type AuthOwlNextFetchOptions = Readonly<{
   fetch?: typeof fetch;
 }>;
 
-function requestUrl(input: RequestInfo | URL): URL | null {
-  try {
-    if (input instanceof Request) return new URL(input.url);
-    return new URL(String(input));
-  } catch {
-    return null;
-  }
-}
-
 function sameOriginBridgePath(value: string): string {
   const base = new URL('https://authowl.invalid');
   let parsed: URL;
@@ -42,84 +38,218 @@ function sameOriginBridgePath(value: string): string {
     throw new TypeError('bridgePath must be a same-origin absolute path');
   }
   if (
-    !value.startsWith('/') ||
-    parsed.origin !== base.origin ||
-    parsed.hash ||
-    parsed.username ||
-    parsed.password
+    !value.startsWith('/')
+    || parsed.origin !== base.origin
+    || parsed.hash
+    || parsed.username
+    || parsed.password
   ) {
     throw new TypeError('bridgePath must be a same-origin absolute path');
   }
   return `${parsed.pathname}${parsed.search}`;
 }
 
-function rememberIntent(init: RequestInit | undefined): boolean | undefined {
-  if (typeof init?.body !== 'string') return undefined;
+async function bridgeError(response: Response): Promise<string | null> {
+  if (!response.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+    return null;
+  }
   try {
-    const body = JSON.parse(init.body) as { rememberMe?: unknown };
-    return typeof body.rememberMe === 'boolean' ? body.rememberMe : undefined;
+    const payload = await response.json() as { error?: unknown };
+    return typeof payload?.error === 'string' ? payload.error : null;
   } catch {
-    return undefined;
+    return null;
   }
 }
 
-function requestHeaders(input: RequestInfo | URL, init: RequestInit | undefined): Headers {
-  if (init?.headers) return new Headers(init.headers);
-  return input instanceof Request ? new Headers(input.headers) : new Headers();
-}
-
 /**
- * Wrap the fetch passed to AuthOwlProvider so every issued browser session is
- * validated and projected onto the Next.js origin before a drop-in redirects.
+ * Wrap the fetch passed to AuthOwlProvider so a live browser session is handed
+ * to the app origin without exposing its bearer token to application script.
+ *
+ * Core connects this adapter to the exact resolved session transport. The
+ * bridge therefore uses the same cookie/bearer verdict and sender proof as the
+ * client instead of constructing a shadow config or guessing lifecycle from
+ * endpoint URLs.
  */
 export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof fetch {
-  const target = resolveAuthTarget(options);
-  const apiOrigin = target.apiUrl;
-  const authPath = `/api/projects/${target.decoded.projectId}/auth/`;
-  const bridgePath = sameOriginBridgePath(options.bridgePath ?? '/api/authowl/session');
   const baseFetch = options.fetch ?? globalThis.fetch;
+  const target = resolveAuthTarget(options);
+  const mintUrl = `${target.projectBaseURL}/session/bridge-code`;
+  const bridgePath = sameOriginBridgePath(options.bridgePath ?? '/api/authowl/session');
+  const storageKey = `authowl:next-session-bridge:${target.decoded.projectId}`;
+  let connection: SessionTransportConnection | null = null;
+  let detachLifecycle: (() => void) | null = null;
+  let detachSessionStore: (() => void) | null = null;
   let synchronization = Promise.resolve();
+  let memoryEnsured = false;
+  let currentSessionId: string | null = null;
+  // Safe default for a session discovered after reload. A session cookie may
+  // end earlier than requested, while persisting one beyond the user's intent
+  // would be a security and privacy regression.
+  let remember = false;
+  let bridgeUnavailable = false;
+  let sessionEnding: Promise<void> | null = null;
 
-  const sync = (token: string | null, remember: boolean): Promise<void> => {
+  const storedEnsured = (): boolean => {
+    try {
+      return globalThis.sessionStorage?.getItem(storageKey) === '1';
+    } catch {
+      return false;
+    }
+  };
+
+  const hasEnsuredProjection = (): boolean => memoryEnsured || storedEnsured();
+
+  const markEnsured = (): void => {
+    memoryEnsured = true;
+    try {
+      globalThis.sessionStorage?.setItem(storageKey, '1');
+    } catch {
+      // Memory still deduplicates within this wrapper when storage is disabled.
+    }
+  };
+
+  const resetEnsured = (): void => {
+    memoryEnsured = false;
+    try {
+      globalThis.sessionStorage?.removeItem(storageKey);
+    } catch {
+      // A denied storage write must not interfere with the auth request.
+    }
+  };
+
+  const serialize = (work: () => Promise<void>): Promise<void> => {
     synchronization = synchronization
       .catch(() => undefined)
-      .then(async () => {
-        const response = await baseFetch(bridgePath, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            [APP_SESSION_BRIDGE_HEADER]: '1',
-          },
-          credentials: 'same-origin',
-          cache: 'no-store',
-          redirect: 'error',
-          body: JSON.stringify({ token, remember }),
-        });
-        if (!response.ok) {
-          throw new AuthOwlNextSessionBridgeError(
-            `AuthOwl Next.js session projection failed with status ${response.status}.`,
-            response.status,
-          );
-        }
-      });
+      .then(work)
+      // Bridge projection is recovery machinery. Its failures must never turn
+      // a successful AuthOwl request into a rejected action at the caller.
+      .catch(() => undefined);
     return synchronization;
   };
 
-  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const response = await baseFetch(input, init);
-    const url = requestUrl(input);
-    if (!url || url.origin !== apiOrigin || !url.pathname.startsWith(authPath)) {
-      return response;
-    }
+  const postToBridge = (body: { token: null } | { code: string; remember: boolean }) =>
+    baseFetch(bridgePath, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [APP_SESSION_BRIDGE_HEADER]: '1',
+      },
+      credentials: 'same-origin',
+      cache: 'no-store',
+      redirect: 'error',
+      body: JSON.stringify(body),
+    });
 
-    const token = response.headers.get(SESSION_TOKEN_HEADER);
-    if (token) {
-      const remember = rememberIntent(init) ?? !sessionChallengeIsEphemeral(requestHeaders(input, init));
-      await sync(token, remember);
-    }
-    else if (response.ok && url.pathname === `${authPath}sign-out`) {
-      await sync(null, true);
-    }
-    return response;
+  const clear = (): Promise<void> => serialize(async () => {
+    await postToBridge({ token: null });
+  });
+
+  const beginClear = (): Promise<void> => {
+    if (sessionEnding) return sessionEnding;
+    const task = clear().finally(() => {
+      if (sessionEnding === task) sessionEnding = null;
+    });
+    sessionEnding = task;
+    return task;
   };
+
+  const ensure = (remembered: boolean): Promise<void> =>
+    serialize(async () => {
+      // Re-check inside the serialized section: initial hydration and a
+      // mutation refresh can announce the same session concurrently.
+      if (bridgeUnavailable || hasEnsuredProjection()) return;
+      const authenticatedFetch = connection?.authenticatedFetch;
+      if (!authenticatedFetch) return;
+
+      const minted = await authenticatedFetch(mintUrl, {
+        method: 'POST',
+        headers: { 'x-publishable-key': target.publishableKey },
+        credentials: 'include',
+        cache: 'no-store',
+        redirect: 'error',
+      });
+      if (minted.status === 404) {
+        // Server-first rollout compatibility. Do not hammer an older engine on
+        // every session-store notification in this page.
+        bridgeUnavailable = true;
+        return;
+      }
+      if (!minted.ok) return;
+
+      const payload = await minted.json() as { code?: unknown };
+      if (
+        typeof payload.code !== 'string'
+        || payload.code.length > APP_SESSION_BRIDGE_CODE_MAX_LENGTH
+      ) {
+        return;
+      }
+
+      const bridged = await postToBridge({ code: payload.code, remember: remembered });
+      if (bridged.ok) {
+        markEnsured();
+        return;
+      }
+      // A rejected deployment credential cannot repair itself within this page.
+      // Auth-service outages remain retryable because they are transient.
+      if (await bridgeError(bridged) === 'bridge_misconfigured') {
+        bridgeUnavailable = true;
+      }
+    });
+
+  const onLifecycle = (event: SessionLifecycleEvent): void => {
+    if (event.type === 'beginSession') {
+      remember = event.remember;
+      currentSessionId = null;
+      resetEnsured();
+      return;
+    }
+    currentSessionId = null;
+    resetEnsured();
+    void beginClear();
+  };
+
+  const synchronizeSession = (): void => {
+    const snapshot = connection?.sessionStore.getSnapshot();
+    if (!snapshot || snapshot.isPending || snapshot.isRefetching) return;
+    const sessionId = snapshot.data?.session.id ?? null;
+    if (!sessionId) {
+      const projected = currentSessionId !== null || hasEnsuredProjection();
+      currentSessionId = null;
+      if (projected) {
+        resetEnsured();
+        void clear();
+      }
+      return;
+    }
+    if (currentSessionId !== null && currentSessionId !== sessionId) {
+      resetEnsured();
+    }
+    if (currentSessionId !== sessionId) {
+      currentSessionId = sessionId;
+    }
+    void ensure(remember);
+  };
+
+  const integration: SessionTransportIntegration = {
+    connect(next) {
+      detachLifecycle?.();
+      detachSessionStore?.();
+      connection = next;
+      detachLifecycle = next.subscribeLifecycle(onLifecycle);
+      detachSessionStore = next.sessionStore.subscribe(synchronizeSession);
+      synchronizeSession();
+    },
+    sessionEstablished() {
+      return ensure(remember);
+    },
+    sessionEnded() {
+      return beginClear();
+    },
+  };
+
+  // Do not annotate global fetch itself: several AuthOwl projects may coexist
+  // in one page. The marker belongs only to this project-specific passthrough.
+  const passthrough = ((input: RequestInfo | URL, init?: RequestInit) =>
+    baseFetch(input, init)) as typeof fetch;
+  return withSessionTransportIntegration(passthrough, integration);
 }

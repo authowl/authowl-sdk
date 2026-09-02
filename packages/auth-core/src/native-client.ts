@@ -184,7 +184,7 @@ interface PasskeyCeremonyClient {
 
 export type PasskeyCeremonyClientFactory = (
   http: ReturnType<typeof createAuthHttpClient>,
-  sessionChanged: () => void,
+  sessionChanged: () => void | Promise<void>,
 ) => PasskeyCeremonyClient;
 
 /**
@@ -235,15 +235,30 @@ export function createAuthActionClient(
     tokens,
     channelName: `authowl:${config.decoded.projectId}`,
   });
-  const passkeys = createPasskeys(http, session.notifyMutation);
+  config.session.integration?.connect({
+    authenticatedFetch: config.fetch,
+    sessionStore: session.store,
+    subscribeLifecycle: (listener) => tokens.subscribeLifecycle(listener),
+  });
   const notifyMutation = () => {
     session.notifyMutation();
     onSessionMutation();
   };
 
-  const { post, mutation: sessionMutation } = createAuthActionHelpers(
+  const notifySessionEstablished = async () => {
+    // Framework-owned server projections (for example an app-origin HttpOnly
+    // cookie) must exist before a successful sign-in action returns. Otherwise
+    // an immediate Next.js navigation can race the projection and render the
+    // destination as signed out even though authentication succeeded.
+    await config.session.integration?.sessionEstablished();
+    notifyMutation();
+  };
+  const passkeys = createPasskeys(http, notifySessionEstablished);
+
+  const { post, mutation } = createAuthActionHelpers(http, notifyMutation);
+  const { mutation: sessionEstablishedMutation } = createAuthActionHelpers(
     http,
-    notifyMutation,
+    notifySessionEstablished,
   );
   const allowHttpLoopback = config.decoded.env === 'test';
 
@@ -288,14 +303,14 @@ export function createAuthActionClient(
     signIn: {
       email: async (params, fetchOptions) => {
         await beginSession(params);
-        return sessionMutation<EmailAuthData | TwoFactorRedirectData>(
+        return sessionEstablishedMutation<EmailAuthData | TwoFactorRedirectData>(
           post('/sign-in/email', params, fetchOptions, decodeEmailSignIn),
           (data) => !('twoFactorRedirect' in data),
         );
       },
       username: async (params, fetchOptions) => {
         await beginSession(params);
-        return sessionMutation<EmailAuthData | TwoFactorRedirectData>(
+        return sessionEstablishedMutation<EmailAuthData | TwoFactorRedirectData>(
           post('/sign-in/username', params, fetchOptions, decodeEmailSignIn),
           (data) => !('twoFactorRedirect' in data),
         );
@@ -338,7 +353,7 @@ export function createAuthActionClient(
             return { data: { redirect: true, url }, error: null };
           }
         }
-        const result = await sessionMutation<SocialAuthData>(
+        const result = await sessionEstablishedMutation<SocialAuthData>(
           post(
             '/sign-in/social',
             params,
@@ -406,7 +421,7 @@ export function createAuthActionClient(
         ),
       emailOtp: async (params, fetchOptions) => {
         await beginSession();
-        return sessionMutation<EmailOtpAuthData>(
+        return sessionEstablishedMutation<EmailOtpAuthData>(
           post('/sign-in/email-otp', params, fetchOptions, decodeEmailOtpSignIn),
         );
       },
@@ -421,7 +436,7 @@ export function createAuthActionClient(
     signUp: {
       email: async (params, fetchOptions) => {
         await beginSession();
-        return sessionMutation<EmailSignUpData>(
+        return sessionEstablishedMutation<EmailSignUpData>(
           post('/sign-up/email', params, fetchOptions, decodeEmailSignUp),
           (data) => data.sessionCreated,
         );
@@ -439,7 +454,7 @@ export function createAuthActionClient(
       // other door - including for a user who had no session before it.
       verifyEmail: async (params, fetchOptions) => {
         await beginSession();
-        return sessionMutation<VerifyEmailOtpData>(
+        return sessionEstablishedMutation<VerifyEmailOtpData>(
           post(
             '/email-otp/verify-email',
             params,
@@ -471,7 +486,7 @@ export function createAuthActionClient(
       // always mints, so it always begins a session.
       verify: async (params, fetchOptions) => {
         await beginSession();
-        return sessionMutation<PhoneOtpVerifyData>(
+        return sessionEstablishedMutation<PhoneOtpVerifyData>(
           post('/phone-otp/verify', params, fetchOptions, decodePhoneOtpVerify),
         );
       },
@@ -533,7 +548,7 @@ export function createAuthActionClient(
           decodeTwoFactorEnable,
         ),
       disable: (params, fetchOptions) =>
-        sessionMutation<TwoFactorStatusData>(
+        mutation<TwoFactorStatusData>(
           post(
             '/two-factor/disable',
             params,
@@ -552,7 +567,7 @@ export function createAuthActionClient(
       // promoted to a durable session by the act of clearing their own 2FA
       // challenge.
       verifyTotp: (params, fetchOptions) =>
-        sessionMutation<TwoFactorVerifyData>(
+        sessionEstablishedMutation<TwoFactorVerifyData>(
           post(
             '/two-factor/verify-totp',
             params,
@@ -561,7 +576,7 @@ export function createAuthActionClient(
           ),
         ),
       verifyBackupCode: (params, fetchOptions) =>
-        sessionMutation<TwoFactorVerifyData>(
+        sessionEstablishedMutation<TwoFactorVerifyData>(
           post(
             '/two-factor/verify-backup-code',
             params,
@@ -577,7 +592,7 @@ export function createAuthActionClient(
           decodeSendTwoFactorOtp,
         ),
       verifyOtp: (params, fetchOptions) =>
-        sessionMutation<TwoFactorVerifyData>(
+        sessionEstablishedMutation<TwoFactorVerifyData>(
           post(
             '/two-factor/verify-otp',
             params,
@@ -594,7 +609,7 @@ export function createAuthActionClient(
         ),
     },
     signOut: (fetchOptions) =>
-      sessionMutation<SignOutData>(
+      mutation<SignOutData>(
         http.request('/sign-out', {
           method: 'POST',
           body: {},
@@ -613,7 +628,7 @@ export function createAuthActionClient(
           // `session-store.ts`, which owns that list and why none of them can be
           // acted on from the response to the call that caused them.
           tokens.endSession();
-          return result;
+          return config.session.integration?.sessionEnded().then(() => result) ?? result;
         }),
         (data) => data.success,
       ),
