@@ -466,6 +466,8 @@ export const ar: Record<keyof typeof en, string> = {
     'يتطلب هذا التطبيق المصادقة الثنائية. أنشئ حسابك بالبريد الإلكتروني وكلمة المرور للمتابعة.',
   'serverError.SSO_EMAIL_DOMAIN_MISMATCH': 'مزوّد الهوية هذا غير مصرّح له بنطاق البريد الإلكتروني هذا.',
   'serverError.MFA_ENROLLMENT_REQUIRED': 'أكمل إعداد المصادقة الثنائية للمتابعة.',
+  'serverError.EMAIL_OTP_RECOVERY_DISABLED':
+    'استخدم المصادقة أو رمزًا احتياطيًا.',
   'serverError.TOO_MANY_ATTEMPTS': 'محاولات كثيرة جدًا. حاول مرة أخرى بعد قليل.',
   'serverError.ACCOUNT_TEMPORARILY_LOCKED': 'حسابك مقفل مؤقتًا. حاول مرة أخرى بعد قليل.',
   'serverError.RATE_LIMITED.retryIn': 'محاولات كثيرة جدًا. حاول مرة أخرى بعد {duration}.',

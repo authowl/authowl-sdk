@@ -474,6 +474,8 @@ export const en = {
     'This identity provider is not authorized for that email domain.',
   'serverError.MFA_ENROLLMENT_REQUIRED':
     'Finish setting up two-factor authentication to continue.',
+  'serverError.EMAIL_OTP_RECOVERY_DISABLED':
+    'Use TOTP or a backup code.',
   'serverError.TOO_MANY_ATTEMPTS': 'Too many attempts. Try again shortly.',
   'serverError.ACCOUNT_TEMPORARILY_LOCKED':
     'Your account is temporarily locked. Try again shortly.',

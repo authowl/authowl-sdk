@@ -240,6 +240,49 @@ describe('getPublicConfig', () => {
     });
   });
 
+  it('accepts explicit high-assurance MFA presentation capabilities', async () => {
+    const body = {
+      ...publicConfigFixture(),
+      mfa: {
+        totp: true,
+        required: true,
+        backupCodes: true,
+        emailOtpFallback: false,
+        trustDevice: false,
+      },
+    };
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })) as unknown as typeof fetch;
+
+    await expect(getPublicConfig(cfg(fetchImpl))).resolves.toMatchObject({ mfa: body.mfa });
+  });
+
+  it.each([
+    { emailOtpFallback: 'false', trustDevice: false },
+    { emailOtpFallback: false, trustDevice: 0 },
+  ])('rejects malformed MFA presentation capabilities: %o', async (capabilities) => {
+    const body = {
+      ...publicConfigFixture(),
+      mfa: {
+        totp: true,
+        required: true,
+        backupCodes: true,
+        ...capabilities,
+      },
+    };
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(body), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })) as unknown as typeof fetch;
+
+    await expect(getPublicConfig(cfg(fetchImpl))).rejects.toMatchObject({
+      name: 'TransportError',
+      kind: 'invalid_response',
+    });
+  });
+
   it.each([
     [{ minLength: 0, maxLength: 96 }],
     [{ minLength: 97, maxLength: 96 }],

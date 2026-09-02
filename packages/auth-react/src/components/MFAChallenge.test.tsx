@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
 import * as React from 'react';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { PublicConfig } from '@authowl/core';
+
+const mocks = vi.hoisted(() => ({
+  config: null as PublicConfig | null,
+}));
 
 vi.mock('../hooks', () => ({
+  usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
   useMFA: () => ({
     verifyTotp: vi.fn(),
     verifyBackupCode: vi.fn(),
@@ -22,6 +28,10 @@ import { MFAChallenge } from './MFAChallenge';
 afterEach(cleanup);
 
 describe('MFAChallenge trust-device control', () => {
+  afterEach(() => {
+    mocks.config = null;
+  });
+
   it('uses the SDK checkbox skin instead of the browser-native dark square', () => {
     const { container } = render(<MFAChallenge />);
     const checkbox = container.querySelector<HTMLInputElement>('input[type="checkbox"]');
@@ -31,5 +41,34 @@ describe('MFAChallenge trust-device control', () => {
     const label = checkbox?.closest('label');
     expect(label?.classList.contains('ba-consent')).toBe(true);
     expect(label?.classList.contains('ba-consent-centered')).toBe(true);
+  });
+
+  it('hides server-disabled recovery controls under high assurance', () => {
+    mocks.config = {
+      mfa: {
+        totp: true,
+        required: true,
+        backupCodes: true,
+        emailOtpFallback: false,
+        trustDevice: false,
+      },
+    } as PublicConfig;
+
+    const { container } = render(<MFAChallenge />);
+
+    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(screen.queryByText('mfa.challenge.useEmailOtp')).toBeNull();
+    expect(screen.getByText('mfa.challenge.useBackup')).toBeTruthy();
+  });
+
+  it('preserves both controls for a rolling-upgrade server without capability flags', () => {
+    mocks.config = {
+      mfa: { totp: true, required: true, backupCodes: true },
+    } as PublicConfig;
+
+    const { container } = render(<MFAChallenge />);
+
+    expect(container.querySelector('input[type="checkbox"]')).not.toBeNull();
+    expect(screen.getByText('mfa.challenge.useEmailOtp')).toBeTruthy();
   });
 });

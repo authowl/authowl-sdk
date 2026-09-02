@@ -206,11 +206,16 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // HTTPS checks. Main measured 22.9961kb, leaving only four bytes of headroom;
 // the fix measures 23.0264kb (+31 bytes). The new row restores roughly 1kb of
 // regression headroom. React remains inside its existing ceiling.
-
+//
+// High-assurance MFA capabilities (2026-09-02) raise React 73->73.25 while
+// Core stays at 24. The validated public-config fields and localized recovery
+// policy keep the SDK UI aligned with the server's enforced boundary. React
+// measures 73.03kb, just 31 bytes above the old ceiling; the quarter-kilobyte
+// row records that cost explicitly while retaining narrow regression headroom.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 73,
+    maxGzipKb: 73.25,
     label: '@authowl/react (provider + hooks + components)',
   },
   {
@@ -283,7 +288,7 @@ for (const b of BUDGETS) {
   }
   const kb = await measureGzipKb(b.entry);
   const ok = kb <= b.maxGzipKb;
-  console.log(`  [${ok ? 'OK  ' : 'OVER'}] ${b.label}: ${kb.toFixed(1)}kb / ${b.maxGzipKb}kb`);
+  console.log(`  [${ok ? 'OK  ' : 'OVER'}] ${b.label}: ${kb.toFixed(2)}kb / ${b.maxGzipKb}kb`);
   if (!ok) failed = true;
 }
 
