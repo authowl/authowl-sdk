@@ -66,5 +66,6 @@ export function makePublicConfig(overrides: Partial<PublicConfig> = {}): PublicC
     badge: true,
     configVersion: 1,
     ...overrides,
+    captcha: overrides.captcha ?? null,
   };
 }
