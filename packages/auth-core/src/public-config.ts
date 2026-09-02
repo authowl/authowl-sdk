@@ -94,6 +94,10 @@ export type PublicConfig = {
     totp: boolean;
     required: boolean;
     backupCodes: boolean;
+    /** Whether an emailed code may recover a TOTP challenge. Defaults to true for older servers. */
+    emailOtpFallback?: boolean;
+    /** Whether a successful challenge may remember this browser. Defaults to true for older servers. */
+    trustDevice?: boolean;
   };
   branding: {
     appName?: string;
@@ -338,6 +342,8 @@ function decodePublicConfig(
     const mfa = asObject(row.mfa);
     if (
       !hasBooleans(mfa, ['totp', 'required', 'backupCodes'])
+      || (mfa.emailOtpFallback !== undefined && typeof mfa.emailOtpFallback !== 'boolean')
+      || (mfa.trustDevice !== undefined && typeof mfa.trustDevice !== 'boolean')
       || ((mfa.required === true || mfa.backupCodes === true) && mfa.totp !== true)
     ) throw invalidPublicConfig();
   }

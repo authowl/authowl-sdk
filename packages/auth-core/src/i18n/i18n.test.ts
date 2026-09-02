@@ -57,6 +57,7 @@ describe('formatMessage', () => {
 describe('serverErrorMessage', () => {
   it('maps known server codes per locale and returns null for unknown', () => {
     const mauBudgetCode: AuthOwlErrorCode = 'MAU_BUDGET_REACHED';
+    const recoveryDisabledCode: AuthOwlErrorCode = 'EMAIL_OTP_RECOVERY_DISABLED';
 
     expect(serverErrorMessage('en', 'INVALID_EMAIL_OR_PASSWORD')).toBe(
       'Incorrect email or password.',
@@ -69,6 +70,9 @@ describe('serverErrorMessage', () => {
     );
     expect(serverErrorMessage('ar', mauBudgetCode)).toBe(
       catalogs.ar['serverError.MAU_BUDGET_REACHED'],
+    );
+    expect(serverErrorMessage('en', recoveryDisabledCode)).toBe(
+      catalogs.en['serverError.EMAIL_OTP_RECOVERY_DISABLED'],
     );
     expect(serverErrorMessage('en', 'PASSKEY_PAGE_NOT_FOCUSED')).toBe(
       catalogs.en['serverError.PASSKEY_PAGE_NOT_FOCUSED'],
@@ -93,6 +97,7 @@ describe('resolveServerError', () => {
     'PASSWORD_SIGNUP_REQUIRED',
     'SSO_EMAIL_DOMAIN_MISMATCH',
     'MFA_ENROLLMENT_REQUIRED',
+    'EMAIL_OTP_RECOVERY_DISABLED',
     'TOO_MANY_ATTEMPTS',
     'ACCOUNT_TEMPORARILY_LOCKED',
   ] as const;
