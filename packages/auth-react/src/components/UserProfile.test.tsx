@@ -320,9 +320,8 @@ describe('UserProfile', () => {
       });
       fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replaceConfirm' }));
 
-      // Wait for the PROMPT's cancel specifically. The disable form carries one
-      // under the same key, so clicking the first match would test that button
-      // instead - and pass while proving nothing about step-up.
+      // Wait for the prompt: the arms are mutually exclusive, so exactly one
+      // `common.cancel` is on screen once it mounts.
       await screen.findByLabelText('mfa.challenge.totpLabel');
       fireEvent.click(screen.getByRole('button', { name: 'common.cancel' }));
 
@@ -330,6 +329,47 @@ describe('UserProfile', () => {
       expect(mocks.mfa.disable).toHaveBeenCalledTimes(1);
     });
 
+    it('gates reissuing backup codes through the same prompt', async () => {
+      mocks.user.twoFactorEnabled = true;
+      mocks.mfa.regenerateBackupCodes
+        .mockResolvedValueOnce(gated)
+        .mockResolvedValueOnce({ data: { backupCodes: ['code-9'] }, error: null });
+      mocks.mfa.verifyBackupCode.mockResolvedValue({ data: { token: 'session-token' }, error: null });
+      render(<UserProfile defaultSection="recovery" />);
+
+      fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
+        target: { value: 'password-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'backupCodes.submit' }));
+
+      // The same prompt, reached from the other weakening endpoint.
+      fireEvent.click(await screen.findByText('mfa.challenge.useBackup'));
+      fireEvent.change(screen.getByLabelText('mfa.challenge.backupLabel'), {
+        target: { value: 'backup-code-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
+
+      await waitFor(() => expect(mocks.mfa.regenerateBackupCodes).toHaveBeenCalledTimes(2));
+      expect(mocks.mfa.regenerateBackupCodes).toHaveBeenLastCalledWith({ password: 'password-1' });
+      expect(await screen.findByText('code-9')).toBeTruthy();
+    });
+
+    it('clears the password when the backup-codes prompt is abandoned', async () => {
+      mocks.user.twoFactorEnabled = true;
+      mocks.mfa.regenerateBackupCodes.mockResolvedValueOnce(gated);
+      render(<UserProfile defaultSection="recovery" />);
+
+      fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
+        target: { value: 'password-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'backupCodes.submit' }));
+
+      fireEvent.click(await screen.findByRole('button', { name: 'common.cancel' }));
+
+      // Backing out leaves no password behind in the form.
+      expect(screen.getByLabelText('common.passwordLabel')).toHaveProperty('value', '');
+      expect(mocks.mfa.regenerateBackupCodes).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('shows recovery only for an enrolled user and deletes only after email confirmation', async () => {

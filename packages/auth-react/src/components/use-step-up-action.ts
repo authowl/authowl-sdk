@@ -1,11 +1,6 @@
 'use client';
 import * as React from 'react';
-import type { AuthActionResult } from '@authowl/core';
-import {
-  useSubmitAction,
-  type SubmitActionOptions,
-  type UseSubmitActionResult,
-} from './use-submit-action';
+import { useSubmitAction, type UseSubmitActionResult } from './use-submit-action';
 
 /**
  * The server code for "prove the second factor before weakening it".
@@ -25,7 +20,21 @@ import {
  */
 export const SECOND_FACTOR_REQUIRED = 'SECOND_FACTOR_REQUIRED';
 
-export type UseStepUpActionResult = UseSubmitActionResult & {
+export type UseStepUpActionResult = Omit<UseSubmitActionResult, 'run'> & {
+  /**
+   * Run an action the server may gate behind a fresh second-factor proof.
+   *
+   * On `SECOND_FACTOR_REQUIRED` the attempt is PARKED rather than surfaced as an
+   * error, and `stepUpRequired` flips so the caller can render the code prompt.
+   * Every other failure behaves exactly as `useSubmitAction`'s `run`.
+   *
+   * ONE ATTEMPT AT A TIME per hook instance. The returned promise settles when
+   * the attempt is parked, NOT when the action finishes - so do not await it to
+   * mean "this completed"; use `onSuccess`. A second action gated while one is
+   * already parked is refused as an ordinary error rather than silently taking
+   * the first one's place. Call the hook once per action if you drive two.
+   */
+  run: UseSubmitActionResult['run'];
   /** True while the server is waiting for a code before it will run the action. */
   stepUpRequired: boolean;
   /**
@@ -71,14 +80,25 @@ export function useStepUpAction(): UseStepUpActionResult {
   // wrong: `resume` would read it from a closure, so two calls in the same tick
   // would both see it and send twice - and replaying `generateBackupCodes` a
   // second time rotates the codes again, retiring the set the user just saved.
-  // The ref restores a synchronous consume. `park` is the ONLY writer of the
-  // pair, so the invariant lives in one function rather than at every call
-  // site, which is what having two variables cost before.
+  // The ref restores a synchronous consume, and `park` is the ONLY writer of
+  // the pair.
   const attempt = React.useRef<(() => Promise<void>) | null>(null);
   const [stepUpRequired, setStepUpRequired] = React.useState(false);
-  const park = React.useCallback((next: (() => Promise<void>) | null) => {
+  /**
+   * The only writer of the pair. Returns false when it REFUSED to park, which
+   * happens only when a different attempt is already waiting.
+   *
+   * One slot, and overwriting it would lose an action silently: the first
+   * attempt's request has already settled as "handled", so replacing it means
+   * no error, no prompt and no replay for work the user asked for. Refusing
+   * instead surfaces the server's own message on the second action, which is
+   * the honest answer - the first one's prompt is still on screen.
+   */
+  const park = React.useCallback((next: (() => Promise<void>) | null): boolean => {
+    if (next !== null && attempt.current !== null) return false;
     attempt.current = next;
     setStepUpRequired(next !== null);
+    return true;
   }, []);
   // Bumped by `cancel`, so an attempt still in flight when the user backs out
   // cannot flip the prompt on afterwards. Without it, cancelling during the
@@ -87,11 +107,8 @@ export function useStepUpAction(): UseStepUpActionResult {
   // await the request, because the whole point is to stop waiting on it.
   const epoch = React.useRef(0);
 
-  const guardedRun = React.useCallback(
-    <T,>(
-      action: () => Promise<AuthActionResult<T> | null | undefined>,
-      opts: SubmitActionOptions<T>,
-    ): Promise<void> => {
+  const guardedRun = React.useCallback<UseSubmitActionResult['run']>(
+    (action, opts) => {
       const send = (): Promise<void> => {
         const era = epoch.current;
         return run(action, {
@@ -106,8 +123,8 @@ export function useStepUpAction(): UseStepUpActionResult {
             if (era !== epoch.current) return true;
             // Safe self-reference: `run` awaits the action before it can call
             // `intercept`, so `send` is initialized by the time this runs.
-            park(send);
-            return true;
+            // A refusal falls through to the ordinary message, never silence.
+            return park(send);
           },
         });
       };

@@ -221,11 +221,10 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // Second-factor step-up (2026-09-03) raises React 73.75->74.25; Core is
 // unchanged (+1 byte). The SDK grows the other half of the server's step-up
 // gate: a park-prompt-replay hook, MFAChallenge's step-up variant, the
-// `intercept` seam, and four catalog strings across two locales. React measures
+// `intercept` seam, and three catalog keys across two locales. React measures
 // 73.74kb - EIGHT bytes under the old ceiling. Shipping on that is the exact
 // anti-pattern this file has recorded twice before: the next change of any size
-// goes red and gets blamed for drift it did not cause. The new row restores
-// roughly half a kilobyte of explicit headroom.
+// goes red and gets blamed for drift it did not cause.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
