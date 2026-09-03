@@ -7,7 +7,7 @@ import {
 } from '@authowl/core';
 import { usePasskeys, usePublicConfig, useUser } from '../hooks';
 import { resolveProjectCapabilities } from '../project-capabilities';
-import { passkeyReachableFrom } from '../signin-methods';
+import { passkeyReachableForConfig } from '../signin-methods';
 
 /**
  * Should this signed-in user be offered a passkey on this device, right now?
@@ -39,7 +39,12 @@ import { passkeyReachableFrom } from '../signin-methods';
  * only for a user who has passed everything else.
  */
 export function usePasskeyOffer(): {
-  /** Resolves true when the offer should be shown before continuing. */
+  /**
+   * False until the project's public config has arrived. Asking before then
+   * would answer from defaults and record a decision nobody made.
+   */
+  ready: boolean;
+  /** Resolves true only on CONFIRMED evidence that the offer should be shown. */
   shouldOffer: () => Promise<boolean>;
   /** Remember the outcome so the user is not asked again. */
   settle: (added: boolean) => void;
@@ -60,11 +65,7 @@ export function usePasskeyOffer(): {
     && user?.twoFactorEnabled !== true
     && typeof window !== 'undefined'
     && 'PublicKeyCredential' in window
-    && passkeyReachableFrom(
-      config?.authBaseUrl,
-      typeof window === 'undefined' ? undefined : window.location.hostname,
-      config?.authentication?.passkey?.relyingPartyId,
-    );
+    && passkeyReachableForConfig(config, window.location.hostname);
 
   const shouldOffer = React.useCallback(async (): Promise<boolean> => {
     if (!eligible || projectId === null || !passkeyOfferIsDue(projectId)) return false;
@@ -89,5 +90,5 @@ export function usePasskeyOffer(): {
     [projectId],
   );
 
-  return { shouldOffer, settle };
+  return { ready: projectId !== null, shouldOffer, settle };
 }

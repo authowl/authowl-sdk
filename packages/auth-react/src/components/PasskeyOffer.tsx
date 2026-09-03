@@ -14,14 +14,15 @@ export type PasskeyOfferProps = {
    */
   onComplete: (added: boolean) => void;
   /**
-   * Which moment this is, which decides the copy only:
+   * Which moment this is, which decides the copy only. REQUIRED: a default
+   * would hand a consumer registration copy in a sign-in flow silently.
    *
    *  - `sign-up`  the last step of registration, turning a fresh account into a
    *               passkey account.
    *  - `sign-in`  offered once to a returning user who signed in another way, so
    *               the next visit needs no password.
    */
-  variant?: 'sign-up' | 'sign-in';
+  variant: 'sign-up' | 'sign-in';
 };
 
 /** One place the two moments' copy is chosen, so neither borrows the other's. */
@@ -57,7 +58,7 @@ const COPY: Record<
  * is true of a failed ceremony - the error is shown, and the user can still move
  * on. Nothing here may strand someone who is already signed in.
  */
-export function PasskeyOffer({ onComplete, variant = 'sign-up' }: PasskeyOfferProps) {
+export function PasskeyOffer({ onComplete, variant }: PasskeyOfferProps) {
   const t = useT();
   const { addPasskey } = usePasskeys();
   const { pending, error, run } = useSubmitAction();

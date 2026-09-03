@@ -5,8 +5,6 @@ import { useT } from '../i18n';
 import { resolveSignInMethods, emailAutocomplete } from '../signin-methods';
 import type { SignInPrimary } from '../signin-methods';
 import { finishSignIn } from './finish-sign-in';
-import { PasskeyOffer } from './PasskeyOffer';
-import { usePasskeyOffer } from './use-passkey-offer';
 import { useSubmitAction } from './use-submit-action';
 import { usePasskeyAutofill } from './passkey-autofill';
 import { useSignInMethodRecorder } from '../last-used-method';
@@ -88,34 +86,6 @@ export function SignIn({
   const mfaEnrolment = useConfirmedMfaPending('clear');
   const emailRef = React.useRef<HTMLInputElement>(null);
   const recordSignInMethod = useSignInMethodRecorder();
-  // The post-sign-in passkey offer. Sign-in is the moment it both makes sense
-  // and can work: the account is known and the session can register a
-  // credential. Held here as a promise the interstitial awaits, so the surface
-  // that is about to unmount stays up until the user answers.
-  const passkeyOffer = usePasskeyOffer();
-  const [offer, setOffer] = React.useState<{ answer: (added: boolean) => void } | null>(null);
-  const offerPasskeyInterstitial = React.useCallback(async () => {
-    if (!(await passkeyOffer.shouldOffer())) return;
-    await new Promise<void>((resolve) => {
-      setOffer({
-        answer: (added) => {
-          passkeyOffer.settle(added);
-          setOffer(null);
-          resolve();
-        },
-      });
-    });
-  }, [passkeyOffer]);
-  const finish = React.useCallback(
-    () => finishSignIn({
-      sessionStore,
-      redirectTo,
-      onSignedIn,
-      interstitial: offerPasskeyInterstitial,
-    }),
-    [sessionStore, redirectTo, onSignedIn, offerPasskeyInterstitial],
-  );
-
   const onPasskeySignedIn = React.useCallback(() => {
     recordSignInMethod('passkey');
     onSignedIn?.();
@@ -159,18 +129,6 @@ export function SignIn({
     return <PublicConfigError showBadge={showBadge} showBranding={showBranding} />;
   }
 
-  // The passkey offer owns the screen while it is up: sign-in already succeeded,
-  // and the handoff is paused awaiting the answer.
-  if (offer) {
-    return (
-      <div className="ba-form" data-testid="signin-passkey-offer">
-        {branding}
-        <PasskeyOffer variant="sign-in" onComplete={offer.answer} />
-        {badge}
-      </div>
-    );
-  }
-
   // Required-MFA enrolment, the OTHER way a password sign-in can succeed without
   // producing a usable session. On a project with "Require MFA for everyone" a
   // factor-less user's session is held at enrolment, and a held session reads as
@@ -199,7 +157,7 @@ export function SignIn({
     return (
       <div className="ba-form" data-testid="signin-mfa">
         {branding}
-        <MFAChallenge onVerified={finish} />
+        <MFAChallenge onVerified={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })} />
         {badge}
       </div>
     );
@@ -237,7 +195,7 @@ export function SignIn({
               failure: t('emailOtp.error.invalidCode'),
               onSuccess: () => {
                 recordSignInMethod('email-otp');
-                finish();
+                finishSignIn({ sessionStore, redirectTo, onSignedIn });
               },
             })
           }
@@ -275,7 +233,6 @@ export function SignIn({
         <PhoneOTP
           redirectTo={redirectTo}
           onSignedIn={onPhoneOtpSignedIn}
-          interstitial={offerPasskeyInterstitial}
           onBack={() => setView('sign-in')}
           onMfaPasswordRequired={() => {
             setView('sign-in');
@@ -318,7 +275,7 @@ export function SignIn({
           if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
             setChallenge(true);
           } else {
-            return finish();
+            return finishSignIn({ sessionStore, redirectTo, onSignedIn });
           }
         },
       }),

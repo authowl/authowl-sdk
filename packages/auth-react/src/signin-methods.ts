@@ -127,6 +127,22 @@ export function passkeyReachableFrom(
   return pageHost === rpId || pageHost.endsWith(`.${rpId}`);
 }
 
+/**
+ * `passkeyReachableFrom` for a whole config, so the three-argument threading has
+ * ONE owner. Sign-in and registration ask the same reachability question and
+ * would otherwise both have to be updated when public-config grows a field.
+ */
+export function passkeyReachableForConfig(
+  config: PublicConfig | null,
+  pageHost: string | undefined,
+): boolean {
+  return passkeyReachableFrom(
+    config?.authBaseUrl,
+    pageHost,
+    config?.authentication?.passkey?.relyingPartyId,
+  );
+}
+
 export function resolveSignInMethods(
   config: PublicConfig | null,
   /** The hostname the form is rendering on; omit when it is not knowable. */
@@ -153,13 +169,7 @@ export function resolveSignInMethods(
   // phone visible for phone-only users; an enrolled account receives the typed
   // TWO_FACTOR_REQUIRED response and is guided back to password sign-in.
   const phoneOtp = capabilities.phoneSignIn && !capabilities.mfaRequired;
-  const passkey =
-    capabilities.passkeySignIn
-    && passkeyReachableFrom(
-      config?.authBaseUrl,
-      pageHost,
-      config?.authentication?.passkey?.relyingPartyId,
-    );
+  const passkey = capabilities.passkeySignIn && passkeyReachableForConfig(config, pageHost);
   const sso = has('sso');
   const renderable =
     password || username || magicLink || emailOtp || phoneOtp || passkey || sso

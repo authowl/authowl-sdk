@@ -32,7 +32,6 @@ export {
 } from './last-used-method';
 export {
   passkeyOfferIsDue,
-  passkeyOfferStorageKey,
   recordPasskeyOfferDismissed,
   recordPasskeyOfferSettled,
 } from './passkey-offer';

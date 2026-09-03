@@ -56,7 +56,15 @@ describe('usePasskeyOffer', () => {
   const offer = () => renderHook(() => usePasskeyOffer()).result.current;
 
   it('offers to a signed-in user with no passkey on a reachable host', async () => {
+    expect(offer().ready).toBe(true);
     await expect(offer().shouldOffer()).resolves.toBe(true);
+  });
+
+  it('is not ready before the project config arrives', async () => {
+    // Answering from defaults would record a decision nobody made.
+    mocks.config = null;
+    expect(offer().ready).toBe(false);
+    await expect(offer().shouldOffer()).resolves.toBe(false);
   });
 
   it('never offers to a user with two-factor enabled', async () => {
