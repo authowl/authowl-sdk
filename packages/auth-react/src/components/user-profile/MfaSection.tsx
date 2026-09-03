@@ -3,7 +3,8 @@ import * as React from 'react';
 import { useMFA, usePublicConfig, useSession, useUser } from '../../hooks';
 import { useT } from '../../i18n';
 import { MFAEnrollment } from '../MFAEnrollment';
-import { useSubmitAction } from '../use-submit-action';
+import { MFAChallenge } from '../MFAChallenge';
+import { useStepUpAction } from '../use-step-up-action';
 import { Busy } from '../Spinner';
 import { FormError } from '../FormError';
 import { resolveProjectCapabilities } from '../../project-capabilities';
@@ -14,7 +15,7 @@ export function MfaSection() {
   const session = useSession();
   const { config } = usePublicConfig();
   const { disable } = useMFA();
-  const { pending, error, run } = useSubmitAction();
+  const { pending, error, stepUpRequired, run, resume, cancel } = useStepUpAction();
   const [password, setPassword] = React.useState('');
   const [showDisable, setShowDisable] = React.useState(false);
   const titleId = React.useId();
@@ -39,6 +40,9 @@ export function MfaSection() {
     );
   }
 
+  // The password is held across a step-up on purpose: the server gates this
+  // endpoint on a code AND the password, and making the user retype one after
+  // proving the other would be friction with nothing behind it.
   const submitDisable = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void run(
@@ -52,6 +56,12 @@ export function MfaSection() {
         },
       },
     );
+  };
+
+  const cancelDisable = () => {
+    cancel();
+    setShowDisable(false);
+    setPassword('');
   };
 
   return (
@@ -74,6 +84,11 @@ export function MfaSection() {
         >
           {required ? t('userProfile.mfa.replace') : t('userProfile.mfa.disable')}
         </button>
+      ) : stepUpRequired ? (
+        // Turning the factor off requires PROVING it, not just knowing the
+        // password - see `useStepUpAction`. The parked attempt replays with the
+        // password already entered, so accepting a code finishes the removal.
+        <MFAChallenge variant="step-up" onVerified={resume} onCancel={cancelDisable} />
       ) : (
         <form method="post" className="ba-fields ba-profile-security-form" onSubmit={submitDisable}>
           <p className="ba-muted">
@@ -106,10 +121,7 @@ export function MfaSection() {
               className="ba-button ba-button-secondary"
               type="button"
               disabled={pending}
-              onClick={() => {
-                setShowDisable(false);
-                setPassword('');
-              }}
+              onClick={cancelDisable}
             >
               {t('userProfile.cancel')}
             </button>

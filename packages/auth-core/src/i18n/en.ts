@@ -19,6 +19,7 @@ export const en = {
   'common.working': 'Working…',
   'common.loading': 'Loading…',
   'common.continue': 'Continue',
+  'common.cancel': 'Cancel',
   'common.error.passwordTooShort': 'Password must be at least {min} characters.',
 
   'publicConfig.error.title': 'Authentication is temporarily unavailable',
@@ -197,6 +198,7 @@ export const en = {
   'mfaGate.body': 'This app requires two-factor authentication. Set it up to continue.',
 
   'mfa.challenge.title': 'Two-factor verification',
+  'mfa.stepUp.title': 'Confirm this change with your authenticator',
   'mfa.challenge.totpHint': 'Enter the 6-digit code from your authenticator app.',
   'mfa.challenge.backupHint': 'Enter one of your saved backup codes.',
   'mfa.challenge.totpLabel': 'Authentication code',
@@ -476,6 +478,11 @@ export const en = {
     'Finish setting up two-factor authentication to continue.',
   'serverError.EMAIL_OTP_RECOVERY_DISABLED':
     'Use TOTP or a backup code.',
+  // The step-up gate (a code, not a password) on turning two-factor off or
+  // reissuing backup codes. Phrased as an instruction because the SDK responds
+  // by showing the code prompt: this is what the user does next, not a refusal.
+  'serverError.SECOND_FACTOR_REQUIRED':
+    'Confirm with a code from your authenticator app, or a backup code.',
   'serverError.TOO_MANY_ATTEMPTS': 'Too many attempts. Try again shortly.',
   'serverError.ACCOUNT_TEMPORARILY_LOCKED':
     'Your account is temporarily locked. Try again shortly.',

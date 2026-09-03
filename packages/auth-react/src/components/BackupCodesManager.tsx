@@ -2,7 +2,8 @@
 import * as React from 'react';
 import { useMFA, useUser } from '../hooks';
 import { useT } from '../i18n';
-import { useSubmitAction } from './use-submit-action';
+import { useStepUpAction } from './use-step-up-action';
+import { MFAChallenge } from './MFAChallenge';
 import { Busy } from './Spinner';
 import { FormError } from './FormError';
 
@@ -13,15 +14,20 @@ export type BackupCodesManagerProps = {
 
 /**
  * Backup-codes management (B.5d): regenerate the signed-in user's single-use
- * backup codes (password-confirmed; the previous set stops working) and show
- * the new set ONCE. Renders nothing for users without 2FA enrolled - mount it
- * unconditionally in an account/security page alongside <MFAEnrollment/>.
+ * backup codes and show the new set ONCE. Renders nothing for users without 2FA
+ * enrolled - mount it unconditionally in an account/security page alongside
+ * <MFAEnrollment/>.
+ *
+ * Reissuing codes retires the old set, so the server treats it as a weakening
+ * action and can demand a second-factor proof on top of the password. That
+ * arrives as a code prompt and the request finishes on its own - see
+ * {@link useStepUpAction}.
  */
 export function BackupCodesManager({ title }: BackupCodesManagerProps) {
   const t = useT();
   const { user } = useUser();
   const { regenerateBackupCodes } = useMFA();
-  const { pending, error, run } = useSubmitAction();
+  const { pending, error, stepUpRequired, run, resume, cancel } = useStepUpAction();
   const [password, setPassword] = React.useState('');
   const [codes, setCodes] = React.useState<string[] | null>(null);
 
@@ -58,6 +64,8 @@ export function BackupCodesManager({ title }: BackupCodesManagerProps) {
             ))}
           </ul>
         </>
+      ) : stepUpRequired ? (
+        <MFAChallenge variant="step-up" onVerified={resume} onCancel={cancel} />
       ) : (
         <form method="post" className="ba-fields" onSubmit={submit}>
           <label className="ba-label">

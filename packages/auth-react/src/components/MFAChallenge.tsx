@@ -7,22 +7,46 @@ import { Busy } from './Spinner';
 import { FormError } from './FormError';
 
 export type MFAChallengeProps = {
-  /** Called once the challenge clears and a session is issued. */
+  /** Called once the factor is accepted (a session is issued on `sign-in`). */
   onVerified?: () => void | Promise<void>;
   /**
    * Allow the "trust this device" option when the project's posture permits it.
-   * The server capability always wins over this presentation override.
+   * The server capability always wins over this presentation override. Ignored
+   * on `step-up`, where the server has no trust to grant.
    */
   allowTrustDevice?: boolean;
+  /**
+   * What this prompt is FOR, which decides its copy and whether device trust is
+   * on offer:
+   *
+   *  - `sign-in`   the session is withheld until the factor clears. The default.
+   *  - `step-up`   the user is ALREADY signed in and is re-proving the factor to
+   *                authorize a change that would weaken it. The server's
+   *                full-session branch returns the existing token and creates no
+   *                session, so nothing here may read as signing in - and it
+   *                cannot mint a trust cookie, so the checkbox is not offered.
+   */
+  variant?: 'sign-in' | 'step-up';
+  /** Abandon the prompt. Rendered as a Cancel control when provided. */
+  onCancel?: () => void;
 };
 
 /**
- * The sign-in second-factor prompt: a user with 2FA enrolled gets no session until
- * they clear this. Accepts a TOTP code or, as a fallback, a single-use backup code.
- * Rendered automatically by <SignIn/> when the server withholds the session behind
- * a 2FA challenge; also usable standalone.
+ * The second-factor prompt. Accepts a TOTP code or, as a fallback, a single-use
+ * backup code or an emailed code where the project's posture permits one.
+ *
+ * Serves two moments, which `variant` selects between. At `sign-in` a user with
+ * 2FA enrolled gets no session until they clear this, and <SignIn/> renders it
+ * automatically when the server withholds one. At `step-up` an already
+ * signed-in user re-proves the factor to authorize a change that would weaken
+ * it - the same three factors, different copy, and no device trust on offer.
  */
-export function MFAChallenge({ onVerified, allowTrustDevice = true }: MFAChallengeProps) {
+export function MFAChallenge({
+  onVerified,
+  allowTrustDevice = true,
+  variant = 'sign-in',
+  onCancel,
+}: MFAChallengeProps) {
   const t = useT();
   const { config } = usePublicConfig();
   const { verifyTotp, verifyBackupCode, sendOtp, verifyOtp } = useMFA();
@@ -30,9 +54,14 @@ export function MFAChallenge({ onVerified, allowTrustDevice = true }: MFAChallen
   const [mode, setMode] = React.useState<'totp' | 'backup' | 'otp'>('totp');
   const [code, setCode] = React.useState('');
   const [trustDevice, setTrustDevice] = React.useState(false);
+  const stepUp = variant === 'step-up';
   // Additive flags default open for rolling compatibility. The server remains
   // the enforcement boundary when an older response does not carry them.
-  const canTrustDevice = allowTrustDevice && (config?.mfa?.trustDevice ?? true);
+  //
+  // `canTrustDevice` is additionally false on a step-up: the engine's
+  // full-session branch ignores `trustDevice` outright, so offering the
+  // checkbox there would be a control that does nothing.
+  const canTrustDevice = !stepUp && allowTrustDevice && (config?.mfa?.trustDevice ?? true);
   const canUseEmailOtp = config?.mfa?.emailOtpFallback ?? true;
 
   // Public config settles asynchronously. If a restrictive posture arrives
@@ -100,7 +129,7 @@ export function MFAChallenge({ onVerified, allowTrustDevice = true }: MFAChallen
 
   return (
     <form method="post" className="ba-fields" data-testid="mfa-challenge" onSubmit={submit}>
-      <h2 className="ba-title">{t('mfa.challenge.title')}</h2>
+      <h2 className="ba-title">{t(stepUp ? 'mfa.stepUp.title' : 'mfa.challenge.title')}</h2>
       <p className="ba-muted">{hint}</p>
       <label className="ba-label">
         {label}
@@ -145,6 +174,11 @@ export function MFAChallenge({ onVerified, allowTrustDevice = true }: MFAChallen
       {canUseEmailOtp && (
         <button type="button" className="ba-link-button" disabled={pending} onClick={requestOtp}>
           {t(mode === 'otp' ? 'mfa.challenge.resendOtp' : 'mfa.challenge.useEmailOtp')}
+        </button>
+      )}
+      {onCancel && (
+        <button type="button" className="ba-link-button" disabled={pending} onClick={onCancel}>
+          {t('common.cancel')}
         </button>
       )}
     </form>
