@@ -17,6 +17,8 @@ import { FormError } from './FormError';
 export type PhoneOTPProps = {
   redirectTo?: string;
   onSignedIn?: () => void;
+  /** Forwarded to {@link finishSignIn}; see its `interstitial`. */
+  interstitial?: () => Promise<void>;
   /** Optional navigation affordance when embedded in another sign-in surface. */
   onBack?: () => void;
   /** Called when this phone belongs to an account that must use password + MFA. */
@@ -33,6 +35,7 @@ type GuardState =
 export function PhoneOTP({
   redirectTo,
   onSignedIn,
+  interstitial,
   onBack,
   onMfaPasswordRequired,
 }: PhoneOTPProps) {
@@ -114,7 +117,7 @@ export function PhoneOTP({
                 }
                 return null;
               },
-              onSuccess: () => finishSignIn({ sessionStore, redirectTo, onSignedIn }),
+              onSuccess: () => finishSignIn({ sessionStore, redirectTo, onSignedIn, interstitial }),
             },
           );
         }}

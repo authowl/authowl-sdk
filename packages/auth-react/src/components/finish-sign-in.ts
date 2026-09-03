@@ -68,8 +68,20 @@ export async function finishSignIn(opts: {
   sessionStore: SessionStore;
   redirectTo?: string;
   onSignedIn?: () => void;
+  /**
+   * A step to run on the way out, after the session is usable and BEFORE the
+   * caller is notified or the browser navigates - the only window in which a
+   * signed-in prompt can be shown by a surface that is about to unmount. Used
+   * for the post-sign-in passkey offer; resolve it to continue.
+   *
+   * Runs only on a session that is genuinely usable. `settled` also covers the
+   * five-second timeout, where no session exists and a step that calls the
+   * server would just fail.
+   */
+  interstitial?: () => Promise<void>;
 }): Promise<void> {
   if ((await waitForUsableSession(opts.sessionStore)) === 'held') return;
+  if (opts.interstitial && hasUsableSession(opts.sessionStore)) await opts.interstitial();
   opts.onSignedIn?.();
   if (safeRedirect(opts.redirectTo)) {
     // Navigation owns the terminal state. Keep the submit promise unresolved so

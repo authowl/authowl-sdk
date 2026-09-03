@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => ({
       username: { collectOnSignUp: boolean; signIn: boolean };
     } | undefined,
   },
+  user: { twoFactorEnabled: false } as { twoFactorEnabled: boolean } | null,
+  listPasskeys: vi.fn(async () => ({ data: [] as unknown[], error: null })),
   signInUsername: vi.fn(async () => ({
     data: { redirect: false, user: {} },
     error: null,
@@ -47,7 +49,8 @@ vi.mock('../hooks', () => ({
     getSession: mocks.getSession,
   }),
   useSession: () => ({ refetch: vi.fn() }),
-  useUser: () => ({ needsMfaEnrollment: mocks.needsMfaEnrollment }),
+  usePasskeys: () => ({ listPasskeys: mocks.listPasskeys, addPasskey: vi.fn() }),
+  useUser: () => ({ needsMfaEnrollment: mocks.needsMfaEnrollment, user: mocks.user }),
   usePublicConfig: () => ({
     config: mocks.config,
     isLoading: false,

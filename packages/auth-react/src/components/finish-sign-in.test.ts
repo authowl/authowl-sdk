@@ -125,4 +125,66 @@ describe('finishSignIn', () => {
       Object.defineProperty(window, 'location', { configurable: true, value: original });
     }
   });
+
+  describe('interstitial', () => {
+    it('runs after the session is usable and before the caller is notified', async () => {
+      const session = sessionStore();
+      const order: string[] = [];
+      const onSignedIn = vi.fn(() => void order.push('notified'));
+      let release = () => {};
+      const interstitial = vi.fn(() => new Promise<void>((resolve) => {
+        order.push('interstitial');
+        release = resolve;
+      }));
+
+      const finishing = finishSignIn({ sessionStore: session.store, onSignedIn, interstitial });
+      session.authenticate();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // The handoff is PAUSED here: the surface showing the prompt is the one
+      // `onSignedIn` would unmount, so notifying first would tear it down.
+      expect(interstitial).toHaveBeenCalledOnce();
+      expect(onSignedIn).not.toHaveBeenCalled();
+
+      release();
+      await finishing;
+      expect(order).toEqual(['interstitial', 'notified']);
+    });
+
+    it('is skipped entirely for a session held at enrolment', async () => {
+      const session = sessionStore();
+      const interstitial = vi.fn(async () => {});
+      const onSignedIn = vi.fn();
+
+      const finishing = finishSignIn({ sessionStore: session.store, onSignedIn, interstitial });
+      session.holdAtEnrollment();
+      await finishing;
+
+      // A held session is not signed in. Prompting there would interrupt the
+      // enrolment the user still has to finish.
+      expect(interstitial).not.toHaveBeenCalled();
+      expect(onSignedIn).not.toHaveBeenCalled();
+    });
+
+    it('is skipped when the wait times out without a session', async () => {
+      // `settled` also covers the five-second timeout, where there is no
+      // session at all - a prompt that calls the server would simply fail.
+      vi.useFakeTimers();
+      try {
+        const session = sessionStore();
+        const interstitial = vi.fn(async () => {});
+        const onSignedIn = vi.fn();
+
+        const finishing = finishSignIn({ sessionStore: session.store, onSignedIn, interstitial });
+        await vi.advanceTimersByTimeAsync(5_000);
+        await finishing;
+
+        expect(interstitial).not.toHaveBeenCalled();
+        expect(onSignedIn).toHaveBeenCalledOnce();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });
