@@ -34,7 +34,7 @@ import { passkeyReachableForConfig } from '../signin-methods';
  * - no passkey already registered - asked of the SERVER, because a credential
  *   synced from another device or added on the account page is invisible to
  *   this browser's own memory.
- * - not already answered here - see `passkeyOfferIsDue`.
+ * - not already answered BY THIS USER here - see `passkeyOfferIsDue`.
  *
  * The server check is the only one that costs a request, so it runs last and
  * only for a user who has passed everything else.
@@ -71,8 +71,14 @@ export function usePasskeyOffer(): {
     && 'PublicKeyCredential' in window
     && passkeyReachableForConfig(config, window.location.hostname);
 
+  // Null unless EVERY gate passes, so a caller cannot ask on a partially
+  // satisfied predicate - and so ONE value answers "should anyone be asked".
+  const subject = eligible ? user?.id ?? null : null;
+
   const shouldOffer = React.useCallback(async (): Promise<boolean> => {
-    if (!eligible || projectId === null || !passkeyOfferIsDue(projectId)) return false;
+    if (subject === null || projectId === null || !passkeyOfferIsDue(projectId, subject)) {
+      return false;
+    }
     try {
       const res = await api.current();
       // Only a CONFIRMED empty list opens the offer. An error means we do not
@@ -83,18 +89,16 @@ export function usePasskeyOffer(): {
     } catch {
       return false;
     }
-  }, [eligible, projectId]);
+  }, [subject, projectId]);
 
   const remember = React.useCallback(
     (added: boolean) => {
-      if (projectId === null) return;
-      if (added) recordPasskeyOfferSettled(projectId);
-      else recordPasskeyOfferDismissed(projectId);
+      if (projectId === null || subject === null) return;
+      if (added) recordPasskeyOfferSettled(projectId, subject);
+      else recordPasskeyOfferDismissed(projectId, subject);
     },
-    [projectId],
+    [projectId, subject],
   );
 
-  // Null unless EVERY gate passes, so a caller cannot accidentally ask on a
-  // partially-satisfied predicate.
-  return { subject: eligible ? user?.id ?? null : null, shouldOffer, remember };
+  return { subject, shouldOffer, remember };
 }

@@ -7,10 +7,18 @@ import { localStore, readFrom, writeTo } from './web-storage';
  * sign-in is nagging, and a user who declined twice has answered. So the
  * decision is remembered per project, per browser.
  *
+ * KEYED PER PROJECT **AND PER USER**. Per project alone looked tidier and was
+ * wrong: on a shared or family device the first person to answer silenced the
+ * offer for everyone after them - permanently if they enrolled, because the
+ * due-check short-circuits before the server is ever consulted. An answer is a
+ * property of the person who gave it.
+ *
  * THE SAME LINE AS `last-used-method`: what is stored is a property of this
- * BROWSER, never of an address. Nothing here may be keyed by, derived from, or
- * exposed alongside an email or username - and nothing is written until the
- * user is already signed in, so it reveals nothing this browser did not do.
+ * BROWSER, never of an ADDRESS. The user id is an opaque identifier the client
+ * already holds for a signed-in session - it is not an email or a username, and
+ * nothing here may be keyed by, derived from, or exposed alongside one. Nothing
+ * is written until the user is already signed in, so it reveals nothing this
+ * browser did not do.
  *
  * It is a HINT, not a record of truth. A passkey added on another device, or
  * through the account page, is invisible here - which is why the caller also
@@ -29,8 +37,8 @@ const SETTLED = 'done';
  */
 const DISMISSAL_COOL_OFF_MS = 30 * 24 * 60 * 60 * 1000;
 
-export const passkeyOfferStorageKey = (projectId: string): string =>
-  `${STORAGE_KEY_PREFIX}.${projectId}`;
+export const passkeyOfferStorageKey = (projectId: string, userId: string): string =>
+  `${STORAGE_KEY_PREFIX}.${projectId}.${userId}`;
 
 /**
  * True when the offer may be shown.
@@ -40,8 +48,12 @@ export const passkeyOfferStorageKey = (projectId: string): string =>
  * ask, which is recoverable. The only values that suppress it are ones this
  * module wrote.
  */
-export function passkeyOfferIsDue(projectId: string, now: number = Date.now()): boolean {
-  const stored = readFrom(localStore(), passkeyOfferStorageKey(projectId));
+export function passkeyOfferIsDue(
+  projectId: string,
+  userId: string,
+  now: number = Date.now(),
+): boolean {
+  const stored = readFrom(localStore(), passkeyOfferStorageKey(projectId, userId));
   if (stored === null) return true;
   if (stored === SETTLED) return false;
   const dismissedAt = Number(stored);
@@ -56,11 +68,15 @@ export function passkeyOfferIsDue(projectId: string, now: number = Date.now()): 
 }
 
 /** The user declined. Ask again after the cool-off. */
-export function recordPasskeyOfferDismissed(projectId: string, now: number = Date.now()): void {
-  writeTo(localStore(), passkeyOfferStorageKey(projectId), String(now));
+export function recordPasskeyOfferDismissed(
+  projectId: string,
+  userId: string,
+  now: number = Date.now(),
+): void {
+  writeTo(localStore(), passkeyOfferStorageKey(projectId, userId), String(now));
 }
 
 /** A passkey now exists because of the offer. Stop asking on this browser. */
-export function recordPasskeyOfferSettled(projectId: string): void {
-  writeTo(localStore(), passkeyOfferStorageKey(projectId), SETTLED);
+export function recordPasskeyOfferSettled(projectId: string, userId: string): void {
+  writeTo(localStore(), passkeyOfferStorageKey(projectId, userId), SETTLED);
 }

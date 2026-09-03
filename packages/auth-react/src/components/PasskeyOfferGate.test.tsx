@@ -144,10 +144,10 @@ describe('PasskeyOfferGate', () => {
     expect(screen.getByText('the app')).toBeTruthy();
   });
 
-  it('still offers under StrictMode, whose simulated remount keeps the ref', async () => {
-    // The check-once ref survives StrictMode's remount, so an unguarded version
-    // sets it on the first run, discards that run's result as cancelled, and
-    // early-returns on the second - meaning the offer never appears in any
+  it('still offers under StrictMode, which double-invokes the effect', async () => {
+    // A check-once guard that survives the simulated remount would set itself on
+    // the first run, have that run's result discarded as cancelled, and
+    // early-return on the second - so the offer would never appear in any
     // consumer's dev environment.
     render(
       <React.StrictMode>
@@ -155,6 +155,36 @@ describe('PasskeyOfferGate', () => {
       </React.StrictMode>,
     );
 
+    expect(await screen.findByTestId('passkey-offer')).toBeTruthy();
+  });
+
+  it('does not show one account the offer decided for another', async () => {
+    // A second tab signing in as someone else propagates here without an
+    // unmount. Keyed by a bare flag, user 1's offer re-rendered for user 2
+    // before user 2 had been checked at all - and user 2's answer, when it
+    // arrived, could not close it.
+    const view = render(app());
+    await screen.findByTestId('passkey-offer');
+
+    mocks.listPasskeys.mockResolvedValue({ data: [{ id: 'passkey-2' }], error: null });
+    mocks.user = { id: 'user-2', twoFactorEnabled: false };
+    view.rerender(app());
+
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
+    await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalledTimes(2));
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
+    expect(screen.getByText('the app')).toBeTruthy();
+  });
+
+  it('offers the new account when it qualifies on its own', async () => {
+    const view = render(app());
+    await screen.findByTestId('passkey-offer');
+
+    mocks.user = { id: 'user-2', twoFactorEnabled: false };
+    view.rerender(app());
+
+    // Shown again only because user-2's own check said so.
+    await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalledTimes(2));
     expect(await screen.findByTestId('passkey-offer')).toBeTruthy();
   });
 

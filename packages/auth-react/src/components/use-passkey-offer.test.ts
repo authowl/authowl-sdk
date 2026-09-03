@@ -71,6 +71,7 @@ describe('usePasskeyOffer', () => {
     // A 2FA-enrolled user cannot complete a passkey sign-in at all today, so
     // the credential could never be used. Offering it would ship a dead end.
     mocks.user = { id: 'user-1', twoFactorEnabled: true };
+    expect(offer().subject).toBeNull();
     await expect(offer().shouldOffer()).resolves.toBe(false);
     expect(mocks.listPasskeys).not.toHaveBeenCalled();
   });
@@ -80,16 +81,19 @@ describe('usePasskeyOffer', () => {
     // A page served from anywhere else cannot run the ceremony at all - the
     // browser refuses before any network call.
     mocks.config = onHost({ authBaseUrl: 'https://accounts.example.test' });
+    expect(offer().subject).toBeNull();
     await expect(offer().shouldOffer()).resolves.toBe(false);
   });
 
   it('never offers when the project does not allow adding passkeys', async () => {
     mocks.config = onHost({ authentication: authentication({ signIn: true, add: false }) });
+    expect(offer().subject).toBeNull();
     await expect(offer().shouldOffer()).resolves.toBe(false);
   });
 
   it('never offers without WebAuthn in the browser', async () => {
     Reflect.deleteProperty(window as unknown as Record<string, unknown>, 'PublicKeyCredential');
+    expect(offer().subject).toBeNull();
     await expect(offer().shouldOffer()).resolves.toBe(false);
   });
 
@@ -107,6 +111,16 @@ describe('usePasskeyOffer', () => {
 
     mocks.listPasskeys.mockRejectedValue(new Error('offline'));
     await expect(offer().shouldOffer()).resolves.toBe(false);
+  });
+
+  it('scopes the answer to the user who gave it', async () => {
+    // Keyed per project alone, one account on a shared device silenced the
+    // offer for every account after it.
+    offer().remember(true);
+    await expect(offer().shouldOffer()).resolves.toBe(false);
+
+    mocks.user = { id: 'user-2', twoFactorEnabled: false };
+    await expect(offer().shouldOffer()).resolves.toBe(true);
   });
 
   it('stops asking after an enrolment and pauses after a decline', async () => {

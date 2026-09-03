@@ -26,8 +26,8 @@ export type PasskeyOfferGateProps = {
  *
  * It also puts the checks where the answers exist. A sign-in form asks
  * "is this user 2FA-enrolled?" before any user is loaded, and gets `undefined` -
- * which reads as "no" and defeats the check entirely. On this side `useUser()`
- * is the real user.
+ * which reads as "no" and defeats the check entirely. On this side the user is
+ * real. {@link usePasskeyOffer} owns which checks those are and why.
  *
  * NEVER BLOCKS. Children render immediately and keep rendering while the checks
  * run; the offer replaces them only on confirmed evidence. This is an optional
@@ -37,43 +37,40 @@ export type PasskeyOfferGateProps = {
  */
 export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
   const { subject, shouldOffer, remember } = usePasskeyOffer();
-  const [offering, setOffering] = React.useState(false);
-  // One check per signed-in user, not one per render. Keyed by id so switching
-  // account re-asks, and so a re-render mid-prompt cannot start a second check.
-  const checked = React.useRef<string | null>(null);
+  // WHO the offer is for, not merely THAT there is one. A bare boolean cannot
+  // be wrong about the second thing, and it was: the check was keyed by user
+  // while its result was not, so an in-place account switch - a second tab
+  // signing in as someone else, which propagates here without an unmount -
+  // re-rendered the first user's offer for the second, before that person had
+  // been checked at all. Their answer then arrived and was discarded, because a
+  // bare flag can only ever be turned ON.
+  const [offerFor, setOfferFor] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     // ON MOUNT WHEN DUE, never on a signed-out -> signed-in transition. The
     // redirect flow lands here ALREADY signed in, so transition detection would
     // miss precisely the case this exists for. Re-asking after a reload is
     // bounded by the stored cool-off instead.
-    if (subject === null || checked.current === subject) return;
-    checked.current = subject;
+    //
+    // The deps already give one check per user: `shouldOffer` only changes
+    // identity when `subject` does. StrictMode double-invokes in development
+    // and costs one extra request there, which is not worth a ref to avoid.
+    if (subject === null) return;
     let cancelled = false;
-    let answered = false;
     void shouldOffer().then((due) => {
-      answered = true;
-      if (!cancelled && due) setOffering(true);
+      // Recorded against the subject asked about, so a late answer cannot
+      // attach to whoever is signed in by the time it lands - and so a "no"
+      // can close a stale offer instead of only ever opening one.
+      if (!cancelled) setOfferFor(due ? subject : null);
     });
     return () => {
       cancelled = true;
-      // Forget an UNFINISHED check, so a remount runs it again. StrictMode
-      // simulates a remount in development, and a ref survives it: without
-      // this, run one sets the ref and has its result discarded as cancelled,
-      // run two early-returns on the ref, and the offer never appears at all -
-      // in every consumer's dev environment. Costs one duplicate request there
-      // and nothing in production.
-      if (!answered) checked.current = null;
     };
   }, [subject, shouldOffer]);
 
-  // `subject === null` is every reason nobody should be asked - signed out,
-  // session revoked in another tab, 2FA enrolled elsewhere. Without it the
-  // offer is sticky: it would keep covering the app, including whatever
-  // redirect-to-sign-in lives in children, behind a prompt whose `addPasskey()`
-  // can now only fail. The sibling gates derive their render from live session
-  // state for the same reason.
-  if (!offering || subject === null) return <>{children}</>;
+  // Both clauses are load-bearing: with `offerFor !== subject` alone, two nulls
+  // would compare equal and render the offer to nobody.
+  if (subject === null || offerFor !== subject) return <>{children}</>;
 
   return (
     <div className="ba-form" data-testid="passkey-offer-gate">
@@ -82,7 +79,7 @@ export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
         title={title}
         onComplete={(added) => {
           remember(added);
-          setOffering(false);
+          setOfferFor(null);
         }}
       />
       <AuthOwlBadge />

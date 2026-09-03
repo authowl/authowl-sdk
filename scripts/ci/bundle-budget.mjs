@@ -231,9 +231,11 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // deliberately will not say whether one exists - so the offer becomes a gate on
 // the signed-in side: <PasskeyOfferGate/>, its gating hook, the shared offer
 // leaf, per-browser memory in Core, and five catalog keys across two locales.
-// React measures 74.64kb against the 73.83kb this row was raised to by the
-// step-up entry above, so the new ceiling keeps roughly the usual half a
-// kilobyte of regression headroom.
+// Measured on this branch: 74.65kb. Measured on the main it rebases onto:
+// 73.83kb, under the 74.25 ceiling the step-up entry above set. So the offer
+// costs 0.82kb and the new ceiling keeps roughly the usual half a kilobyte of
+// regression headroom. (Measurement and ceiling are different numbers; naming
+// both is what stops the next person's arithmetic drifting.)
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
