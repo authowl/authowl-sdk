@@ -130,6 +130,34 @@ describe('PasskeyOfferGate', () => {
     expect(screen.queryByTestId('passkey-offer')).toBeNull();
   });
 
+  it('gives the app back if the session ends while the offer is up', async () => {
+    const view = render(app());
+    await screen.findByTestId('passkey-offer');
+
+    // Revoked in another tab, expired, or signed out elsewhere. Holding the
+    // offer up would cover the app - including any redirect to sign-in - with
+    // a prompt whose addPasskey() can now only fail.
+    mocks.user = null;
+    view.rerender(app());
+
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
+    expect(screen.getByText('the app')).toBeTruthy();
+  });
+
+  it('still offers under StrictMode, whose simulated remount keeps the ref', async () => {
+    // The check-once ref survives StrictMode's remount, so an unguarded version
+    // sets it on the first run, discards that run's result as cancelled, and
+    // early-returns on the second - meaning the offer never appears in any
+    // consumer's dev environment.
+    render(
+      <React.StrictMode>
+        <PasskeyOfferGate><p>the app</p></PasskeyOfferGate>
+      </React.StrictMode>,
+    );
+
+    expect(await screen.findByTestId('passkey-offer')).toBeTruthy();
+  });
+
   it('checks once per signed-in user however often it re-renders', async () => {
     const view = render(app());
     await screen.findByTestId('passkey-offer');

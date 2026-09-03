@@ -50,15 +50,30 @@ export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
     if (subject === null || checked.current === subject) return;
     checked.current = subject;
     let cancelled = false;
+    let answered = false;
     void shouldOffer().then((due) => {
+      answered = true;
       if (!cancelled && due) setOffering(true);
     });
     return () => {
       cancelled = true;
+      // Forget an UNFINISHED check, so a remount runs it again. StrictMode
+      // simulates a remount in development, and a ref survives it: without
+      // this, run one sets the ref and has its result discarded as cancelled,
+      // run two early-returns on the ref, and the offer never appears at all -
+      // in every consumer's dev environment. Costs one duplicate request there
+      // and nothing in production.
+      if (!answered) checked.current = null;
     };
   }, [subject, shouldOffer]);
 
-  if (!offering) return <>{children}</>;
+  // `subject === null` is every reason nobody should be asked - signed out,
+  // session revoked in another tab, 2FA enrolled elsewhere. Without it the
+  // offer is sticky: it would keep covering the app, including whatever
+  // redirect-to-sign-in lives in children, behind a prompt whose `addPasskey()`
+  // can now only fail. The sibling gates derive their render from live session
+  // state for the same reason.
+  if (!offering || subject === null) return <>{children}</>;
 
   return (
     <div className="ba-form" data-testid="passkey-offer-gate">
