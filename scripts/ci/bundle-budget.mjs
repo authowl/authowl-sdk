@@ -225,10 +225,19 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // 73.74kb - EIGHT bytes under the old ceiling. Shipping on that is the exact
 // anti-pattern this file has recorded twice before: the next change of any size
 // goes red and gets blamed for drift it did not cause.
+// Post-sign-in passkey offer (2026-09-03) raises React 74.25->75.25; Core is
+// unchanged at 24.5 (+0.12, measured 24.21). Offering a passkey ON the sign-in
+// form is backwards - a first-time visitor has none, and the browser
+// deliberately will not say whether one exists - so the offer becomes a gate on
+// the signed-in side: <PasskeyOfferGate/>, its gating hook, the shared offer
+// leaf, per-browser memory in Core, and five catalog keys across two locales.
+// React measures 74.64kb against the 73.83kb this row was raised to by the
+// step-up entry above, so the new ceiling keeps roughly the usual half a
+// kilobyte of regression headroom.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 74.25,
+    maxGzipKb: 75.25,
     label: '@authowl/react (provider + hooks + components)',
   },
   {

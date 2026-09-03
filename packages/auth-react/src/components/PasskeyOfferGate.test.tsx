@@ -61,7 +61,7 @@ describe('PasskeyOfferGate', () => {
     // fires on mount-when-due rather than on a signed-out -> in transition.
     render(app());
 
-    expect(await screen.findByTestId('passkey-offer-gate')).toBeTruthy();
+    expect(await screen.findByTestId('passkey-offer')).toBeTruthy();
   });
 
   it('never blocks the app while it decides', async () => {
@@ -76,7 +76,7 @@ describe('PasskeyOfferGate', () => {
     // regression on a surface that already has one.
     expect(screen.getByText('the app')).toBeTruthy();
     release({ data: [], error: null });
-    expect(await screen.findByTestId('passkey-offer-gate')).toBeTruthy();
+    expect(await screen.findByTestId('passkey-offer')).toBeTruthy();
   });
 
   it('does not offer to a 2FA user whose session arrives after the gate mounts', async () => {
@@ -92,7 +92,7 @@ describe('PasskeyOfferGate', () => {
     view.rerender(app());
 
     await waitFor(() => expect(mocks.listPasskeys).not.toHaveBeenCalled());
-    expect(screen.queryByTestId('passkey-offer-gate')).toBeNull();
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
     expect(screen.getByText('the app')).toBeTruthy();
   });
 
@@ -101,7 +101,7 @@ describe('PasskeyOfferGate', () => {
     render(app());
 
     await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalled());
-    expect(screen.queryByTestId('passkey-offer-gate')).toBeNull();
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
   });
 
   it('returns to the app and stops asking once a passkey is added', async () => {
@@ -114,7 +114,7 @@ describe('PasskeyOfferGate', () => {
     cleanup();
     render(app());
     await waitFor(() => expect(screen.getByText('the app')).toBeTruthy());
-    expect(screen.queryByTestId('passkey-offer-gate')).toBeNull();
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
   });
 
   it('returns to the app when declined, and does not ask again this cool-off', async () => {
@@ -127,12 +127,12 @@ describe('PasskeyOfferGate', () => {
     cleanup();
     render(app());
     await waitFor(() => expect(screen.getByText('the app')).toBeTruthy());
-    expect(screen.queryByTestId('passkey-offer-gate')).toBeNull();
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
   });
 
   it('checks once per signed-in user however often it re-renders', async () => {
     const view = render(app());
-    await screen.findByTestId('passkey-offer-gate');
+    await screen.findByTestId('passkey-offer');
 
     view.rerender(app());
     view.rerender(app());

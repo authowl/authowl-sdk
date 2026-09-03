@@ -23,17 +23,16 @@ export type PasskeyOfferProps = {
    *               the next visit needs no password.
    */
   variant: 'sign-up' | 'sign-in';
+  /** Heading override; defaults to the variant's own copy. */
+  title?: string;
 };
 
 /** One place the two moments' copy is chosen, so neither borrows the other's. */
 const COPY: Record<
-  'sign-up' | 'sign-in',
-  { testId: string } & Record<'title' | 'body' | 'submit' | 'skip' | 'failed', MessageKey>
+  PasskeyOfferProps['variant'],
+  Record<'title' | 'body' | 'submit' | 'skip' | 'failed', MessageKey>
 > = {
   'sign-up': {
-    // Unchanged from when this was PasskeySignUpCompletion: the id is part of
-    // what callers and tests already target.
-    testId: 'signup-passkey-completion',
     title: 'signUp.passkeyTitle',
     body: 'signUp.passkeyDescription',
     submit: 'signUp.passkeySubmit',
@@ -41,7 +40,6 @@ const COPY: Record<
     failed: 'signUp.error.passkeyFailed',
   },
   'sign-in': {
-    testId: 'signin-passkey-offer',
     title: 'passkeyOffer.title',
     body: 'passkeyOffer.description',
     submit: 'passkeyOffer.submit',
@@ -58,15 +56,15 @@ const COPY: Record<
  * is true of a failed ceremony - the error is shown, and the user can still move
  * on. Nothing here may strand someone who is already signed in.
  */
-export function PasskeyOffer({ onComplete, variant }: PasskeyOfferProps) {
+export function PasskeyOffer({ onComplete, variant, title }: PasskeyOfferProps) {
   const t = useT();
   const { addPasskey } = usePasskeys();
   const { pending, error, run } = useSubmitAction();
   const copy = COPY[variant];
 
   return (
-    <div className="ba-fields" data-testid={copy.testId}>
-      <h3 className="ba-title">{t(copy.title)}</h3>
+    <div className="ba-fields" data-testid="passkey-offer">
+      <h3 className="ba-title">{title ?? t(copy.title)}</h3>
       <p className="ba-muted">{t(copy.body)}</p>
       <FormError>{error}</FormError>
       <button

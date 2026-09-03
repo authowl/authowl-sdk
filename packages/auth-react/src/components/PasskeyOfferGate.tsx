@@ -1,12 +1,14 @@
 'use client';
 import * as React from 'react';
-import { useUser } from '../hooks';
+import { AuthOwlBadge } from './AuthOwlBadge';
 import { PasskeyOffer } from './PasskeyOffer';
 import { usePasskeyOffer } from './use-passkey-offer';
 
 export type PasskeyOfferGateProps = {
   /** The signed-in application. Rendered untouched in every other state. */
   children: React.ReactNode;
+  /** Optional heading override, matching the other gates. */
+  title?: string;
 };
 
 /**
@@ -33,22 +35,20 @@ export type PasskeyOfferGateProps = {
  * unreadable, storage refusing - resolves to "show the app". Blocking would add
  * another bootstrap blank-flash to a surface that already has one.
  */
-export function PasskeyOfferGate({ children }: PasskeyOfferGateProps) {
-  const { user, isSignedIn } = useUser();
-  const { ready, shouldOffer, settle } = usePasskeyOffer();
+export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
+  const { subject, shouldOffer, remember } = usePasskeyOffer();
   const [offering, setOffering] = React.useState(false);
   // One check per signed-in user, not one per render. Keyed by id so switching
   // account re-asks, and so a re-render mid-prompt cannot start a second check.
   const checked = React.useRef<string | null>(null);
-  const userId = isSignedIn ? user?.id ?? null : null;
 
   React.useEffect(() => {
     // ON MOUNT WHEN DUE, never on a signed-out -> signed-in transition. The
     // redirect flow lands here ALREADY signed in, so transition detection would
     // miss precisely the case this exists for. Re-asking after a reload is
     // bounded by the stored cool-off instead.
-    if (!ready || userId === null || checked.current === userId) return;
-    checked.current = userId;
+    if (subject === null || checked.current === subject) return;
+    checked.current = subject;
     let cancelled = false;
     void shouldOffer().then((due) => {
       if (!cancelled && due) setOffering(true);
@@ -56,7 +56,7 @@ export function PasskeyOfferGate({ children }: PasskeyOfferGateProps) {
     return () => {
       cancelled = true;
     };
-  }, [ready, userId, shouldOffer]);
+  }, [subject, shouldOffer]);
 
   if (!offering) return <>{children}</>;
 
@@ -64,11 +64,13 @@ export function PasskeyOfferGate({ children }: PasskeyOfferGateProps) {
     <div className="ba-form" data-testid="passkey-offer-gate">
       <PasskeyOffer
         variant="sign-in"
+        title={title}
         onComplete={(added) => {
-          settle(added);
+          remember(added);
           setOffering(false);
         }}
       />
+      <AuthOwlBadge />
     </div>
   );
 }

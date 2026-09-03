@@ -5,7 +5,7 @@ import type { PublicConfig } from '@authowl/core';
 
 const mocks = vi.hoisted(() => ({
   config: null as PublicConfig | null,
-  user: { twoFactorEnabled: false } as { twoFactorEnabled: boolean } | null,
+  user: { id: 'user-1', twoFactorEnabled: false } as { id: string; twoFactorEnabled: boolean } | null,
   listPasskeys: vi.fn(async (): Promise<{ data: unknown[] | null; error: unknown }> => ({
     data: [],
     error: null,
@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../hooks', () => ({
   usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
-  useUser: () => ({ user: mocks.user }),
+  useUser: () => ({ user: mocks.user, isSignedIn: mocks.user !== null }),
   usePasskeys: () => ({ listPasskeys: mocks.listPasskeys }),
 }));
 
@@ -45,7 +45,7 @@ describe('usePasskeyOffer', () => {
     localStorage.clear();
     vi.clearAllMocks();
     mocks.listPasskeys.mockResolvedValue({ data: [], error: null });
-    mocks.user = { twoFactorEnabled: false };
+    mocks.user = { id: 'user-1', twoFactorEnabled: false };
     mocks.config = onHost();
     Object.defineProperty(window, 'PublicKeyCredential', { value: class {}, configurable: true });
   });
@@ -56,21 +56,21 @@ describe('usePasskeyOffer', () => {
   const offer = () => renderHook(() => usePasskeyOffer()).result.current;
 
   it('offers to a signed-in user with no passkey on a reachable host', async () => {
-    expect(offer().ready).toBe(true);
+    expect(offer().subject).toBe('user-1');
     await expect(offer().shouldOffer()).resolves.toBe(true);
   });
 
   it('is not ready before the project config arrives', async () => {
     // Answering from defaults would record a decision nobody made.
     mocks.config = null;
-    expect(offer().ready).toBe(false);
+    expect(offer().subject).toBeNull();
     await expect(offer().shouldOffer()).resolves.toBe(false);
   });
 
   it('never offers to a user with two-factor enabled', async () => {
     // A 2FA-enrolled user cannot complete a passkey sign-in at all today, so
     // the credential could never be used. Offering it would ship a dead end.
-    mocks.user = { twoFactorEnabled: true };
+    mocks.user = { id: 'user-1', twoFactorEnabled: true };
     await expect(offer().shouldOffer()).resolves.toBe(false);
     expect(mocks.listPasskeys).not.toHaveBeenCalled();
   });
@@ -110,11 +110,11 @@ describe('usePasskeyOffer', () => {
   });
 
   it('stops asking after an enrolment and pauses after a decline', async () => {
-    offer().settle(true);
+    offer().remember(true);
     await expect(offer().shouldOffer()).resolves.toBe(false);
 
     localStorage.clear();
-    offer().settle(false);
+    offer().remember(false);
     await expect(offer().shouldOffer()).resolves.toBe(false);
   });
 });

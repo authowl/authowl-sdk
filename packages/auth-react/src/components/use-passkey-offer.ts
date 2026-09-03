@@ -21,10 +21,11 @@ import { passkeyReachableForConfig } from '../signin-methods';
  * EVERY GATE HERE EXISTS TO AVOID OFFERING A DEAD END:
  *
  * - `passkeyAdd` - the project may not allow registration at all.
- * - `passkeyReachableFrom` - the engine sets no explicit rpID, so the RP is the
- *   AUTH host. A ceremony started on a page that is not that host, or a
- *   registrable suffix of it, is refused by the browser before any network
- *   call. Off-host the offer is not unlikely to work, it is impossible.
+ * - `passkeyReachableForConfig` - the relying party is the id the server
+ *   reports, defaulting to the AUTH host when it reports none. A ceremony
+ *   started on a page that is neither that host nor a registrable suffix of it
+ *   is refused by the browser before any network call, so off-host the offer is
+ *   not unlikely to work, it is impossible.
  * - `PublicKeyCredential` - no WebAuthn, no ceremony.
  * - NOT `twoFactorEnabled` - a 2FA-enrolled user cannot complete a passkey
  *   sign-in today (the assurance gate runs with `userVerified: false`), so the
@@ -40,17 +41,19 @@ import { passkeyReachableForConfig } from '../signin-methods';
  */
 export function usePasskeyOffer(): {
   /**
-   * False until the project's public config has arrived. Asking before then
-   * would answer from defaults and record a decision nobody made.
+   * Who to ask, or null when nobody should be asked yet - config still
+   * loading, signed out, or any gate below failing. Callers key their check on
+   * it, so the whole eligibility predicate stays in ONE place instead of being
+   * split between this hook and whatever renders the offer.
    */
-  ready: boolean;
+  subject: string | null;
   /** Resolves true only on CONFIRMED evidence that the offer should be shown. */
   shouldOffer: () => Promise<boolean>;
-  /** Remember the outcome so the user is not asked again. */
-  settle: (added: boolean) => void;
+  /** Remember which way the user answered, so they are not asked again. */
+  remember: (added: boolean) => void;
 } {
   const { config } = usePublicConfig();
-  const { user } = useUser();
+  const { user, isSignedIn } = useUser();
   const { listPasskeys } = usePasskeys();
   // The passkey API is proxy-fabricated and hands back a fresh reference every
   // render, so it is read through a ref - keying a callback on it would rebuild
@@ -61,6 +64,7 @@ export function usePasskeyOffer(): {
   const projectId = config?.environmentId ?? null;
   const eligible =
     projectId !== null
+    && isSignedIn
     && resolveProjectCapabilities(config).passkeyAdd
     && user?.twoFactorEnabled !== true
     && typeof window !== 'undefined'
@@ -81,7 +85,7 @@ export function usePasskeyOffer(): {
     }
   }, [eligible, projectId]);
 
-  const settle = React.useCallback(
+  const remember = React.useCallback(
     (added: boolean) => {
       if (projectId === null) return;
       if (added) recordPasskeyOfferSettled(projectId);
@@ -90,5 +94,7 @@ export function usePasskeyOffer(): {
     [projectId],
   );
 
-  return { ready: projectId !== null, shouldOffer, settle };
+  // Null unless EVERY gate passes, so a caller cannot accidentally ask on a
+  // partially-satisfied predicate.
+  return { subject: eligible ? user?.id ?? null : null, shouldOffer, remember };
 }

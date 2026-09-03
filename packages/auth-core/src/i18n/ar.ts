@@ -142,14 +142,14 @@ export const ar: Record<keyof typeof en, string> = {
     'يتطلب موفّر التحقق البشري «{provider}» إصدارًا أحدث من حزمة التطوير.',
 
   'passkey.signInButton': 'تسجيل الدخول بمفتاح مرور',
+  'passkey.waiting': 'في انتظار مفتاح المرور…',
+  'passkey.error.signInFailed': 'تعذر تسجيل الدخول بمفتاح المرور.',
   'passkeyOffer.title': 'تخطَّ كلمة المرور في المرة القادمة',
   'passkeyOffer.description':
     'أضف مفتاح مرور إلى هذا الجهاز وسجّل الدخول ببصمتك أو وجهك أو قفل جهازك.',
   'passkeyOffer.submit': 'إضافة مفتاح مرور',
   'passkeyOffer.skip': 'ليس الآن',
   'passkeyOffer.error': 'تعذرت إضافة مفتاح المرور. حاول مرة أخرى أو تابع بدونه.',
-  'passkey.waiting': 'في انتظار مفتاح المرور…',
-  'passkey.error.signInFailed': 'تعذر تسجيل الدخول بمفتاح المرور.',
 
   'forgotPassword.sent': 'إذا كان هناك حساب مسجل بالبريد {email}، فقد أرسلنا رابطًا لإعادة تعيين كلمة المرور.',
   'forgotPassword.backToSignIn': 'العودة إلى تسجيل الدخول',
