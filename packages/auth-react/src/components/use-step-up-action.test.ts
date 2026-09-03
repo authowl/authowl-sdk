@@ -97,6 +97,28 @@ describe('useStepUpAction', () => {
     expect(result.current.error).toBeNull();
   });
 
+  it('replays once even if resume is called twice in the same tick', async () => {
+    // Not reachable from MfaSection (the prompt unmounts on the first call) but
+    // `resume` is public API, and a second send of generateBackupCodes rotates
+    // the codes AGAIN - retiring the set the user has just written down.
+    const action = vi
+      .fn()
+      .mockResolvedValueOnce(gated)
+      .mockResolvedValue({ data: { status: true }, error: null });
+    const { result } = renderHook(() => useStepUpAction());
+
+    await act(async () => {
+      await result.current.run(action, { failure: 'failed' });
+    });
+    await act(async () => {
+      result.current.resume();
+      result.current.resume();
+    });
+
+    // One gated call, one replay. Not two replays.
+    expect(action).toHaveBeenCalledTimes(2);
+  });
+
   it('drops the parked attempt on cancel so nothing can replay it', async () => {
     const action = vi.fn().mockResolvedValue(gated);
     const { result } = renderHook(() => useStepUpAction());

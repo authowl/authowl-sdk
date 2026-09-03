@@ -58,10 +58,6 @@ export function useStepUpAction(): UseStepUpActionResult {
   // is what makes the replay lossless: it closes over the inputs as submitted,
   // so resuming cannot silently send a different body than the one refused.
   //
-  // ONE piece of state, not a boolean beside it: "a prompt is up" and "an
-  // attempt is waiting" are the same fact, and keeping them in two places made
-  // every call site responsible for holding them in agreement.
-  //
   // PARKED ONLY WHEN THE GATE ACTUALLY FIRES, and dropped the moment it is
   // replayed. That thunk captures a plaintext PASSWORD and, with it, the whole
   // enclosing render scope. Parking unconditionally would have retained the
@@ -70,9 +66,20 @@ export function useStepUpAction(): UseStepUpActionResult {
   // success paths do - clearing React state does nothing to a captured string.
   // The retention window is now exactly the prompt's lifetime.
   //
-  // Wrapped in an object so parking is a plain `setParked({ attempt })`; a bare
-  // function in state would be read as a reducer.
-  const [parked, setParked] = React.useState<{ attempt: () => Promise<void> } | null>(null);
+  // A REF FOR THE ATTEMPT, state only to render. "An attempt is waiting" and "a
+  // prompt is up" are one fact, but holding the attempt in state alone is
+  // wrong: `resume` would read it from a closure, so two calls in the same tick
+  // would both see it and send twice - and replaying `generateBackupCodes` a
+  // second time rotates the codes again, retiring the set the user just saved.
+  // The ref restores a synchronous consume. `park` is the ONLY writer of the
+  // pair, so the invariant lives in one function rather than at every call
+  // site, which is what having two variables cost before.
+  const attempt = React.useRef<(() => Promise<void>) | null>(null);
+  const [stepUpRequired, setStepUpRequired] = React.useState(false);
+  const park = React.useCallback((next: (() => Promise<void>) | null) => {
+    attempt.current = next;
+    setStepUpRequired(next !== null);
+  }, []);
   // Bumped by `cancel`, so an attempt still in flight when the user backs out
   // cannot flip the prompt on afterwards. Without it, cancelling during the
   // request and having the gate answer a moment later drops the user into a
@@ -85,7 +92,7 @@ export function useStepUpAction(): UseStepUpActionResult {
       action: () => Promise<AuthActionResult<T> | null | undefined>,
       opts: SubmitActionOptions<T>,
     ): Promise<void> => {
-      const attempt = (): Promise<void> => {
+      const send = (): Promise<void> => {
         const era = epoch.current;
         return run(action, {
           ...opts,
@@ -98,36 +105,30 @@ export function useStepUpAction(): UseStepUpActionResult {
             // error message for a cancelled action is noise.
             if (era !== epoch.current) return true;
             // Safe self-reference: `run` awaits the action before it can call
-            // `intercept`, so `attempt` is initialized by the time this runs.
-            setParked({ attempt });
+            // `intercept`, so `send` is initialized by the time this runs.
+            park(send);
             return true;
           },
         });
       };
-      return attempt();
+      return send();
     },
-    [run],
+    [run, park],
   );
 
   const resume = React.useCallback(() => {
-    setParked(null);
-    // Never a blind re-send: with nothing parked there is nothing to replay.
-    void parked?.attempt();
-  }, [parked]);
+    // Consumed BEFORE the replay, synchronously, so a second call in the same
+    // tick finds nothing. Never a blind re-send.
+    const send = attempt.current;
+    park(null);
+    void send?.();
+  }, [park]);
 
   const cancel = React.useCallback(() => {
     epoch.current += 1;
-    setParked(null);
+    park(null);
     setError(null);
-  }, [setError]);
+  }, [park, setError]);
 
-  return {
-    pending,
-    error,
-    setError,
-    stepUpRequired: parked !== null,
-    run: guardedRun,
-    resume,
-    cancel,
-  };
+  return { pending, error, setError, stepUpRequired, run: guardedRun, resume, cancel };
 }
