@@ -5,7 +5,7 @@ import {
   recordPasskeyOfferDismissed,
   recordPasskeyOfferSettled,
 } from '@authowl/core';
-import { usePasskeys, usePublicConfig, useUser } from '../hooks';
+import { usePasskeys, usePublicConfig, useSession, useUser } from '../hooks';
 import { resolveProjectCapabilities } from '../project-capabilities';
 import { passkeyReachableForConfig } from '../signin-methods';
 
@@ -41,12 +41,12 @@ import { passkeyReachableForConfig } from '../signin-methods';
  */
 export function usePasskeyOffer(): {
   /**
-   * Who to ask, or null when nobody should be asked yet - config still
-   * loading, signed out, or any gate below failing. Callers key their check on
-   * it, so the whole eligibility predicate stays in ONE place instead of being
-   * split between this hook and whatever renders the offer.
+   * Who to ask and the exact session that qualified, or null when nobody should
+   * be asked yet. The session key prevents an old decision being reused across
+   * sign-out or a rapid A -> B -> A account switch. Callers key their check on
+   * this value, so the whole eligibility predicate stays in one place.
    */
-  subject: string | null;
+  subject: Readonly<{ userId: string; sessionKey: string }> | null;
   /** Resolves true only on CONFIRMED evidence that the offer should be shown. */
   shouldOffer: () => Promise<boolean>;
   /** Remember which way the user answered, so they are not asked again. */
@@ -54,6 +54,7 @@ export function usePasskeyOffer(): {
 } {
   const { config } = usePublicConfig();
   const { user, isSignedIn } = useUser();
+  const { data: sessionData } = useSession();
   const { listPasskeys } = usePasskeys();
   // The passkey API is proxy-fabricated and hands back a fresh reference every
   // render, so it is read through a ref - keying a callback on it would rebuild
@@ -73,10 +74,21 @@ export function usePasskeyOffer(): {
 
   // Null unless EVERY gate passes, so a caller cannot ask on a partially
   // satisfied predicate - and so ONE value answers "should anyone be asked".
-  const subject = eligible ? user?.id ?? null : null;
+  const userId = user?.id ?? null;
+  const sessionId = sessionData?.session?.id ?? null;
+  const subject = React.useMemo(
+    () => eligible && userId && sessionId
+      ? { userId, sessionKey: `${projectId}:${sessionId}:${userId}` }
+      : null,
+    [eligible, projectId, sessionId, userId],
+  );
 
   const shouldOffer = React.useCallback(async (): Promise<boolean> => {
-    if (subject === null || projectId === null || !passkeyOfferIsDue(projectId, subject)) {
+    if (
+      subject === null
+      || projectId === null
+      || !passkeyOfferIsDue(projectId, subject.userId)
+    ) {
       return false;
     }
     try {
@@ -94,8 +106,8 @@ export function usePasskeyOffer(): {
   const remember = React.useCallback(
     (added: boolean) => {
       if (projectId === null || subject === null) return;
-      if (added) recordPasskeyOfferSettled(projectId, subject);
-      else recordPasskeyOfferDismissed(projectId, subject);
+      if (added) recordPasskeyOfferSettled(projectId, subject.userId);
+      else recordPasskeyOfferDismissed(projectId, subject.userId);
     },
     [projectId, subject],
   );

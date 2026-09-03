@@ -37,13 +37,10 @@ export type PasskeyOfferGateProps = {
  */
 export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
   const { subject, shouldOffer, remember } = usePasskeyOffer();
-  // WHO the offer is for, not merely THAT there is one. A bare boolean cannot
-  // be wrong about the second thing, and it was: the check was keyed by user
-  // while its result was not, so an in-place account switch - a second tab
-  // signing in as someone else, which propagates here without an unmount -
-  // re-rendered the first user's offer for the second, before that person had
-  // been checked at all. Their answer then arrived and was discarded, because a
-  // bare flag can only ever be turned ON.
+  // WHO and WHICH SESSION the offer is for, not merely THAT there is one. A
+  // user id alone still reuses an old decision when a fast A -> B -> A switch
+  // returns before B's check settles. Binding the decision to the session makes
+  // every sign-in earn its own current eligibility result.
   const [offerFor, setOfferFor] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -61,7 +58,7 @@ export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
       // Recorded against the subject asked about, so a late answer cannot
       // attach to whoever is signed in by the time it lands - and so a "no"
       // can close a stale offer instead of only ever opening one.
-      if (!cancelled) setOfferFor(due ? subject : null);
+      if (!cancelled) setOfferFor(due ? subject.sessionKey : null);
     });
     return () => {
       cancelled = true;
@@ -70,7 +67,7 @@ export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
 
   // Both clauses are load-bearing: with `offerFor !== subject` alone, two nulls
   // would compare equal and render the offer to nobody.
-  if (subject === null || offerFor !== subject) return <>{children}</>;
+  if (subject === null || offerFor !== subject.sessionKey) return <>{children}</>;
 
   return (
     <div className="ba-form" data-testid="passkey-offer-gate">

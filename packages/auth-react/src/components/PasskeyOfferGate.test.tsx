@@ -7,6 +7,7 @@ import type { PublicConfig } from '@authowl/core';
 const mocks = vi.hoisted(() => ({
   config: null as PublicConfig | null,
   user: null as { id: string; twoFactorEnabled: boolean } | null,
+  sessionId: null as string | null,
   listPasskeys: vi.fn(async (): Promise<{ data: unknown[] | null; error: unknown }> => ({
     data: [],
     error: null,
@@ -17,6 +18,13 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../hooks', () => ({
   usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
   useUser: () => ({ user: mocks.user, isSignedIn: mocks.user !== null }),
+  useSession: () => ({
+    data: mocks.user && mocks.sessionId
+      ? { user: mocks.user, session: { id: mocks.sessionId } }
+      : null,
+    isPending: false,
+    error: null,
+  }),
   usePasskeys: () => ({ listPasskeys: mocks.listPasskeys, addPasskey: mocks.addPasskey }),
 }));
 
@@ -49,6 +57,7 @@ describe('PasskeyOfferGate', () => {
       authentication,
     } as unknown as PublicConfig;
     mocks.user = { id: 'user-1', twoFactorEnabled: false };
+    mocks.sessionId = 'session-1';
     Object.defineProperty(window, 'PublicKeyCredential', { value: class {}, configurable: true });
   });
   afterEach(() => {
@@ -186,14 +195,51 @@ describe('PasskeyOfferGate', () => {
 
     mocks.listPasskeys.mockResolvedValue({ data: [{ id: 'passkey-2' }], error: null });
     mocks.user = { id: 'user-2', twoFactorEnabled: false };
+    mocks.sessionId = 'session-2';
     view.rerender(app());
     await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalledTimes(2));
 
     mocks.user = { id: 'user-1', twoFactorEnabled: false };
+    mocks.sessionId = 'session-3';
     view.rerender(app());
 
     expect(screen.queryByTestId('passkey-offer')).toBeNull();
     expect(screen.getByText('the app')).toBeTruthy();
+  });
+
+  it('does not reuse an old offer during a rapid account switch back', async () => {
+    const view = render(app());
+    await screen.findByTestId('passkey-offer');
+
+    let resolveSecondCheck: (value: { data: unknown[]; error: null }) => void = () => {};
+    let resolveThirdCheck: (value: { data: unknown[]; error: null }) => void = () => {};
+    mocks.listPasskeys
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveSecondCheck = resolve;
+      }))
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveThirdCheck = resolve;
+      }));
+
+    mocks.user = { id: 'user-2', twoFactorEnabled: false };
+    mocks.sessionId = 'session-2';
+    view.rerender(app());
+    await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalledTimes(2));
+
+    // Return to the first account before either replacement check settles. A
+    // user-only key matches the old decision here and flashes the stale offer.
+    mocks.user = { id: 'user-1', twoFactorEnabled: false };
+    mocks.sessionId = 'session-3';
+    view.rerender(app());
+
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
+    expect(screen.getByText('the app')).toBeTruthy();
+    await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalledTimes(3));
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
+
+    resolveSecondCheck({ data: [], error: null });
+    resolveThirdCheck({ data: [{ id: 'already-added' }], error: null });
+    await waitFor(() => expect(screen.queryByTestId('passkey-offer')).toBeNull());
   });
 
   it('offers the new account when it qualifies on its own', async () => {
@@ -201,6 +247,7 @@ describe('PasskeyOfferGate', () => {
     await screen.findByTestId('passkey-offer');
 
     mocks.user = { id: 'user-2', twoFactorEnabled: false };
+    mocks.sessionId = 'session-2';
     view.rerender(app());
 
     // Shown again only because user-2's own check said so.

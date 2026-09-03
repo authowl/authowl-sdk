@@ -6,6 +6,7 @@ import type { PublicConfig } from '@authowl/core';
 const mocks = vi.hoisted(() => ({
   config: null as PublicConfig | null,
   user: { id: 'user-1', twoFactorEnabled: false } as { id: string; twoFactorEnabled: boolean } | null,
+  sessionId: 'session-1' as string | null,
   listPasskeys: vi.fn(async (): Promise<{ data: unknown[] | null; error: unknown }> => ({
     data: [],
     error: null,
@@ -15,6 +16,13 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../hooks', () => ({
   usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
   useUser: () => ({ user: mocks.user, isSignedIn: mocks.user !== null }),
+  useSession: () => ({
+    data: mocks.user && mocks.sessionId
+      ? { user: mocks.user, session: { id: mocks.sessionId } }
+      : null,
+    isPending: false,
+    error: null,
+  }),
   usePasskeys: () => ({ listPasskeys: mocks.listPasskeys }),
 }));
 
@@ -46,6 +54,7 @@ describe('usePasskeyOffer', () => {
     vi.clearAllMocks();
     mocks.listPasskeys.mockResolvedValue({ data: [], error: null });
     mocks.user = { id: 'user-1', twoFactorEnabled: false };
+    mocks.sessionId = 'session-1';
     mocks.config = onHost();
     Object.defineProperty(window, 'PublicKeyCredential', { value: class {}, configurable: true });
   });
@@ -56,7 +65,10 @@ describe('usePasskeyOffer', () => {
   const offer = () => renderHook(() => usePasskeyOffer()).result.current;
 
   it('offers to a signed-in user with no passkey on a reachable host', async () => {
-    expect(offer().subject).toBe('user-1');
+    expect(offer().subject).toEqual({
+      userId: 'user-1',
+      sessionKey: 'env_1:session-1:user-1',
+    });
     await expect(offer().shouldOffer()).resolves.toBe(true);
   });
 
@@ -120,6 +132,7 @@ describe('usePasskeyOffer', () => {
     await expect(offer().shouldOffer()).resolves.toBe(false);
 
     mocks.user = { id: 'user-2', twoFactorEnabled: false };
+    mocks.sessionId = 'session-2';
     await expect(offer().shouldOffer()).resolves.toBe(true);
   });
 
