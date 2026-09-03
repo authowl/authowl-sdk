@@ -176,6 +176,26 @@ describe('PasskeyOfferGate', () => {
     expect(screen.getByText('the app')).toBeTruthy();
   });
 
+  it('does not flash a stale offer when switching back to the first account', async () => {
+    // A -> B -> A is one person with two accounts, not an exotic case. If a
+    // "not due" answer could only fail to open an offer rather than close one,
+    // B's "no" would leave A's offer still recorded, and returning to A would
+    // render it instantly - before A had been re-checked.
+    const view = render(app());
+    await screen.findByTestId('passkey-offer');
+
+    mocks.listPasskeys.mockResolvedValue({ data: [{ id: 'passkey-2' }], error: null });
+    mocks.user = { id: 'user-2', twoFactorEnabled: false };
+    view.rerender(app());
+    await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalledTimes(2));
+
+    mocks.user = { id: 'user-1', twoFactorEnabled: false };
+    view.rerender(app());
+
+    expect(screen.queryByTestId('passkey-offer')).toBeNull();
+    expect(screen.getByText('the app')).toBeTruthy();
+  });
+
   it('offers the new account when it qualifies on its own', async () => {
     const view = render(app());
     await screen.findByTestId('passkey-offer');

@@ -28,7 +28,14 @@ import { localStore, readFrom, writeTo } from './web-storage';
 
 const STORAGE_KEY_PREFIX = 'authowl.passkey-offer';
 
-/** Enrolled from the offer on this browser: never ask again. */
+/**
+ * Enrolled from the offer on this browser: never ask again.
+ *
+ * A dismissal in a second tab can overwrite this, and that is harmless: once
+ * the passkey exists the SERVER's list is non-empty, and the caller checks it
+ * before storage is ever consulted. Storage only ever suppresses an offer the
+ * server would otherwise allow; it cannot resurrect one.
+ */
 const SETTLED = 'done';
 
 /**
