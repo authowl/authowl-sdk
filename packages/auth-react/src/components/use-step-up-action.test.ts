@@ -149,10 +149,11 @@ describe('useStepUpAction', () => {
     // gets the server's own message instead, while the first keeps the prompt.
     const first = vi.fn().mockResolvedValue(gated);
     const second = vi.fn().mockResolvedValue(gated);
+    const firstSucceeded = vi.fn();
     const { result } = renderHook(() => useStepUpAction());
 
     await act(async () => {
-      await result.current.run(first, { failure: 'first failed' });
+      await result.current.run(first, { failure: 'first failed', onSuccess: firstSucceeded });
     });
     await act(async () => {
       await result.current.run(second, { failure: 'second failed' });
@@ -162,7 +163,6 @@ describe('useStepUpAction', () => {
     // Refused, and said so - not swallowed.
     expect(result.current.error).toBe('second failed');
 
-    const firstSucceeds = vi.fn();
     await act(async () => {
       result.current.resume();
     });
@@ -170,7 +170,8 @@ describe('useStepUpAction', () => {
     // The attempt that owns the prompt is the one that replays.
     expect(first).toHaveBeenCalledTimes(2);
     expect(second).toHaveBeenCalledTimes(1);
-    expect(firstSucceeds).not.toHaveBeenCalled();
+    // Still gated on the replay, so it is not reported done either.
+    expect(firstSucceeded).not.toHaveBeenCalled();
   });
 
   it('reopens the prompt when the replay is gated again', async () => {
