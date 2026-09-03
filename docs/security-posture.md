@@ -27,6 +27,12 @@ control is not rendered. Missing fields default to `true` for compatibility
 with servers released before the posture contract. The server still validates
 every request.
 
+`<MFAChallenge variant="step-up" />` is the same prompt used to re-prove a
+factor while already signed in, for the actions that would weaken it. It reads
+the same capability fields, but never offers the remembered-device checkbox at
+any posture: the server's full-session branch mints no session, so it has no
+trust to grant. `useStepUpAction` drives it.
+
 `allowTrustDevice={false}` can make an application stricter than the project,
 but it cannot override a server value of `trustDevice: false`.
 

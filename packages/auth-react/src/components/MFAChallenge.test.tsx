@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import * as React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PublicConfig } from '@authowl/core';
 
@@ -70,5 +70,48 @@ describe('MFAChallenge trust-device control', () => {
 
     expect(container.querySelector('input[type="checkbox"]')).not.toBeNull();
     expect(screen.getByText('mfa.challenge.useEmailOtp')).toBeTruthy();
+  });
+});
+
+describe('MFAChallenge step-up variant', () => {
+  afterEach(() => {
+    mocks.config = null;
+  });
+
+  it('names the moment it is actually for', () => {
+    render(<MFAChallenge variant="step-up" />);
+
+    expect(screen.getByText('mfa.stepUp.title')).toBeTruthy();
+    expect(screen.queryByText('mfa.challenge.title')).toBeNull();
+  });
+
+  it('never offers device trust, even where the posture allows it', () => {
+    // The engine's full-session branch ignores `trustDevice` outright, so the
+    // checkbox would be a control that silently does nothing.
+    mocks.config = {
+      mfa: { totp: true, required: true, backupCodes: true, trustDevice: true },
+    } as PublicConfig;
+
+    const { container } = render(<MFAChallenge variant="step-up" allowTrustDevice />);
+
+    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+  });
+
+  it('keeps every recovery factor the posture still permits', () => {
+    render(<MFAChallenge variant="step-up" />);
+
+    expect(screen.getByText('mfa.challenge.useBackup')).toBeTruthy();
+    expect(screen.getByText('mfa.challenge.useEmailOtp')).toBeTruthy();
+  });
+
+  it('offers a way out only when the caller can take one', () => {
+    const onCancel = vi.fn();
+    const { rerender } = render(<MFAChallenge variant="step-up" />);
+    expect(screen.queryByText('common.cancel')).toBeNull();
+
+    rerender(<MFAChallenge variant="step-up" onCancel={onCancel} />);
+    fireEvent.click(screen.getByText('common.cancel'));
+
+    expect(onCancel).toHaveBeenCalledOnce();
   });
 });

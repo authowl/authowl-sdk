@@ -218,10 +218,17 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // sign-in and sign-out wait for the app-origin HttpOnly session projection.
 // Measured baselines are 24.09kb in Core and 73.25kb through React; the new
 // ceilings retain roughly half a kilobyte of explicit regression headroom.
+// Second-factor step-up (2026-09-03) raises React 73.75->74.25; Core is
+// unchanged (+1 byte). The SDK grows the other half of the server's step-up
+// gate: a park-prompt-replay hook, MFAChallenge's step-up variant, the
+// `intercept` seam, and three catalog keys across two locales. React measures
+// 73.74kb - EIGHT bytes under the old ceiling. Shipping on that is the exact
+// anti-pattern this file has recorded twice before: the next change of any size
+// goes red and gets blamed for drift it did not cause.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 73.75,
+    maxGzipKb: 74.25,
     label: '@authowl/react (provider + hooks + components)',
   },
   {

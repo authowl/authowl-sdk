@@ -19,6 +19,7 @@ export const ar: Record<keyof typeof en, string> = {
   'common.working': 'جارٍ التنفيذ…',
   'common.loading': 'جارٍ التحميل…',
   'common.continue': 'متابعة',
+  'common.cancel': 'إلغاء',
   'common.error.passwordTooShort': 'يجب ألا تقل كلمة المرور عن {min} أحرف.',
 
   'publicConfig.error.title': 'المصادقة غير متاحة مؤقتًا',
@@ -196,6 +197,7 @@ export const ar: Record<keyof typeof en, string> = {
   'mfaGate.body': 'يتطلب هذا التطبيق المصادقة الثنائية. قم بإعدادها للمتابعة.',
 
   'mfa.challenge.title': 'التحقق الثنائي',
+  'mfa.stepUp.title': 'أكِّد هذا التغيير من تطبيق المصادقة',
   'mfa.challenge.totpHint': 'أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة.',
   'mfa.challenge.backupHint': 'أدخل أحد رموز الاحتياط المحفوظة لديك.',
   'mfa.challenge.totpLabel': 'رمز المصادقة',
@@ -247,6 +249,7 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.signedOut': 'سجّل الدخول لإدارة حسابك.',
   'userProfile.save': 'حفظ التغييرات',
   'userProfile.retry': 'حاول مرة أخرى',
+  // Deprecated: superseded by `common.cancel`.
   'userProfile.cancel': 'إلغاء',
   'userProfile.nav.aria': 'إعدادات الحساب',
   'userProfile.nav.profile': 'الملف الشخصي',
@@ -468,6 +471,8 @@ export const ar: Record<keyof typeof en, string> = {
   'serverError.MFA_ENROLLMENT_REQUIRED': 'أكمل إعداد المصادقة الثنائية للمتابعة.',
   'serverError.EMAIL_OTP_RECOVERY_DISABLED':
     'استخدم المصادقة أو رمزًا احتياطيًا.',
+  'serverError.SECOND_FACTOR_REQUIRED':
+    'أكِّد برمز من تطبيق المصادقة، أو برمز احتياطي.',
   'serverError.TOO_MANY_ATTEMPTS': 'محاولات كثيرة جدًا. حاول مرة أخرى بعد قليل.',
   'serverError.ACCOUNT_TEMPORARILY_LOCKED': 'حسابك مقفل مؤقتًا. حاول مرة أخرى بعد قليل.',
   'serverError.RATE_LIMITED.retryIn': 'محاولات كثيرة جدًا. حاول مرة أخرى بعد {duration}.',

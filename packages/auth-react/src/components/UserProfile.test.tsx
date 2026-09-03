@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import * as React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AuthActionResult } from '@authowl/core';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => {
@@ -39,12 +40,17 @@ const mocks = vi.hoisted(() => {
   };
   const mfa = {
     enable: vi.fn(),
-    disable: vi.fn(async () => ({ data: { status: true }, error: null })),
+    disable: vi.fn(async (): Promise<AuthActionResult<{ status: boolean }>> => ({ data: { status: true }, error: null })),
     verifyTotp: vi.fn(),
     verifyBackupCode: vi.fn(),
     sendOtp: vi.fn(),
     verifyOtp: vi.fn(),
-    regenerateBackupCodes: vi.fn(async () => ({ data: { backupCodes: ['code-1'] }, error: null })),
+    regenerateBackupCodes: vi.fn(
+      async (): Promise<AuthActionResult<{ backupCodes: string[] }>> => ({
+        data: { backupCodes: ['code-1'] },
+        error: null,
+      }),
+    ),
   };
   const config = {
     enabledMethods: ['password', 'passkey'],
@@ -239,6 +245,131 @@ describe('UserProfile', () => {
 
     await waitFor(() => expect(mocks.mfa.disable).toHaveBeenCalledWith({ password: 'password-1' }));
     expect(mocks.refetch).toHaveBeenCalledWith({ query: { disableCookieCache: true } });
+  });
+
+  // Plan 43.3 gates BOTH weakening endpoints on a fresh second-factor proof, not
+  // on the password. Before these, the shipped UI collected a password only, so
+  // the gate was a dead end: the server asked for a code and no screen could
+  // take one. These prove the whole journey, including that the parked request
+  // replays with the password already entered.
+  describe('second-factor step-up', () => {
+    const gated = { data: null, error: { code: 'SECOND_FACTOR_REQUIRED', status: 403 } };
+
+    it('collects a code and finishes the removal the server gated', async () => {
+      mocks.user.twoFactorEnabled = true;
+      mocks.mfa.disable
+        .mockResolvedValueOnce(gated)
+        .mockResolvedValueOnce({ data: { status: true }, error: null });
+      mocks.mfa.verifyTotp.mockResolvedValue({ data: { token: 'session-token' }, error: null });
+      render(<UserProfile defaultSection="mfa" />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
+      fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
+        target: { value: 'password-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replaceConfirm' }));
+
+      // The gate swaps in a code prompt instead of telling the user their
+      // password was rejected - which is what the raw server message read like.
+      const code = await screen.findByLabelText('mfa.challenge.totpLabel');
+      expect(screen.queryByRole('alert')).toBeNull();
+
+      fireEvent.change(code, { target: { value: '123456' } });
+      fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
+
+      await waitFor(() => expect(mocks.mfa.verifyTotp).toHaveBeenCalledWith({
+        code: '123456',
+        trustDevice: false,
+      }));
+      await waitFor(() => expect(mocks.mfa.disable).toHaveBeenCalledTimes(2));
+      expect(mocks.mfa.disable).toHaveBeenLastCalledWith({ password: 'password-1' });
+      expect(mocks.refetch).toHaveBeenCalledWith({ query: { disableCookieCache: true } });
+    });
+
+    it('does not replay the removal when the code is rejected', async () => {
+      mocks.user.twoFactorEnabled = true;
+      mocks.mfa.disable.mockResolvedValueOnce(gated);
+      mocks.mfa.verifyTotp.mockResolvedValue({
+        data: null,
+        error: { code: 'INVALID_CODE', status: 401 },
+      });
+      render(<UserProfile defaultSection="mfa" />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
+      fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
+        target: { value: 'password-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replaceConfirm' }));
+
+      const code = await screen.findByLabelText('mfa.challenge.totpLabel');
+      fireEvent.change(code, { target: { value: '000000' } });
+      fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
+
+      await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
+      expect(mocks.mfa.disable).toHaveBeenCalledTimes(1);
+    });
+
+    it('abandons the parked removal on cancel', async () => {
+      mocks.user.twoFactorEnabled = true;
+      mocks.mfa.disable.mockResolvedValueOnce(gated);
+      render(<UserProfile defaultSection="mfa" />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
+      fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
+        target: { value: 'password-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replaceConfirm' }));
+
+      // Wait for the prompt: the arms are mutually exclusive, so exactly one
+      // `common.cancel` is on screen once it mounts.
+      await screen.findByLabelText('mfa.challenge.totpLabel');
+      fireEvent.click(screen.getByRole('button', { name: 'common.cancel' }));
+
+      expect(screen.getByRole('button', { name: 'userProfile.mfa.replace' })).toBeTruthy();
+      expect(mocks.mfa.disable).toHaveBeenCalledTimes(1);
+    });
+
+    it('gates reissuing backup codes through the same prompt', async () => {
+      mocks.user.twoFactorEnabled = true;
+      mocks.mfa.regenerateBackupCodes
+        .mockResolvedValueOnce(gated)
+        .mockResolvedValueOnce({ data: { backupCodes: ['code-9'] }, error: null });
+      mocks.mfa.verifyBackupCode.mockResolvedValue({ data: { token: 'session-token' }, error: null });
+      render(<UserProfile defaultSection="recovery" />);
+
+      fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
+        target: { value: 'password-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'backupCodes.submit' }));
+
+      // The same prompt, reached from the other weakening endpoint.
+      fireEvent.click(await screen.findByText('mfa.challenge.useBackup'));
+      fireEvent.change(screen.getByLabelText('mfa.challenge.backupLabel'), {
+        target: { value: 'backup-code-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
+
+      await waitFor(() => expect(mocks.mfa.regenerateBackupCodes).toHaveBeenCalledTimes(2));
+      expect(mocks.mfa.regenerateBackupCodes).toHaveBeenLastCalledWith({ password: 'password-1' });
+      expect(await screen.findByText('code-9')).toBeTruthy();
+    });
+
+    it('clears the password when the backup-codes prompt is abandoned', async () => {
+      mocks.user.twoFactorEnabled = true;
+      mocks.mfa.regenerateBackupCodes.mockResolvedValueOnce(gated);
+      render(<UserProfile defaultSection="recovery" />);
+
+      fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
+        target: { value: 'password-1' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'backupCodes.submit' }));
+
+      fireEvent.click(await screen.findByRole('button', { name: 'common.cancel' }));
+
+      // Backing out leaves no password behind in the form.
+      expect(screen.getByLabelText('common.passwordLabel')).toHaveProperty('value', '');
+      expect(mocks.mfa.regenerateBackupCodes).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('shows recovery only for an enrolled user and deletes only after email confirmation', async () => {

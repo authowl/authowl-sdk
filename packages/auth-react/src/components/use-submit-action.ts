@@ -3,6 +3,36 @@ import * as React from 'react';
 import type { AuthActionResult, AuthClientError } from '@authowl/core';
 import { useServerError } from '../i18n';
 
+/** Everything `run` needs besides the action itself. */
+export type SubmitActionOptions<T> = {
+  /** Generic, already-localized copy shown when the action fails. */
+  failure: string;
+  onSuccess?: (res: AuthActionResult<T>) => void | Promise<void>;
+  /**
+   * Override the default code-based error message for an endpoint-specific
+   * status (e.g. SSO's bare 404 = "no connection for this domain", which is
+   * not a global server code). Return a message to use, or null to fall back
+   * to the standard `useServerError` mapping.
+   */
+  mapError?: (error: AuthClientError) => string | null;
+  /**
+   * Take over a failure entirely instead of rendering it. Return true when the
+   * caller has handled the error by swapping the UI (the second-factor step-up
+   * prompt is the case this exists for), and no message is surfaced. Runs
+   * before `mapError`, which only ever produces text.
+   */
+  intercept?: (error: AuthClientError) => boolean;
+  /**
+   * Keep `pending` true after a SUCCESSFUL action instead of resetting it -
+   * for redirect-out actions (SSO) where the browser navigates away, so the
+   * spinner persists through the navigation instead of flashing back to idle.
+   * Error and throw paths still reset. Only safe when success always navigates
+   * away; a success that stays on the page would leave a stuck spinner (which
+   * is why magic-link/OTP, whose success swaps a view in place, do NOT set it).
+   */
+  keepPendingOnSuccess?: boolean;
+};
+
 export type UseSubmitActionResult = {
   /** True while an action is in flight (drives disabled buttons / busy labels). */
   pending: boolean;
@@ -20,27 +50,7 @@ export type UseSubmitActionResult = {
    */
   run: <T>(
     action: () => Promise<AuthActionResult<T> | null | undefined>,
-    opts: {
-      failure: string;
-      onSuccess?: (res: AuthActionResult<T>) => void | Promise<void>;
-      /**
-       * Override the default code-based error message for an endpoint-specific
-       * status (e.g. SSO's bare 404 = "no connection for this domain", which is
-       * not a global server code). Return a message to use, or null to fall back
-       * to the standard `useServerError` mapping.
-       */
-      mapError?: (error: AuthClientError) => string | null;
-      /**
-       * Keep `pending` true after a SUCCESSFUL action instead of resetting it -
-       * for redirect-out actions (SSO) where the browser navigates away, so the
-       * spinner persists through the navigation instead of flashing back to
-       * idle. Error and throw paths still reset. Only safe when success always
-       * navigates away; a success that stays on the page would leave a stuck
-       * spinner (which is why magic-link/OTP, whose success swaps a view in
-       * place, do NOT set it).
-       */
-      keepPendingOnSuccess?: boolean;
-    },
+    opts: SubmitActionOptions<T>,
   ) => Promise<void>;
 };
 
@@ -50,13 +60,17 @@ export function useSubmitAction(): UseSubmitActionResult {
   const toMessage = useServerError();
 
   const run = React.useCallback<UseSubmitActionResult['run']>(
-    async (action, { failure, onSuccess, mapError, keepPendingOnSuccess }) => {
+    async (action, { failure, onSuccess, mapError, intercept, keepPendingOnSuccess }) => {
       setError(null);
       setPending(true);
       try {
         const res = await action();
         if (res?.error) {
-          setError(mapError?.(res.error) ?? toMessage(res.error, failure));
+          // `setError(null)` above already cleared the previous message, so an
+          // intercepted failure leaves no stale text behind the new UI.
+          if (!intercept?.(res.error)) {
+            setError(mapError?.(res.error) ?? toMessage(res.error, failure));
+          }
           setPending(false);
           return;
         }
