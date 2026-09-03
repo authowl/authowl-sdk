@@ -251,6 +251,8 @@ export const en = {
   'userProfile.signedOut': 'Sign in to manage your account.',
   'userProfile.save': 'Save changes',
   'userProfile.retry': 'Try again',
+  // Deprecated: superseded by `common.cancel`, which every surface now uses.
+  // Kept because `MessageKey` is published API and removing a key is breaking.
   'userProfile.cancel': 'Cancel',
   'userProfile.nav.aria': 'Account settings',
   'userProfile.nav.profile': 'Profile',

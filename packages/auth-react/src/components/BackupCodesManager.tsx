@@ -33,6 +33,13 @@ export function BackupCodesManager({ title }: BackupCodesManagerProps) {
 
   if (!user?.twoFactorEnabled) return null;
 
+  // Abandoning the prompt clears the password too, so backing out leaves the
+  // same state as MfaSection's cancel rather than a still-filled field.
+  const cancelStepUp = () => {
+    cancel();
+    setPassword('');
+  };
+
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     void run(() => regenerateBackupCodes({ password }), {
@@ -65,7 +72,7 @@ export function BackupCodesManager({ title }: BackupCodesManagerProps) {
           </ul>
         </>
       ) : stepUpRequired ? (
-        <MFAChallenge variant="step-up" onVerified={resume} onCancel={cancel} />
+        <MFAChallenge variant="step-up" onVerified={resume} onCancel={cancelStepUp} />
       ) : (
         <form method="post" className="ba-fields" onSubmit={submit}>
           <label className="ba-label">

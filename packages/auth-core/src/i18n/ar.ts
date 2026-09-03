@@ -249,6 +249,7 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.signedOut': 'سجّل الدخول لإدارة حسابك.',
   'userProfile.save': 'حفظ التغييرات',
   'userProfile.retry': 'حاول مرة أخرى',
+  // Deprecated: superseded by `common.cancel`.
   'userProfile.cancel': 'إلغاء',
   'userProfile.nav.aria': 'إعدادات الحساب',
   'userProfile.nav.profile': 'الملف الشخصي',

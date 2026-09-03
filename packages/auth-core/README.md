@@ -232,7 +232,19 @@ For example, a custom UI may call `authowl.signIn.username(...)` only when
 registration only when `capabilities.authentication?.passkey.add` is true.
 
 Sensitive mutations can return `SESSION_NOT_FRESH` with HTTP 403. Ask the user
-to sign in again and retry the action. Organization ownership conflicts return
+to sign in again and retry the action.
+
+Turning two-factor off, and reissuing backup codes, can instead return
+`SECOND_FACTOR_REQUIRED` with HTTP 403. The remedy is NOT the one above: the
+session must have PROVED a second factor recently, and signing in again does not
+do that for a user whose device is trusted, or who arrived by social sign-in or
+inbound SSO - each mints a fresh session that never ran the challenge, so
+retrying after a fresh sign-in fails identically. Collect a code instead
+(`twoFactor.verifyTotp`, `verifyBackupCode`, or `verifyOtp` where the posture
+allows it) on the signed-in session, then replay the original request unchanged.
+`@authowl/react` does this for you in `<UserProfile />` and
+`<BackupCodesManager />`, and exposes `useStepUpAction` for custom UIs built on
+`useMFA()`. Organization ownership conflicts return
 `ORGANIZATION_LAST_OWNER`. Disabled and cross-project resources return 404.
 Public metadata is server-authored. Unsafe metadata is end-user-owned and must
 be treated as untrusted. Private metadata has no browser SDK surface.

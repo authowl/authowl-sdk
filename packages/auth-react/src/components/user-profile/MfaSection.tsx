@@ -76,7 +76,14 @@ export function MfaSection() {
         <strong>{t('userProfile.mfa.enabled')}</strong>
         <span>{t('userProfile.mfa.authenticator')}</span>
       </div>
-      {!showDisable ? (
+      {/* Ordered so each arm stands on its own: step-up can only follow an
+          opened form, and stating that as nesting made the reader derive it. */}
+      {stepUpRequired ? (
+        // Turning the factor off requires PROVING it, not just knowing the
+        // password - see `useStepUpAction`. The parked attempt replays with the
+        // password already entered, so accepting a code finishes the removal.
+        <MFAChallenge variant="step-up" onVerified={resume} onCancel={cancelDisable} />
+      ) : !showDisable ? (
         <button
           className="ba-button ba-button-secondary ba-profile-submit"
           type="button"
@@ -84,11 +91,6 @@ export function MfaSection() {
         >
           {required ? t('userProfile.mfa.replace') : t('userProfile.mfa.disable')}
         </button>
-      ) : stepUpRequired ? (
-        // Turning the factor off requires PROVING it, not just knowing the
-        // password - see `useStepUpAction`. The parked attempt replays with the
-        // password already entered, so accepting a code finishes the removal.
-        <MFAChallenge variant="step-up" onVerified={resume} onCancel={cancelDisable} />
       ) : (
         <form method="post" className="ba-fields ba-profile-security-form" onSubmit={submitDisable}>
           <p className="ba-muted">
@@ -123,7 +125,7 @@ export function MfaSection() {
               disabled={pending}
               onClick={cancelDisable}
             >
-              {t('userProfile.cancel')}
+              {t('common.cancel')}
             </button>
           </span>
         </form>
