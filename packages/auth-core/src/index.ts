@@ -31,6 +31,11 @@ export {
   type LastUsedSignInMethod,
 } from './last-used-method';
 export {
+  passkeyOfferIsDue,
+  recordPasskeyOfferDismissed,
+  recordPasskeyOfferSettled,
+} from './passkey-offer';
+export {
   SESSION_TOKEN_HEADER,
   SESSION_TRANSPORT_BEARER,
   SESSION_TRANSPORT_HEADER,

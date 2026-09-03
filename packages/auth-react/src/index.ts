@@ -95,6 +95,8 @@ export { MFAEnrollment } from './components/MFAEnrollment';
 export type { MFAEnrollmentProps } from './components/MFAEnrollment';
 export { useStepUpAction, SECOND_FACTOR_REQUIRED } from './components/use-step-up-action';
 export type { UseStepUpActionResult } from './components/use-step-up-action';
+export { PasskeyOfferGate } from './components/PasskeyOfferGate';
+export type { PasskeyOfferGateProps } from './components/PasskeyOfferGate';
 export { MFAChallenge } from './components/MFAChallenge';
 export type { MFAChallengeProps } from './components/MFAChallenge';
 export { AuthOwlBadge } from './components/AuthOwlBadge';

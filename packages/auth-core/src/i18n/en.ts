@@ -144,6 +144,12 @@ export const en = {
   'passkey.signInButton': 'Sign in with a passkey',
   'passkey.waiting': 'Waiting for passkey…',
   'passkey.error.signInFailed': 'Passkey sign-in failed.',
+  'passkeyOffer.title': 'Skip the password next time',
+  'passkeyOffer.description':
+    'Add a passkey to this device and sign in with your fingerprint, face, or device lock.',
+  'passkeyOffer.submit': 'Add a passkey',
+  'passkeyOffer.skip': 'Not now',
+  'passkeyOffer.error': 'Could not add the passkey. Try again, or continue without one.',
 
   'forgotPassword.sent': "If an account exists for {email}, we've sent a link to reset your password.",
   'forgotPassword.backToSignIn': 'Back to sign in',

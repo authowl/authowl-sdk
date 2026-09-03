@@ -149,7 +149,7 @@ describe('SignUp passwordless passkey flow', () => {
       }),
     );
 
-    expect(await screen.findByTestId('signup-passkey-completion')).toBeTruthy();
+    expect(await screen.findByTestId('signup-passkey-step')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'signUp.passkeySubmit' }));
     await waitFor(() => expect(mocks.addPasskey).toHaveBeenCalledTimes(1));
     expect(onSignedUp).toHaveBeenCalledTimes(1);
@@ -179,7 +179,7 @@ describe('SignUp passwordless passkey flow', () => {
         consentVersion: undefined,
       }, undefined),
     );
-    expect(await screen.findByTestId('signup-passkey-completion')).toBeTruthy();
+    expect(await screen.findByTestId('signup-passkey-step')).toBeTruthy();
   });
 
   it('submits exact bilingual notice versions and explicit purpose choices', async () => {
@@ -270,7 +270,7 @@ describe('SignUp passwordless passkey flow', () => {
       target: { value: '654321' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'emailOtp.verifySubmit' }));
-    await screen.findByTestId('signup-passkey-completion');
+    await screen.findByTestId('signup-passkey-step');
 
     fireEvent.click(screen.getByRole('button', { name: 'signUp.passkeySkip' }));
     expect(mocks.addPasskey).not.toHaveBeenCalled();
@@ -378,7 +378,7 @@ describe('SignUp passwordless passkey flow', () => {
       callbackURL: undefined,
       consentVersion: undefined,
     }, undefined));
-    expect(screen.queryByTestId('signup-passkey-completion')).toBeNull();
+    expect(screen.queryByTestId('signup-passkey-step')).toBeNull();
   });
 
   it('completes required code verification without exposing code sign-in', async () => {

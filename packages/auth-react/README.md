@@ -34,7 +34,8 @@ function Page() {
 **Components**: `<SignIn />`, `<SignUp />`, `<PrivacyCenter />`, `<PhoneOTP />`, `<SocialButtons />`, `<MagicLinkForm />`,
 `<EmailOtpForm />`, `<PasskeyButton />`, `<PasskeyManager />`, `<ForgotPassword />`,
 `<ResetPassword />`, `<VerifyEmail />`, `<VerificationPending />`, `<MFAEnrollment />`,
-`<MFAChallenge />`, `<Waitlist />`, `<ConsentGate />`, `<UserButton />`, `<SignOutButton />`,
+`<MFAChallenge />`, `<Waitlist />`, `<ConsentGate />`, `<MFARequiredGate />`,
+`<PasskeyOfferGate />`, `<UserButton />`, `<SignOutButton />`,
 `<SignedIn>`/`<SignedOut>`/`<Protect>`, `<AuthOwlBadge />`, `<UserProfile />`,
 `<OrganizationSwitcher />`, `<OrganizationList />`, `<CreateOrganization />`,
 `<OrganizationProfile />`, `<GoogleOneTap />`.
@@ -42,6 +43,14 @@ function Page() {
 **Hooks**: `useUser`, `useSession`, `useSignIn`, `useSignUp`, `useSignOut`, `usePrivacy`,
 `usePasskeys`, `usePasswordReset`, `useEmailVerification`, `useMFA`, `useConsent`,
 `usePublicConfig`, `useWaitlist`.
+
+Wrap your signed-in application in `<PasskeyOfferGate>` to offer a passkey once,
+just after someone signs in by another method. It never blocks: children render
+immediately, and the offer appears only once the checks confirm the user could
+actually use a passkey - the project allows registration, the page can reach the
+relying party, the browser supports WebAuthn, the account is not two-factor
+enrolled, and the server reports no passkey yet. A decline is remembered per
+browser for thirty days; an enrolment ends the asking.
 
 When the environment's acquisition mode is `waitlist`, `<SignUp />` automatically
 renders email enrollment instead of account-creation methods. `<Waitlist />` is

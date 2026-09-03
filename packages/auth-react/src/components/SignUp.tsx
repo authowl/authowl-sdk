@@ -8,7 +8,7 @@ import { AuthOwlBadge } from './AuthOwlBadge';
 import { VerificationPending } from './VerificationPending';
 import { LegalConsentCheckbox } from './LegalConsentCheckbox';
 import { PasswordlessSignUp } from './PasswordlessSignUp';
-import { PasskeySignUpCompletion } from './PasskeySignUpCompletion';
+import { PasskeyOffer } from './PasskeyOffer';
 import { Busy } from './Spinner';
 import { AUTH_CHALLENGE_ACTIONS, useAuthChallenge } from './AuthChallenge';
 import { FormError } from './FormError';
@@ -217,7 +217,7 @@ export function SignUp({
     return (
       <div className="ba-form" data-testid="signup-passkey-step">
         {showBranding ? <AuthOwlBranding /> : null}
-        <PasskeySignUpCompletion onComplete={finishSignUp} />
+        <PasskeyOffer variant="sign-up" onComplete={finishSignUp} />
         <AuthOwlBadge force={showBadge} />
       </div>
     );
