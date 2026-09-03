@@ -54,10 +54,13 @@ export type UseStepUpActionResult = UseSubmitActionResult & {
  */
 export function useStepUpAction(): UseStepUpActionResult {
   const { pending, error, setError, run } = useSubmitAction();
-  const [stepUpRequired, setStepUpRequired] = React.useState(false);
   // The gated attempt itself, held verbatim. Re-running the caller's own thunk
   // is what makes the replay lossless: it closes over the inputs as submitted,
   // so resuming cannot silently send a different body than the one refused.
+  //
+  // ONE piece of state, not a boolean beside it: "a prompt is up" and "an
+  // attempt is waiting" are the same fact, and keeping them in two places made
+  // every call site responsible for holding them in agreement.
   //
   // PARKED ONLY WHEN THE GATE ACTUALLY FIRES, and dropped the moment it is
   // replayed. That thunk captures a plaintext PASSWORD and, with it, the whole
@@ -66,7 +69,10 @@ export function useStepUpAction(): UseStepUpActionResult {
   // the gate, and would have quietly defeated the `setPassword('')` scrub the
   // success paths do - clearing React state does nothing to a captured string.
   // The retention window is now exactly the prompt's lifetime.
-  const parked = React.useRef<(() => Promise<void>) | null>(null);
+  //
+  // Wrapped in an object so parking is a plain `setParked({ attempt })`; a bare
+  // function in state would be read as a reducer.
+  const [parked, setParked] = React.useState<{ attempt: () => Promise<void> } | null>(null);
   // Bumped by `cancel`, so an attempt still in flight when the user backs out
   // cannot flip the prompt on afterwards. Without it, cancelling during the
   // request and having the gate answer a moment later drops the user into a
@@ -93,8 +99,7 @@ export function useStepUpAction(): UseStepUpActionResult {
             if (era !== epoch.current) return true;
             // Safe self-reference: `run` awaits the action before it can call
             // `intercept`, so `attempt` is initialized by the time this runs.
-            parked.current = attempt;
-            setStepUpRequired(true);
+            setParked({ attempt });
             return true;
           },
         });
@@ -105,21 +110,24 @@ export function useStepUpAction(): UseStepUpActionResult {
   );
 
   const resume = React.useCallback(() => {
-    const attempt = parked.current;
-    parked.current = null;
-    setStepUpRequired(false);
-    // Nothing parked is not reachable from the UI - the prompt only mounts
-    // after an attempt parked one - and doing nothing is the safe answer if it
-    // ever became reachable. Never a blind re-send.
-    void attempt?.();
-  }, []);
+    setParked(null);
+    // Never a blind re-send: with nothing parked there is nothing to replay.
+    void parked?.attempt();
+  }, [parked]);
 
   const cancel = React.useCallback(() => {
     epoch.current += 1;
-    parked.current = null;
-    setStepUpRequired(false);
+    setParked(null);
     setError(null);
   }, [setError]);
 
-  return { pending, error, setError, stepUpRequired, run: guardedRun, resume, cancel };
+  return {
+    pending,
+    error,
+    setError,
+    stepUpRequired: parked !== null,
+    run: guardedRun,
+    resume,
+    cancel,
+  };
 }
