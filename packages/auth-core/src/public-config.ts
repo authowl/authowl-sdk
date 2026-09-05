@@ -1,7 +1,6 @@
 import type { ResolvedAuthConfig } from './config';
 import { requestPublishableJson, requireOk } from './http';
 import { decodeJsonObject } from './response-schema';
-import type { PrivacyRightType } from './privacy-client';
 
 export type EnvironmentType = 'development' | 'production';
 
@@ -158,8 +157,10 @@ export type PublicConfig = {
      * simply does not send it, and treating that as "offer nothing" would
      * blank the rights section for every project on an older deployment. The
      * server stays the enforcement boundary either way.
+     * Unknown future wire values may be present and are ignored by consumers
+     * that do not yet know how to render them.
      */
-    availableRightTypes?: PrivacyRightType[];
+    availableRightTypes?: string[];
     consentPurposes: Array<{
       purposeId: string;
       purposeVersionId: string;
@@ -454,16 +455,6 @@ function assertPrivacyConfig(value: unknown): void {
     || privacy.notices.length > 64
     || privacy.consentPurposes.length > 64
   ) throw invalidPublicConfig();
-  // Optional, so `undefined` passes. Shape only - an unrecognised entry is left
-  // alone rather than rejected or stripped, because the set can only grow
-  // server-side and a consumer intersects it against the rights it can render
-  // anyway. Narrowing here as well would compute the same intersection twice,
-  // in two packages, and this is an `assert` - the other checks in this file
-  // are pure, and normalisation lives in `decodePublicConfig`.
-  // Deliberately NOT validated here. See the normalisation in
-  // `decodePublicConfig`: a malformed value becomes absent rather than failing
-  // the whole config, because this field exists to grow and the alternative is
-  // taking down sign-in over an advisory list.
 
   for (const entry of privacy.notices) {
     const notice = asObject(entry);
