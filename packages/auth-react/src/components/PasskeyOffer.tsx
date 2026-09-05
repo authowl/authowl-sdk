@@ -23,6 +23,12 @@ export type PasskeyOfferProps = {
    *               the next visit needs no password.
    */
   variant: 'sign-up' | 'sign-in';
+  /**
+   * Options for the registration ceremony. `<PasskeyOfferGate/>` supplies
+   * `authenticatorAttachment: 'platform'` for a 2FA-enrolled user, whose
+   * credential only clears the sign-in gate when the ceremony verifies them.
+   */
+  registration?: Readonly<{ authenticatorAttachment?: 'platform' | 'cross-platform' }>;
   /** Heading override; defaults to the variant's own copy. */
   title?: string;
 };
@@ -56,7 +62,7 @@ const COPY: Record<
  * is true of a failed ceremony - the error is shown, and the user can still move
  * on. Nothing here may strand someone who is already signed in.
  */
-export function PasskeyOffer({ onComplete, variant, title }: PasskeyOfferProps) {
+export function PasskeyOffer({ onComplete, variant, title, registration }: PasskeyOfferProps) {
   const t = useT();
   const { addPasskey } = usePasskeys();
   const { pending, error, run } = useSubmitAction();
@@ -72,7 +78,7 @@ export function PasskeyOffer({ onComplete, variant, title }: PasskeyOfferProps) 
         type="button"
         disabled={pending}
         aria-busy={pending || undefined}
-        onClick={() => void run(() => addPasskey(), {
+        onClick={() => void run(() => addPasskey(registration), {
           failure: t(copy.failed),
           onSuccess: () => onComplete(true),
         })}

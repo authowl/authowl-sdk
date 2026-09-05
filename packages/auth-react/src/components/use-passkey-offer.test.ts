@@ -79,13 +79,32 @@ describe('usePasskeyOffer', () => {
     await expect(offer().shouldOffer()).resolves.toBe(false);
   });
 
-  it('never offers to a user with two-factor enabled', async () => {
-    // A 2FA-enrolled user cannot complete a passkey sign-in at all today, so
-    // the credential could never be used. Offering it would ship a dead end.
+  it('DOES offer to a user with two-factor enabled', async () => {
+    // This pinned the opposite rule, and the rule was wrong. The server's
+    // `passkeyAssuranceGate` allows any assertion that performed user
+    // verification: a passkey with a biometric or PIN is two factors, so it
+    // both signs the user in and satisfies MFA. Refusing them meant that on a
+    // project with MFA required - where EVERY user is enrolled - the offer
+    // could never fire for anybody.
     mocks.user = { id: 'user-1', twoFactorEnabled: true };
-    expect(offer().subject).toBeNull();
-    await expect(offer().shouldOffer()).resolves.toBe(false);
-    expect(mocks.listPasskeys).not.toHaveBeenCalled();
+
+    expect(offer().subject).not.toBeNull();
+    await expect(offer().shouldOffer()).resolves.toBe(true);
+  });
+
+  it('steers a 2FA-enrolled user to a platform authenticator', async () => {
+    // Their credential only clears the sign-in gate if the ceremony verifies
+    // them, and a platform authenticator does that by default. UV cannot be
+    // requested at registration, so this is the honest lever available.
+    mocks.user = { id: 'user-1', twoFactorEnabled: true };
+    expect(offer().registration).toEqual({ authenticatorAttachment: 'platform' });
+  });
+
+  it('leaves the choice open for a user with no second factor', async () => {
+    // Any authenticator satisfies them, so narrowing it would cost them a
+    // roaming security key for no gain.
+    mocks.user = { id: 'user-1', twoFactorEnabled: false };
+    expect(offer().registration).toEqual({});
   });
 
   it('never offers where the ceremony cannot reach the relying party', async () => {

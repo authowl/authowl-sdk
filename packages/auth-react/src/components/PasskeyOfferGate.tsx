@@ -36,7 +36,7 @@ export type PasskeyOfferGateProps = {
  * another bootstrap blank-flash to a surface that already has one.
  */
 export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
-  const { subject, shouldOffer, remember } = usePasskeyOffer();
+  const { subject, shouldOffer, remember, registration } = usePasskeyOffer();
   // WHO and WHICH SESSION the offer is for, not merely THAT there is one. A
   // user id alone still reuses an old decision when a fast A -> B -> A switch
   // returns before B's check settles. Binding the decision to the session makes
@@ -72,6 +72,7 @@ export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
   return (
     <div className="ba-form" data-testid="passkey-offer-gate">
       <PasskeyOffer
+        registration={registration}
         variant="sign-in"
         title={title}
         onComplete={(added) => {

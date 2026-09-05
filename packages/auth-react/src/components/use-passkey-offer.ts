@@ -27,10 +27,18 @@ import { passkeyReachableForConfig } from '../signin-methods';
  *   is refused by the browser before any network call, so off-host the offer is
  *   not unlikely to work, it is impossible.
  * - `PublicKeyCredential` - no WebAuthn, no ceremony.
- * - NOT `twoFactorEnabled` - a 2FA-enrolled user cannot complete a passkey
- *   sign-in today (the assurance gate runs with `userVerified: false`), so the
- *   credential we minted could never be used. Offering it would ship a fresh
- *   dead end from the change that removes one.
+ * A 2FA-ENROLLED USER IS OFFERED ONE, and an earlier version of this hook
+ * refused them. That refusal cited a comment saying such a user "cannot
+ * complete a passkey sign-in at all today"; the server says otherwise.
+ * `passkeyAssuranceGate` allows any assertion that performed USER VERIFICATION
+ * - a passkey with a biometric or PIN is possession plus inherence, which is
+ * two factors, so it both passes the sign-in and satisfies MFA. Only a
+ * UV-ABSENT assertion is refused for an enrolled user.
+ *
+ * The cost of that mistake was the whole feature: on a project with MFA
+ * required, every user is enrolled, so the offer could never fire for anyone -
+ * exactly the population a passkey helps most, since it replaces the password
+ * AND the code.
  * - no passkey already registered - asked of the SERVER, because a credential
  *   synced from another device or added on the account page is invisible to
  *   this browser's own memory.
@@ -51,6 +59,21 @@ export function usePasskeyOffer(): {
   shouldOffer: () => Promise<boolean>;
   /** Remember which way the user answered, so they are not asked again. */
   remember: (added: boolean) => void;
+  /**
+   * Options the offer's registration ceremony should use for THIS user.
+   *
+   * `platform` for a 2FA-enrolled user: their credential only clears the
+   * sign-in gate if the ceremony performs user verification, and a platform
+   * authenticator (Touch ID, Face ID, Windows Hello) does that by default. UV
+   * cannot be requested directly - the registration surface exposes no
+   * `userVerification` option, and WebAuthn reports UV per assertion rather
+   * than per device, so it is not knowable in advance either. Steering the
+   * authenticator is the honest lever available.
+   *
+   * A user with no second factor is unconstrained: any authenticator works for
+   * them, so narrowing the choice would cost them a roaming key for nothing.
+   */
+  registration: Readonly<{ authenticatorAttachment?: 'platform' }>;
 } {
   const { config } = usePublicConfig();
   const { user, isSignedIn } = useUser();
@@ -67,7 +90,6 @@ export function usePasskeyOffer(): {
     projectId !== null
     && isSignedIn
     && resolveProjectCapabilities(config).passkeyAdd
-    && user?.twoFactorEnabled !== true
     && typeof window !== 'undefined'
     && 'PublicKeyCredential' in window
     && passkeyReachableForConfig(config, window.location.hostname);
@@ -112,5 +134,10 @@ export function usePasskeyOffer(): {
     [projectId, subject],
   );
 
-  return { subject, shouldOffer, remember };
+  const registration = React.useMemo(
+    () => (user?.twoFactorEnabled === true ? { authenticatorAttachment: 'platform' as const } : {}),
+    [user?.twoFactorEnabled],
+  );
+
+  return { subject, shouldOffer, remember, registration };
 }
