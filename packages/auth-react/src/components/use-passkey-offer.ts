@@ -35,15 +35,11 @@ import { passkeyReachableForConfig } from '../signin-methods';
  * The server check is the only one that costs a request, so it runs last and
  * only for a user who has passed everything else.
  *
- * THERE IS DELIBERATELY NO `twoFactorEnabled` GATE. An earlier version refused
- * enrolled users, citing a comment that said such a user "cannot complete a
- * passkey sign-in at all today". The server says otherwise:
- * `passkeyAssuranceGate` allows any assertion that performed user verification,
- * so a passkey with a biometric or PIN is two factors - it both signs them in
- * and satisfies their MFA. That mistake cost the whole feature, because on a
- * project with MFA required every user is enrolled, so the offer fired for
- * nobody - exactly the people it helps most, since it replaces the password AND
- * the code.
+ * THERE IS DELIBERATELY NO `twoFactorEnabled` GATE, and adding one back would
+ * silence this feature entirely on a project with MFA required, where every
+ * user is enrolled. A user-verified passkey is two factors: it signs an
+ * enrolled user in AND satisfies their MFA - see `passkeyAssuranceGate` on the
+ * server, and the test beside it.
  *
  * Nothing is steered from here. On a project with a second factor the SERVER
  * registers passkeys with `userVerification: 'required'`, so the credential is
