@@ -25,7 +25,11 @@ const mocks = vi.hoisted(() => ({
   toServerError: (_error: unknown, fallback: string) => fallback,
 }));
 
-const privacy = {
+const privacy: {
+  availableRightTypes?: string[];
+  notices: unknown[];
+  consentPurposes: unknown[];
+} = {
   notices: [{
     noticeId: '11111111-1111-4111-8111-111111111111',
     noticeVersionId: '22222222-2222-4222-8222-222222222222',
@@ -96,5 +100,39 @@ describe('PrivacyCenter', () => {
       locale: 'en',
     }));
     expect(mocks.listRightsRequests).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('PrivacyCenter rights availability', () => {
+  afterEach(() => {
+    delete privacy.availableRightTypes;
+  });
+
+  it('offers every right when the server does not say which are available', async () => {
+    // An older server simply omits the field. Reading that as "offer nothing"
+    // would blank the rights section for every project on an older deployment.
+    render(<PrivacyCenter />);
+
+    expect(await screen.findByRole('button', { name: 'privacy.right.access' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'privacy.right.erasure' })).toBeTruthy();
+  });
+
+  it('offers only the rights the server can accept', async () => {
+    privacy.availableRightTypes = ['access', 'portability'];
+    render(<PrivacyCenter />);
+
+    expect(await screen.findByRole('button', { name: 'privacy.right.access' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'privacy.right.portability' })).toBeTruthy();
+    // Not merely disabled - absent. A button that can only 409 is not an
+    // affordance, and this is the exact control that failed in production.
+    expect(screen.queryByRole('button', { name: 'privacy.right.erasure' })).toBeNull();
+  });
+
+  it('says so plainly when the project accepts none', async () => {
+    privacy.availableRightTypes = [];
+    render(<PrivacyCenter />);
+
+    expect(await screen.findByText('privacy.rights.unavailable')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'privacy.right.access' })).toBeNull();
   });
 });

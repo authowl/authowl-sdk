@@ -10,14 +10,38 @@ import {
 
 export type PrivacyLocale = 'en' | 'ar';
 export type PrivacyConsentState = 'granted' | 'refused' | 'withdrawn';
-export type PrivacyRightType =
-  | 'access'
-  | 'correction'
-  | 'portability'
-  | 'erasure'
-  | 'restriction'
-  | 'objection'
-  | 'consent_withdrawal';
+/** The closed set, as a value, and the order every surface renders it in. */
+export const PRIVACY_RIGHT_TYPES = [
+  'access',
+  'correction',
+  'portability',
+  'erasure',
+  'restriction',
+  'objection',
+  'consent_withdrawal',
+] as const;
+export type PrivacyRightType = (typeof PRIVACY_RIGHT_TYPES)[number];
+
+/**
+ * The rights a surface should offer, given what the server advertises.
+ *
+ * ONE OWNER for the compatibility rule this whole feature rests on:
+ * `undefined` means a server that cannot report availability, so offer
+ * everything - exactly as these surfaces behaved before the field existed -
+ * while an EMPTY list means the project accepts none, which is different and
+ * must be honoured. Getting those two confused blanks the privacy tab of every
+ * app on an older deployment.
+ *
+ * Unknown entries are ignored here rather than rejected at decode, so the
+ * server can add an eighth right type without any published SDK needing to know
+ * about it.
+ */
+export function offeredRightTypes(
+  advertised: readonly string[] | undefined,
+): PrivacyRightType[] {
+  if (advertised === undefined) return [...PRIVACY_RIGHT_TYPES];
+  return PRIVACY_RIGHT_TYPES.filter((right) => advertised.includes(right));
+}
 export type PrivacyRightState =
   | 'received'
   | 'identity_pending'

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { offeredRightTypes } from '@authowl/core';
 import type {
   PrivacyConsentPreference,
   PrivacyRightState,
@@ -49,7 +50,6 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
   const [error, setError] = React.useState<string | null>(null);
   const [pendingPurpose, setPendingPurpose] = React.useState<string | null>(null);
   const [pendingRight, setPendingRight] = React.useState<PrivacyRightType | null>(null);
-
   const refresh = React.useCallback(async () => {
     if (!isSignedIn) return;
     setLoading(true);
@@ -78,6 +78,8 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
   if (!isSignedIn) return <p className="ba-muted">{t('privacy.signedOut')}</p>;
 
   const privacy = config?.privacy;
+  const offeredRights = offeredRightTypes(privacy?.availableRightTypes);
+
   const preferenceByCode = new Map(preferences.map((item) => [item.code, item]));
 
   async function updateConsent(purposeCode: string, granted: boolean) {
@@ -161,19 +163,23 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
           <h3>{t('privacy.rights.title')}</h3>
           <p>{t('privacy.rights.description')}</p>
         </div>
-        <div className="ba-privacy-right-grid">
-          {(Object.keys(RIGHT_KEYS) as PrivacyRightType[]).map((right) => (
-            <button
-              type="button"
-              className={right === 'erasure' ? 'ba-privacy-right ba-privacy-right-danger' : 'ba-privacy-right'}
-              key={right}
-              disabled={pendingRight !== null}
-              onClick={() => void createRequest(right)}
-            >
-              <Busy busy={pendingRight === right} label={t('common.working')}>{t(RIGHT_KEYS[right])}</Busy>
-            </button>
-          ))}
-        </div>
+        {offeredRights.length === 0 ? (
+          <p className="ba-privacy-empty">{t('privacy.rights.unavailable')}</p>
+        ) : (
+          <div className="ba-privacy-right-grid">
+            {offeredRights.map((right) => (
+              <button
+                type="button"
+                className={right === 'erasure' ? 'ba-privacy-right ba-privacy-right-danger' : 'ba-privacy-right'}
+                key={right}
+                disabled={pendingRight !== null}
+                onClick={() => void createRequest(right)}
+              >
+                <Busy busy={pendingRight === right} label={t('common.working')}>{t(RIGHT_KEYS[right])}</Busy>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="ba-privacy-center-block">

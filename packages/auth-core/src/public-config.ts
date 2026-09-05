@@ -150,6 +150,17 @@ export type PublicConfig = {
       purposeCodes: string[];
       effectiveFrom: string;
     }>;
+    /**
+     * Which data rights this project can actually accept.
+     *
+     * ABSENT MEANS UNKNOWN, NOT NONE. A server released before this field
+     * simply does not send it, and treating that as "offer nothing" would
+     * blank the rights section for every project on an older deployment. The
+     * server stays the enforcement boundary either way.
+     * Unknown future wire values may be present and are ignored by consumers
+     * that do not yet know how to render them.
+     */
+    availableRightTypes?: string[];
     consentPurposes: Array<{
       purposeId: string;
       purposeVersionId: string;
@@ -374,6 +385,14 @@ function decodePublicConfig(
     row.captcha = { provider: captcha.provider, siteKey: captcha.siteKey };
   }
 
+  // Advisory, and normalised rather than validated - see `normalizeRightTypes`.
+  if (row.privacy !== undefined && row.privacy !== null) {
+    const privacy = asObject(row.privacy);
+    if (privacy.availableRightTypes !== undefined) {
+      privacy.availableRightTypes = normalizeRightTypes(privacy.availableRightTypes);
+    }
+  }
+
   return row as unknown as PublicConfig;
 }
 
@@ -520,6 +539,24 @@ function optionalStrings(
   return keys.every((key) =>
     value[key] === undefined
     || (typeof value[key] === 'string' && value[key].length <= 4096));
+}
+
+/**
+ * The advertised rights, or `undefined` when the server sent nothing usable.
+ *
+ * NEVER THROWS, unlike the rest of this file's checks. Rejecting a malformed
+ * value here would not disable the privacy tab - it fails the whole public
+ * config and puts the provider into its error state, so a server that ever
+ * emitted the wrong shape, repeated an entry, or added a 65th right would take
+ * down SIGN-IN over an advisory list. Absent is the safe reading: consumers
+ * then offer every right and the server declines what it must, which is
+ * exactly the behaviour that predates the field. `@authowl/flutter` parses it
+ * the same way, so the two SDKs cannot disagree about a malformed server.
+ */
+function normalizeRightTypes(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.length > 64) return undefined;
+  const entries = value.filter((entry): entry is string => typeof entry === 'string' && entry.length <= 128);
+  return entries.length === value.length ? entries : undefined;
 }
 
 function isStringArray(value: unknown, maxItems: number): value is string[] {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createAuthOwlClient } from './client';
 import { resolveConfig } from './config';
+import { PRIVACY_RIGHT_TYPES, offeredRightTypes } from './privacy-client';
 
 const PROJECT_ID = '11111111-1111-4111-8111-111111111111';
 const PK = `pk_live_${PROJECT_ID}_abcdefghij0123456789`;
@@ -87,5 +88,33 @@ describe('privacy client', () => {
       data: null,
       error: { status: 0 },
     });
+  });
+});
+
+describe('offeredRightTypes', () => {
+  it('offers everything when the server cannot report availability', () => {
+    // The compatibility rule the whole feature rests on. Reading `undefined` as
+    // "none" would blank the privacy tab of every app on an older deployment.
+    expect(offeredRightTypes(undefined)).toEqual([...PRIVACY_RIGHT_TYPES]);
+  });
+
+  it('offers nothing when the project accepts none', () => {
+    // Different from undefined, and the state that produced the live report:
+    // an unapproved compliance profile refuses every right.
+    expect(offeredRightTypes([])).toEqual([]);
+  });
+
+  it('offers exactly what is advertised, in the canonical order', () => {
+    expect(offeredRightTypes(['portability', 'access'])).toEqual(['access', 'portability']);
+  });
+
+  it('ignores a right this build has no button for', () => {
+    // The server's set can grow. An unknown entry must not crash a published
+    // SDK, and must not smuggle a right this build cannot render.
+    expect(offeredRightTypes(['access', 'telepathy'])).toEqual(['access']);
+  });
+
+  it('is unmoved by duplicates', () => {
+    expect(offeredRightTypes(['access', 'access'])).toEqual(['access']);
   });
 });

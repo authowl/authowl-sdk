@@ -70,6 +70,7 @@ export const ar: Record<keyof typeof en, string> = {
   'privacy.choices.empty': 'لا توجد في هذا التطبيق استخدامات اختيارية تعتمد على الموافقة.',
   'privacy.rights.title': 'حقوقك في بياناتك',
   'privacy.rights.description': 'أرسل طلبًا موثّقًا مباشرة إلى الجهة المسؤولة عن هذا التطبيق.',
+  'privacy.rights.unavailable': 'لا يستقبل هذا التطبيق طلبات حقوق البيانات بعد.',
   'privacy.right.access': 'الحصول على نسخة من بياناتي',
   'privacy.right.correction': 'تصحيح بياناتي',
   'privacy.right.portability': 'تصدير بياناتي',
@@ -477,6 +478,9 @@ export const ar: Record<keyof typeof en, string> = {
   'serverError.MFA_ENROLLMENT_REQUIRED': 'أكمل إعداد المصادقة الثنائية للمتابعة.',
   'serverError.EMAIL_OTP_RECOVERY_DISABLED':
     'استخدم المصادقة أو رمزًا احتياطيًا.',
+  'serverError.RIGHTS_INTAKE_UNAVAILABLE': 'لا يستقبل هذا التطبيق طلبات حقوق البيانات بعد.',
+  'serverError.RIGHT_NOT_CONFIGURED': 'هذا النوع من الطلبات غير متاح لهذا التطبيق بعد.',
+  'serverError.RIGHTS_REQUEST_FAILED': 'تعذر إرسال الطلب. حاول مرة أخرى.',
   'serverError.SECOND_FACTOR_REQUIRED':
     'أكِّد برمز من تطبيق المصادقة، أو برمز احتياطي.',
   'serverError.TOO_MANY_ATTEMPTS': 'محاولات كثيرة جدًا. حاول مرة أخرى بعد قليل.',

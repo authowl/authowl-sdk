@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { offeredRightTypes } from '@authowl/core';
 import type {
   PrivacyConsentPreference,
   PrivacyRightsRequest,
@@ -120,6 +121,7 @@ export function PrivacyCenter({ theme = defaultTheme }: PrivacyCenterProps = {})
   if (!signedIn) return <Text style={{ color: theme.mutedText }}>{t('privacy.signedOut')}</Text>;
 
   const privacy = config.data?.privacy;
+  const offeredRights = offeredRightTypes(privacy?.availableRightTypes);
   return (
     <View
       testID="authowl-privacy-center"
@@ -194,7 +196,10 @@ export function PrivacyCenter({ theme = defaultTheme }: PrivacyCenterProps = {})
         description={t('privacy.rights.description')}
         theme={theme}
       >
-        {(Object.keys(RIGHT_KEYS) as PrivacyRightType[]).map((right) => (
+        {offeredRights.length === 0 && (
+          <Text style={{ color: theme.mutedText }}>{t('privacy.rights.unavailable')}</Text>
+        )}
+        {offeredRights.map((right) => (
           <Pressable
             key={right}
             testID={`authowl-privacy-right-${right}`}

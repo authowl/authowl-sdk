@@ -151,6 +151,11 @@ describe('resolveServerError', () => {
     ['YOU_ARE_NOT_ALLOWED_TO_DELETE_THIS_MEMBER', 403, 'You are not allowed to delete this member'],
     ['YOU_ARE_NOT_ALLOWED_TO_UPDATE_THIS_MEMBER', 403, 'You are not allowed to update this member'],
     ['YOU_ARE_NOT_ALLOWED_TO_CANCEL_THIS_INVITATION', 403, 'You are not allowed to cancel this invitation'],
+    // Privacy rights intake preconditions. The server writes these for an end
+    // user, so an unmapped code looks fine in English and shows English to
+    // every Arabic reader.
+    ['RIGHTS_INTAKE_UNAVAILABLE', 409, 'This app is not accepting data rights requests yet.'],
+    ['RIGHT_NOT_CONFIGURED', 409, 'This right is not configured for every data source.'],
     // Plan 43.3's step-up gate. The server's own sentence is written for an end
     // user, so an unmapped code would have LOOKED fine in English while showing
     // English to every Arabic reader.

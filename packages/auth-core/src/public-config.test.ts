@@ -340,6 +340,42 @@ describe('getPublicConfig', () => {
   });
 });
 
+describe('advertised data rights normalisation', () => {
+  function decodeWithPrivacy(availableRightTypes: unknown) {
+    const base = publicConfigFixture();
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        ...base,
+        privacy: { notices: [], consentPurposes: [], availableRightTypes },
+      }),
+    );
+    return getPublicConfig(cfg(fetchImpl));
+  }
+
+  it('carries a clean list through', async () => {
+    const config = await decodeWithPrivacy(['access', 'portability']);
+    expect(config.privacy?.availableRightTypes).toEqual(['access', 'portability']);
+  });
+
+  it('keeps an empty list, which means the project accepts none', async () => {
+    // Distinct from absent, and the state behind the live 409 report.
+    const config = await decodeWithPrivacy([]);
+    expect(config.privacy?.availableRightTypes).toEqual([]);
+  });
+
+  it('treats a malformed value as absent instead of failing the whole config', async () => {
+    // THIS IS THE POINT. Throwing here does not disable the privacy tab, it
+    // puts the provider into its error state and takes SIGN-IN down with it -
+    // over an advisory list on a field that exists to grow.
+    for (const malformed of ['access', 42, null, [1, 2], [{}]]) {
+      const config = await decodeWithPrivacy(malformed);
+      expect(config.privacy?.availableRightTypes, JSON.stringify(malformed)).toBeUndefined();
+      // Still a usable config: the rest of the projection survived.
+      expect(config.environmentId).toBeTruthy();
+    }
+  });
+});
+
 describe('captcha config normalisation', () => {
   function decodeWith(extra: Record<string, unknown>) {
     const { captcha: _drop, ...base } = publicConfigFixture();
