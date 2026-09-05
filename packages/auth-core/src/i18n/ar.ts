@@ -480,6 +480,7 @@ export const ar: Record<keyof typeof en, string> = {
     'استخدم المصادقة أو رمزًا احتياطيًا.',
   'serverError.RIGHTS_INTAKE_UNAVAILABLE': 'لا يستقبل هذا التطبيق طلبات حقوق البيانات بعد.',
   'serverError.RIGHT_NOT_CONFIGURED': 'هذا النوع من الطلبات غير متاح لهذا التطبيق بعد.',
+  'serverError.RIGHTS_REQUEST_FAILED': 'تعذر إرسال الطلب. حاول مرة أخرى.',
   'serverError.SECOND_FACTOR_REQUIRED':
     'أكِّد برمز من تطبيق المصادقة، أو برمز احتياطي.',
   'serverError.TOO_MANY_ATTEMPTS': 'محاولات كثيرة جدًا. حاول مرة أخرى بعد قليل.',

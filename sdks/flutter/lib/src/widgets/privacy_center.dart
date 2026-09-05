@@ -148,6 +148,7 @@ class _AuthOwlPrivacyCenterState extends State<AuthOwlPrivacyCenter> {
 
     final theme = authOwlThemeData(Theme.of(context), scope.primaryColor);
     final privacy = scope.publicConfig?.privacy;
+    final offeredRights = offeredRightsFor(privacy);
     final preferencesByCode = <String, AuthOwlConsentPreference>{
       for (final preference in _preferences) preference.code: preference,
     };
@@ -209,15 +210,16 @@ class _AuthOwlPrivacyCenterState extends State<AuthOwlPrivacyCenter> {
               title: scope.t('privacy.rights.title'),
               description: scope.t('privacy.rights.description'),
               children: <Widget>[
-                if (_offeredRights(privacy).isEmpty)
+                if (offeredRights.isEmpty)
                   Text(
                     scope.t('privacy.rights.unavailable'),
                     style: theme.textTheme.bodySmall,
-                  ),
-                Wrap(
+                  )
+                else
+                  Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _offeredRights(privacy).map((right) {
+                  children: offeredRights.map((right) {
                     final pending = _pendingRight == right;
                     final destructive = right == AuthOwlPrivacyRight.erasure;
                     return OutlinedButton(
@@ -332,7 +334,8 @@ class _PrivacyCard extends StatelessWidget {
 /// A null list means the server cannot tell us, so everything is offered - the
 /// behaviour before the field existed. Offering a right the server refuses is
 /// what put seven failing buttons in front of end users on the web portal.
-List<AuthOwlPrivacyRight> _offeredRights(AuthOwlPrivacyConfig? privacy) {
+@visibleForTesting
+List<AuthOwlPrivacyRight> offeredRightsFor(AuthOwlPrivacyConfig? privacy) {
   final advertised = privacy?.availableRightTypes;
   if (advertised == null) return AuthOwlPrivacyRight.values;
   return AuthOwlPrivacyRight.values

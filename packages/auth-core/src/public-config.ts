@@ -384,6 +384,14 @@ function decodePublicConfig(
     row.captcha = { provider: captcha.provider, siteKey: captcha.siteKey };
   }
 
+  // Advisory, and normalised rather than validated - see `normalizeRightTypes`.
+  if (row.privacy !== undefined && row.privacy !== null) {
+    const privacy = asObject(row.privacy);
+    if (privacy.availableRightTypes !== undefined) {
+      privacy.availableRightTypes = normalizeRightTypes(privacy.availableRightTypes);
+    }
+  }
+
   return row as unknown as PublicConfig;
 }
 
@@ -452,9 +460,10 @@ function assertPrivacyConfig(value: unknown): void {
   // anyway. Narrowing here as well would compute the same intersection twice,
   // in two packages, and this is an `assert` - the other checks in this file
   // are pure, and normalisation lives in `decodePublicConfig`.
-  if (privacy.availableRightTypes !== undefined && !isRightTypeList(privacy.availableRightTypes)) {
-    throw invalidPublicConfig();
-  }
+  // Deliberately NOT validated here. See the normalisation in
+  // `decodePublicConfig`: a malformed value becomes absent rather than failing
+  // the whole config, because this field exists to grow and the alternative is
+  // taking down sign-in over an advisory list.
 
   for (const entry of privacy.notices) {
     const notice = asObject(entry);
@@ -542,21 +551,21 @@ function optionalStrings(
 }
 
 /**
- * Deliberately more forgiving than {@link isStringArray}, which also rejects
- * duplicates and caps the length tightly.
+ * The advertised rights, or `undefined` when the server sent nothing usable.
  *
- * This field EXISTS TO GROW. Rejecting it does not disable the privacy tab, it
- * throws `invalidPublicConfig` and puts the whole provider into its error
- * state - so an eighth right type, or a server that ever repeated an entry,
- * would take down sign-in along with everything else. Shape is worth checking;
- * tidiness is not worth that blast radius. A consumer intersects the list
- * against the rights it can actually render, so duplicates and unknown values
- * are already inert.
+ * NEVER THROWS, unlike the rest of this file's checks. Rejecting a malformed
+ * value here would not disable the privacy tab - it fails the whole public
+ * config and puts the provider into its error state, so a server that ever
+ * emitted the wrong shape, repeated an entry, or added a 65th right would take
+ * down SIGN-IN over an advisory list. Absent is the safe reading: consumers
+ * then offer every right and the server declines what it must, which is
+ * exactly the behaviour that predates the field. `@authowl/flutter` parses it
+ * the same way, so the two SDKs cannot disagree about a malformed server.
  */
-function isRightTypeList(value: unknown): value is string[] {
-  return Array.isArray(value)
-    && value.length <= 64
-    && value.every((entry) => typeof entry === 'string' && entry.length <= 128);
+function normalizeRightTypes(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.length > 64) return undefined;
+  const entries = value.filter((entry): entry is string => typeof entry === 'string' && entry.length <= 128);
+  return entries.length === value.length ? entries : undefined;
 }
 
 function isStringArray(value: unknown, maxItems: number): value is string[] {

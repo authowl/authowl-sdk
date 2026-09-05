@@ -492,6 +492,7 @@ export const en = {
   // step-up code had.
   'serverError.RIGHTS_INTAKE_UNAVAILABLE': 'This app is not accepting data rights requests yet.',
   'serverError.RIGHT_NOT_CONFIGURED': 'This request type is not available for this app yet.',
+  'serverError.RIGHTS_REQUEST_FAILED': 'We could not submit that request. Please try again.',
   // The step-up gate (a code, not a password) on turning two-factor off or
   // reissuing backup codes. Phrased as an instruction because the SDK responds
   // by showing the code prompt: this is what the user does next, not a refusal.

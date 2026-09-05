@@ -227,6 +227,14 @@ class AuthOwlPublicConfig {
   }
 }
 
+/// Parses the privacy block, SKIPPING entries it cannot read rather than
+/// discarding the whole block.
+///
+/// Discarding was a fail-open: a single malformed notice made this return null,
+/// and null reads as "the server cannot report availability" - so a project
+/// that had said "accept no data rights" got all seven buttons back, each one
+/// answering 409. The rights gate must not depend on unrelated notice fields
+/// parsing. Null is now reserved for a privacy block that is genuinely absent.
 AuthOwlPrivacyConfig? _privacyConfig(Object? raw) {
   if (raw is! Map ||
       raw['notices'] is! List ||
@@ -235,7 +243,7 @@ AuthOwlPrivacyConfig? _privacyConfig(Object? raw) {
   }
   final notices = <AuthOwlPrivacyNotice>[];
   for (final entry in raw['notices'] as List) {
-    if (entry is! Map) return null;
+    if (entry is! Map) continue;
     final id = entry['noticeVersionId'];
     final title = _localized(entry['title']);
     final body = _localized(entry['body']);
@@ -245,7 +253,7 @@ AuthOwlPrivacyConfig? _privacyConfig(Object? raw) {
         title == null ||
         body == null ||
         purposeCodes == null) {
-      return null;
+      continue;
     }
     notices.add(AuthOwlPrivacyNotice(
       noticeVersionId: id,
@@ -256,7 +264,7 @@ AuthOwlPrivacyConfig? _privacyConfig(Object? raw) {
   }
   final purposes = <AuthOwlConsentPurpose>[];
   for (final entry in raw['consentPurposes'] as List) {
-    if (entry is! Map) return null;
+    if (entry is! Map) continue;
     final id = entry['purposeVersionId'];
     final code = entry['code'];
     final title = _localized(entry['title']);
@@ -267,7 +275,7 @@ AuthOwlPrivacyConfig? _privacyConfig(Object? raw) {
         code.isEmpty ||
         title == null ||
         description == null) {
-      return null;
+      continue;
     }
     purposes.add(AuthOwlConsentPurpose(
       purposeVersionId: id,
@@ -281,9 +289,18 @@ AuthOwlPrivacyConfig? _privacyConfig(Object? raw) {
   // failing the whole config: this field exists to grow, and taking down every
   // auth surface over it would be a far worse outcome than offering a right
   // the server then declines.
-  final availableRightTypes = rawRights is List
-      ? rawRights.whereType<String>().toList(growable: false)
-      : null;
+  // Absent, or anything that is not a clean list of strings, reads as ABSENT -
+  // never as an empty list. `whereType` silently produced `[]` for a list of
+  // non-strings, which HIDES every right: the opposite of the documented rule,
+  // and a worse failure than offering one the server declines. Matches
+  // `normalizeRightTypes` in @authowl/core, so the two SDKs cannot disagree
+  // about a malformed server.
+  final List<String>? availableRightTypes;
+  if (rawRights is List && rawRights.every((entry) => entry is String)) {
+    availableRightTypes = rawRights.cast<String>().toList(growable: false);
+  } else {
+    availableRightTypes = null;
+  }
   return AuthOwlPrivacyConfig(
     notices: notices,
     consentPurposes: purposes,

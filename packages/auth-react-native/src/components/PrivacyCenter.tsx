@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { offeredRightTypes } from '@authowl/core';
 import type {
   PrivacyConsentPreference,
   PrivacyRightsRequest,
@@ -120,13 +121,7 @@ export function PrivacyCenter({ theme = defaultTheme }: PrivacyCenterProps = {})
   if (!signedIn) return <Text style={{ color: theme.mutedText }}>{t('privacy.signedOut')}</Text>;
 
   const privacy = config.data?.privacy;
-  // Only what the server says it can accept. Absent means an older server that
-  // cannot tell us - offer everything, as this did before the field existed.
-  const advertisedRights = privacy?.availableRightTypes;
-  const allRights = Object.keys(RIGHT_KEYS) as PrivacyRightType[];
-  const offeredRights = advertisedRights === undefined
-    ? allRights
-    : allRights.filter((right) => advertisedRights.includes(right));
+  const offeredRights = offeredRightTypes(privacy?.availableRightTypes);
   return (
     <View
       testID="authowl-privacy-center"

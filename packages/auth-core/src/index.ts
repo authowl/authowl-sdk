@@ -206,6 +206,8 @@ export {
   type PrivacyLocale,
   type PrivacyRightsRequest,
   type PrivacyRightState,
+  offeredRightTypes,
+  PRIVACY_RIGHT_TYPES,
   type PrivacyRightType,
   type RecordPrivacyConsentOptions,
 } from './privacy-client';

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { offeredRightTypes } from '@authowl/core';
 import type {
   PrivacyConsentPreference,
   PrivacyRightState,
@@ -77,20 +78,7 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
   if (!isSignedIn) return <p className="ba-muted">{t('privacy.signedOut')}</p>;
 
   const privacy = config?.privacy;
-  // Only the rights the server says it can accept. A project whose compliance
-  // profile is not approved, or whose data sources do not cover an operation,
-  // refuses that right - and offering the button anyway is how seven controls
-  // that could only ever fail ended up in front of end users.
-  //
-  // ABSENT means an older server that cannot tell us; show everything, exactly
-  // as this component did before the field existed. RIGHT_KEYS owns the order
-  // the buttons appear in, so the filter runs over it rather than over the
-  // core package's set.
-  const advertisedRights = privacy?.availableRightTypes;
-  const allRights = Object.keys(RIGHT_KEYS) as PrivacyRightType[];
-  const offeredRights = advertisedRights === undefined
-    ? allRights
-    : allRights.filter((right) => advertisedRights.includes(right));
+  const offeredRights = offeredRightTypes(privacy?.availableRightTypes);
 
   const preferenceByCode = new Map(preferences.map((item) => [item.code, item]));
 
