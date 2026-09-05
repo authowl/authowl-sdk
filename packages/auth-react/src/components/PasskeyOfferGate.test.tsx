@@ -103,6 +103,21 @@ describe('PasskeyOfferGate', () => {
     expect(await screen.findByTestId('passkey-offer')).toBeTruthy();
   });
 
+
+
+  it('registers without narrowing the authenticator', async () => {
+    // Nothing is steered from the client. On a project with a second factor the
+    // SERVER registers with `userVerification: 'required'`, which admits a
+    // phone over hybrid and a PIN-protected key as well as a platform
+    // authenticator - and unlike an attachment restriction it actually
+    // guarantees the credential can clear the sign-in gate.
+    mocks.user = { id: 'user-1', twoFactorEnabled: true };
+    render(app());
+    fireEvent.click(await screen.findByText('passkeyOffer.submit'));
+
+    await waitFor(() => expect(mocks.addPasskey).toHaveBeenCalledWith());
+  });
+
   it('shows the app, not the offer, to someone who already has a passkey', async () => {
     mocks.listPasskeys.mockResolvedValue({ data: [{ id: 'passkey-1' }], error: null });
     render(app());

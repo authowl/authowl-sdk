@@ -27,18 +27,6 @@ import { passkeyReachableForConfig } from '../signin-methods';
  *   is refused by the browser before any network call, so off-host the offer is
  *   not unlikely to work, it is impossible.
  * - `PublicKeyCredential` - no WebAuthn, no ceremony.
- * A 2FA-ENROLLED USER IS OFFERED ONE, and an earlier version of this hook
- * refused them. That refusal cited a comment saying such a user "cannot
- * complete a passkey sign-in at all today"; the server says otherwise.
- * `passkeyAssuranceGate` allows any assertion that performed USER VERIFICATION
- * - a passkey with a biometric or PIN is possession plus inherence, which is
- * two factors, so it both passes the sign-in and satisfies MFA. Only a
- * UV-ABSENT assertion is refused for an enrolled user.
- *
- * The cost of that mistake was the whole feature: on a project with MFA
- * required, every user is enrolled, so the offer could never fire for anyone -
- * exactly the population a passkey helps most, since it replaces the password
- * AND the code.
  * - no passkey already registered - asked of the SERVER, because a credential
  *   synced from another device or added on the account page is invisible to
  *   this browser's own memory.
@@ -46,6 +34,21 @@ import { passkeyReachableForConfig } from '../signin-methods';
  *
  * The server check is the only one that costs a request, so it runs last and
  * only for a user who has passed everything else.
+ *
+ * THERE IS DELIBERATELY NO `twoFactorEnabled` GATE. An earlier version refused
+ * enrolled users, citing a comment that said such a user "cannot complete a
+ * passkey sign-in at all today". The server says otherwise:
+ * `passkeyAssuranceGate` allows any assertion that performed user verification,
+ * so a passkey with a biometric or PIN is two factors - it both signs them in
+ * and satisfies their MFA. That mistake cost the whole feature, because on a
+ * project with MFA required every user is enrolled, so the offer fired for
+ * nobody - exactly the people it helps most, since it replaces the password AND
+ * the code.
+ *
+ * Nothing is steered from here. On a project with a second factor the SERVER
+ * registers passkeys with `userVerification: 'required'`, so the credential is
+ * guaranteed to clear the sign-in gate. Asking the client to narrow the
+ * authenticator instead would be narrower and weaker.
  */
 export function usePasskeyOffer(): {
   /**
@@ -59,21 +62,6 @@ export function usePasskeyOffer(): {
   shouldOffer: () => Promise<boolean>;
   /** Remember which way the user answered, so they are not asked again. */
   remember: (added: boolean) => void;
-  /**
-   * Options the offer's registration ceremony should use for THIS user.
-   *
-   * `platform` for a 2FA-enrolled user: their credential only clears the
-   * sign-in gate if the ceremony performs user verification, and a platform
-   * authenticator (Touch ID, Face ID, Windows Hello) does that by default. UV
-   * cannot be requested directly - the registration surface exposes no
-   * `userVerification` option, and WebAuthn reports UV per assertion rather
-   * than per device, so it is not knowable in advance either. Steering the
-   * authenticator is the honest lever available.
-   *
-   * A user with no second factor is unconstrained: any authenticator works for
-   * them, so narrowing the choice would cost them a roaming key for nothing.
-   */
-  registration: Readonly<{ authenticatorAttachment?: 'platform' }>;
 } {
   const { config } = usePublicConfig();
   const { user, isSignedIn } = useUser();
@@ -134,10 +122,5 @@ export function usePasskeyOffer(): {
     [projectId, subject],
   );
 
-  const registration = React.useMemo(
-    () => (user?.twoFactorEnabled === true ? { authenticatorAttachment: 'platform' as const } : {}),
-    [user?.twoFactorEnabled],
-  );
-
-  return { subject, shouldOffer, remember, registration };
+  return { subject, shouldOffer, remember };
 }

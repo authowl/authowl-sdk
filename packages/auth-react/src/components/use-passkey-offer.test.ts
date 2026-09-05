@@ -92,20 +92,19 @@ describe('usePasskeyOffer', () => {
     await expect(offer().shouldOffer()).resolves.toBe(true);
   });
 
-  it('steers a 2FA-enrolled user to a platform authenticator', async () => {
-    // Their credential only clears the sign-in gate if the ceremony verifies
-    // them, and a platform authenticator does that by default. UV cannot be
-    // requested at registration, so this is the honest lever available.
+  it('still suppresses a 2FA user who already has a passkey', async () => {
+    // The 2FA exclusion used to short-circuit before the server was asked, so
+    // relaxing it puts the WHOLE weight of "do not nag" on the listPasskeys
+    // check for this population. Without this, every signed-in visit of an
+    // already-enrolled 2FA user reopens the offer until they dismiss it.
     mocks.user = { id: 'user-1', twoFactorEnabled: true };
-    expect(offer().registration).toEqual({ authenticatorAttachment: 'platform' });
+    mocks.listPasskeys.mockResolvedValue({ data: [{ id: 'passkey-1' }], error: null });
+
+    await expect(offer().shouldOffer()).resolves.toBe(false);
+    expect(mocks.listPasskeys).toHaveBeenCalled();
   });
 
-  it('leaves the choice open for a user with no second factor', async () => {
-    // Any authenticator satisfies them, so narrowing it would cost them a
-    // roaming security key for no gain.
-    mocks.user = { id: 'user-1', twoFactorEnabled: false };
-    expect(offer().registration).toEqual({});
-  });
+
 
   it('never offers where the ceremony cannot reach the relying party', async () => {
     // The engine sets no explicit rpID, so the relying party is the AUTH host.
