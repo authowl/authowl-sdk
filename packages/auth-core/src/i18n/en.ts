@@ -487,6 +487,11 @@ export const en = {
     'Finish setting up two-factor authentication to continue.',
   'serverError.EMAIL_OTP_RECOVERY_DISABLED':
     'Use TOTP or a backup code.',
+  // The privacy rights intake preconditions. Unmapped, the server's English
+  // sentence renders verbatim to Arabic readers - the same gap the second-factor
+  // step-up code had.
+  'serverError.RIGHTS_INTAKE_UNAVAILABLE': 'This app is not accepting data rights requests yet.',
+  'serverError.RIGHT_NOT_CONFIGURED': 'This request type is not available for this app yet.',
   // The step-up gate (a code, not a password) on turning two-factor off or
   // reissuing backup codes. Phrased as an instruction because the SDK responds
   // by showing the code prompt: this is what the user does next, not a refusal.

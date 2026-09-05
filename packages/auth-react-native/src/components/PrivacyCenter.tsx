@@ -120,6 +120,13 @@ export function PrivacyCenter({ theme = defaultTheme }: PrivacyCenterProps = {})
   if (!signedIn) return <Text style={{ color: theme.mutedText }}>{t('privacy.signedOut')}</Text>;
 
   const privacy = config.data?.privacy;
+  // Only what the server says it can accept. Absent means an older server that
+  // cannot tell us - offer everything, as this did before the field existed.
+  const advertisedRights = privacy?.availableRightTypes;
+  const allRights = Object.keys(RIGHT_KEYS) as PrivacyRightType[];
+  const offeredRights = advertisedRights === undefined
+    ? allRights
+    : allRights.filter((right) => advertisedRights.includes(right));
   return (
     <View
       testID="authowl-privacy-center"
@@ -194,7 +201,10 @@ export function PrivacyCenter({ theme = defaultTheme }: PrivacyCenterProps = {})
         description={t('privacy.rights.description')}
         theme={theme}
       >
-        {(Object.keys(RIGHT_KEYS) as PrivacyRightType[]).map((right) => (
+        {offeredRights.length === 0 && (
+          <Text style={{ color: theme.mutedText }}>{t('privacy.rights.unavailable')}</Text>
+        )}
+        {offeredRights.map((right) => (
           <Pressable
             key={right}
             testID={`authowl-privacy-right-${right}`}

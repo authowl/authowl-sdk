@@ -209,10 +209,15 @@ class _AuthOwlPrivacyCenterState extends State<AuthOwlPrivacyCenter> {
               title: scope.t('privacy.rights.title'),
               description: scope.t('privacy.rights.description'),
               children: <Widget>[
+                if (_offeredRights(privacy).isEmpty)
+                  Text(
+                    scope.t('privacy.rights.unavailable'),
+                    style: theme.textTheme.bodySmall,
+                  ),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: AuthOwlPrivacyRight.values.map((right) {
+                  children: _offeredRights(privacy).map((right) {
                     final pending = _pendingRight == right;
                     final destructive = right == AuthOwlPrivacyRight.erasure;
                     return OutlinedButton(
@@ -320,6 +325,19 @@ class _PrivacyCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The rights the server says it accepts, in the enum's own order.
+///
+/// A null list means the server cannot tell us, so everything is offered - the
+/// behaviour before the field existed. Offering a right the server refuses is
+/// what put seven failing buttons in front of end users on the web portal.
+List<AuthOwlPrivacyRight> _offeredRights(AuthOwlPrivacyConfig? privacy) {
+  final advertised = privacy?.availableRightTypes;
+  if (advertised == null) return AuthOwlPrivacyRight.values;
+  return AuthOwlPrivacyRight.values
+      .where((right) => advertised.contains(_rightWire(right)))
+      .toList(growable: false);
 }
 
 String _rightWire(AuthOwlPrivacyRight right) => switch (right) {

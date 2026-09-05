@@ -1,7 +1,7 @@
 import type { ResolvedAuthConfig } from './config';
 import { requestPublishableJson, requireOk } from './http';
 import { decodeJsonObject } from './response-schema';
-import { PRIVACY_RIGHT_TYPES, type PrivacyRightType } from './privacy-client';
+import type { PrivacyRightType } from './privacy-client';
 
 export type EnvironmentType = 'development' | 'production';
 
@@ -446,14 +446,14 @@ function assertPrivacyConfig(value: unknown): void {
     || privacy.notices.length > 64
     || privacy.consentPurposes.length > 64
   ) throw invalidPublicConfig();
-  // Optional, so `undefined` passes; anything present must be a clean list of
-  // known right types. An unknown entry is dropped rather than rejected: the
-  // set can only grow server-side, and refusing the whole config over a right
-  // this build has no button for would take the privacy tab down.
-  if (privacy.availableRightTypes !== undefined) {
-    if (!isStringArray(privacy.availableRightTypes, 16)) throw invalidPublicConfig();
-    privacy.availableRightTypes = (privacy.availableRightTypes as string[])
-      .filter((right): right is PrivacyRightType => (PRIVACY_RIGHT_TYPES as readonly string[]).includes(right));
+  // Optional, so `undefined` passes. Shape only - an unrecognised entry is left
+  // alone rather than rejected or stripped, because the set can only grow
+  // server-side and a consumer intersects it against the rights it can render
+  // anyway. Narrowing here as well would compute the same intersection twice,
+  // in two packages, and this is an `assert` - the other checks in this file
+  // are pure, and normalisation lives in `decodePublicConfig`.
+  if (privacy.availableRightTypes !== undefined && !isRightTypeList(privacy.availableRightTypes)) {
+    throw invalidPublicConfig();
   }
 
   for (const entry of privacy.notices) {
@@ -539,6 +539,24 @@ function optionalStrings(
   return keys.every((key) =>
     value[key] === undefined
     || (typeof value[key] === 'string' && value[key].length <= 4096));
+}
+
+/**
+ * Deliberately more forgiving than {@link isStringArray}, which also rejects
+ * duplicates and caps the length tightly.
+ *
+ * This field EXISTS TO GROW. Rejecting it does not disable the privacy tab, it
+ * throws `invalidPublicConfig` and puts the whole provider into its error
+ * state - so an eighth right type, or a server that ever repeated an entry,
+ * would take down sign-in along with everything else. Shape is worth checking;
+ * tidiness is not worth that blast radius. A consumer intersects the list
+ * against the rights it can actually render, so duplicates and unknown values
+ * are already inert.
+ */
+function isRightTypeList(value: unknown): value is string[] {
+  return Array.isArray(value)
+    && value.length <= 64
+    && value.every((entry) => typeof entry === 'string' && entry.length <= 128);
 }
 
 function isStringArray(value: unknown, maxItems: number): value is string[] {

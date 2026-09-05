@@ -49,22 +49,6 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
   const [error, setError] = React.useState<string | null>(null);
   const [pendingPurpose, setPendingPurpose] = React.useState<string | null>(null);
   const [pendingRight, setPendingRight] = React.useState<PrivacyRightType | null>(null);
-  // Only the rights the server says it can accept. A project whose compliance
-  // profile is not approved, or whose data sources do not cover an operation,
-  // refuses that right - and offering the button anyway is how seven controls
-  // that could only ever fail ended up in front of end users.
-  //
-  // ABSENT means an older server that cannot tell us; show everything, exactly
-  // as this component did before the field existed.
-  //
-  // Declared with the other hooks, ABOVE the loading and signed-out returns:
-  // below them it runs conditionally, which is a hook-order crash the moment
-  // the component finishes loading.
-  const offeredRights = React.useMemo(() => {
-    const advertised = config?.privacy?.availableRightTypes;
-    const all = Object.keys(RIGHT_KEYS) as PrivacyRightType[];
-    return advertised === undefined ? all : all.filter((right) => advertised.includes(right));
-  }, [config?.privacy?.availableRightTypes]);
   const refresh = React.useCallback(async () => {
     if (!isSignedIn) return;
     setLoading(true);
@@ -93,6 +77,20 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
   if (!isSignedIn) return <p className="ba-muted">{t('privacy.signedOut')}</p>;
 
   const privacy = config?.privacy;
+  // Only the rights the server says it can accept. A project whose compliance
+  // profile is not approved, or whose data sources do not cover an operation,
+  // refuses that right - and offering the button anyway is how seven controls
+  // that could only ever fail ended up in front of end users.
+  //
+  // ABSENT means an older server that cannot tell us; show everything, exactly
+  // as this component did before the field existed. RIGHT_KEYS owns the order
+  // the buttons appear in, so the filter runs over it rather than over the
+  // core package's set.
+  const advertisedRights = privacy?.availableRightTypes;
+  const allRights = Object.keys(RIGHT_KEYS) as PrivacyRightType[];
+  const offeredRights = advertisedRights === undefined
+    ? allRights
+    : allRights.filter((right) => advertisedRights.includes(right));
 
   const preferenceByCode = new Map(preferences.map((item) => [item.code, item]));
 

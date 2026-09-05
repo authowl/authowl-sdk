@@ -51,10 +51,18 @@ class AuthOwlPrivacyConfig {
   const AuthOwlPrivacyConfig({
     required this.notices,
     required this.consentPurposes,
+    this.availableRightTypes,
   });
 
   final List<AuthOwlPrivacyNotice> notices;
   final List<AuthOwlConsentPurpose> consentPurposes;
+
+  /// Wire names of the data rights this project can actually accept.
+  ///
+  /// Null means an older server that does not report it - offer every right,
+  /// as this SDK did before the field existed. An empty list means the project
+  /// accepts none, which is different and must be honoured.
+  final List<String>? availableRightTypes;
 
   /// Build the exact evidence body accepted by email sign-up.
   Map<String, Object?> buildSignUpEvidence({
@@ -268,7 +276,19 @@ AuthOwlPrivacyConfig? _privacyConfig(Object? raw) {
       description: description,
     ));
   }
-  return AuthOwlPrivacyConfig(notices: notices, consentPurposes: purposes);
+  final rawRights = raw['availableRightTypes'];
+  // Absent stays null. A malformed value is treated as absent rather than
+  // failing the whole config: this field exists to grow, and taking down every
+  // auth surface over it would be a far worse outcome than offering a right
+  // the server then declines.
+  final availableRightTypes = rawRights is List
+      ? rawRights.whereType<String>().toList(growable: false)
+      : null;
+  return AuthOwlPrivacyConfig(
+    notices: notices,
+    consentPurposes: purposes,
+    availableRightTypes: availableRightTypes,
+  );
 }
 
 Map<String, String>? _localized(Object? raw) {
