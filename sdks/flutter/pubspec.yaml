@@ -2,7 +2,7 @@ name: authowl
 description: >-
   Official AuthOwl Flutter SDK with localized authentication widgets,
   provider-managed sessions, and secure-storage integration.
-version: 0.4.0
+version: 0.4.1
 repository: https://github.com/authowl/authowl-sdk
 homepage: https://authowl.dev
 
