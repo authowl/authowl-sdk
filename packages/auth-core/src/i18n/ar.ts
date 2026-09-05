@@ -70,6 +70,7 @@ export const ar: Record<keyof typeof en, string> = {
   'privacy.choices.empty': 'لا توجد في هذا التطبيق استخدامات اختيارية تعتمد على الموافقة.',
   'privacy.rights.title': 'حقوقك في بياناتك',
   'privacy.rights.description': 'أرسل طلبًا موثّقًا مباشرة إلى الجهة المسؤولة عن هذا التطبيق.',
+  'privacy.rights.unavailable': 'لا يستقبل هذا التطبيق طلبات حقوق البيانات بعد.',
   'privacy.right.access': 'الحصول على نسخة من بياناتي',
   'privacy.right.correction': 'تصحيح بياناتي',
   'privacy.right.portability': 'تصدير بياناتي',

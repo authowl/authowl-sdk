@@ -10,14 +10,17 @@ import {
 
 export type PrivacyLocale = 'en' | 'ar';
 export type PrivacyConsentState = 'granted' | 'refused' | 'withdrawn';
-export type PrivacyRightType =
-  | 'access'
-  | 'correction'
-  | 'portability'
-  | 'erasure'
-  | 'restriction'
-  | 'objection'
-  | 'consent_withdrawal';
+/** The closed set, as a value, so a validator can check membership at runtime. */
+export const PRIVACY_RIGHT_TYPES = [
+  'access',
+  'correction',
+  'portability',
+  'erasure',
+  'restriction',
+  'objection',
+  'consent_withdrawal',
+] as const;
+export type PrivacyRightType = (typeof PRIVACY_RIGHT_TYPES)[number];
 export type PrivacyRightState =
   | 'received'
   | 'identity_pending'

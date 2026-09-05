@@ -1,6 +1,7 @@
 import type { ResolvedAuthConfig } from './config';
 import { requestPublishableJson, requireOk } from './http';
 import { decodeJsonObject } from './response-schema';
+import { PRIVACY_RIGHT_TYPES, type PrivacyRightType } from './privacy-client';
 
 export type EnvironmentType = 'development' | 'production';
 
@@ -150,6 +151,15 @@ export type PublicConfig = {
       purposeCodes: string[];
       effectiveFrom: string;
     }>;
+    /**
+     * Which data rights this project can actually accept.
+     *
+     * ABSENT MEANS UNKNOWN, NOT NONE. A server released before this field
+     * simply does not send it, and treating that as "offer nothing" would
+     * blank the rights section for every project on an older deployment. The
+     * server stays the enforcement boundary either way.
+     */
+    availableRightTypes?: PrivacyRightType[];
     consentPurposes: Array<{
       purposeId: string;
       purposeVersionId: string;
@@ -436,6 +446,15 @@ function assertPrivacyConfig(value: unknown): void {
     || privacy.notices.length > 64
     || privacy.consentPurposes.length > 64
   ) throw invalidPublicConfig();
+  // Optional, so `undefined` passes; anything present must be a clean list of
+  // known right types. An unknown entry is dropped rather than rejected: the
+  // set can only grow server-side, and refusing the whole config over a right
+  // this build has no button for would take the privacy tab down.
+  if (privacy.availableRightTypes !== undefined) {
+    if (!isStringArray(privacy.availableRightTypes, 16)) throw invalidPublicConfig();
+    privacy.availableRightTypes = (privacy.availableRightTypes as string[])
+      .filter((right): right is PrivacyRightType => (PRIVACY_RIGHT_TYPES as readonly string[]).includes(right));
+  }
 
   for (const entry of privacy.notices) {
     const notice = asObject(entry);

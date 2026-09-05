@@ -70,6 +70,7 @@ export const en = {
   'privacy.choices.empty': 'This app has no optional consent-based uses.',
   'privacy.rights.title': 'Your data rights',
   'privacy.rights.description': 'Send a verified request directly to the organization responsible for this app.',
+  'privacy.rights.unavailable': 'This app is not accepting data rights requests yet.',
   'privacy.right.access': 'Get a copy of my data',
   'privacy.right.correction': 'Correct my data',
   'privacy.right.portability': 'Export my data',
