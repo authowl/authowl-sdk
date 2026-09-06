@@ -79,14 +79,32 @@ describe('usePasskeyOffer', () => {
     await expect(offer().shouldOffer()).resolves.toBe(false);
   });
 
-  it('never offers to a user with two-factor enabled', async () => {
-    // A 2FA-enrolled user cannot complete a passkey sign-in at all today, so
-    // the credential could never be used. Offering it would ship a dead end.
+  it('DOES offer to a user with two-factor enabled', async () => {
+    // This pinned the opposite rule, and the rule was wrong. The server's
+    // `passkeyAssuranceGate` allows any assertion that performed user
+    // verification: a passkey with a biometric or PIN is two factors, so it
+    // both signs the user in and satisfies MFA. Refusing them meant that on a
+    // project with MFA required - where EVERY user is enrolled - the offer
+    // could never fire for anybody.
     mocks.user = { id: 'user-1', twoFactorEnabled: true };
-    expect(offer().subject).toBeNull();
-    await expect(offer().shouldOffer()).resolves.toBe(false);
-    expect(mocks.listPasskeys).not.toHaveBeenCalled();
+
+    expect(offer().subject).not.toBeNull();
+    await expect(offer().shouldOffer()).resolves.toBe(true);
   });
+
+  it('still suppresses a 2FA user who already has a passkey', async () => {
+    // The 2FA exclusion used to short-circuit before the server was asked, so
+    // relaxing it puts the WHOLE weight of "do not nag" on the listPasskeys
+    // check for this population. Without this, every signed-in visit of an
+    // already-enrolled 2FA user reopens the offer until they dismiss it.
+    mocks.user = { id: 'user-1', twoFactorEnabled: true };
+    mocks.listPasskeys.mockResolvedValue({ data: [{ id: 'passkey-1' }], error: null });
+
+    await expect(offer().shouldOffer()).resolves.toBe(false);
+    expect(mocks.listPasskeys).toHaveBeenCalled();
+  });
+
+
 
   it('never offers where the ceremony cannot reach the relying party', async () => {
     // The engine sets no explicit rpID, so the relying party is the AUTH host.

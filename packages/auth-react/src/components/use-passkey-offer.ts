@@ -27,10 +27,6 @@ import { passkeyReachableForConfig } from '../signin-methods';
  *   is refused by the browser before any network call, so off-host the offer is
  *   not unlikely to work, it is impossible.
  * - `PublicKeyCredential` - no WebAuthn, no ceremony.
- * - NOT `twoFactorEnabled` - a 2FA-enrolled user cannot complete a passkey
- *   sign-in today (the assurance gate runs with `userVerified: false`), so the
- *   credential we minted could never be used. Offering it would ship a fresh
- *   dead end from the change that removes one.
  * - no passkey already registered - asked of the SERVER, because a credential
  *   synced from another device or added on the account page is invisible to
  *   this browser's own memory.
@@ -38,6 +34,17 @@ import { passkeyReachableForConfig } from '../signin-methods';
  *
  * The server check is the only one that costs a request, so it runs last and
  * only for a user who has passed everything else.
+ *
+ * THERE IS DELIBERATELY NO `twoFactorEnabled` GATE, and adding one back would
+ * silence this feature entirely on a project with MFA required, where every
+ * user is enrolled. A user-verified passkey is two factors: it signs an
+ * enrolled user in AND satisfies their MFA - see `passkeyAssuranceGate` on the
+ * server, and the test beside it.
+ *
+ * Nothing is steered from here. On a project with a second factor the SERVER
+ * registers passkeys with `userVerification: 'required'`, so the credential is
+ * guaranteed to clear the sign-in gate. Asking the client to narrow the
+ * authenticator instead would be narrower and weaker.
  */
 export function usePasskeyOffer(): {
   /**
@@ -67,7 +74,6 @@ export function usePasskeyOffer(): {
     projectId !== null
     && isSignedIn
     && resolveProjectCapabilities(config).passkeyAdd
-    && user?.twoFactorEnabled !== true
     && typeof window !== 'undefined'
     && 'PublicKeyCredential' in window
     && passkeyReachableForConfig(config, window.location.hostname);

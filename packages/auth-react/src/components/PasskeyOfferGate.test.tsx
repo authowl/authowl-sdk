@@ -88,11 +88,11 @@ describe('PasskeyOfferGate', () => {
     expect(await screen.findByTestId('passkey-offer')).toBeTruthy();
   });
 
-  it('does not offer to a 2FA user whose session arrives after the gate mounts', async () => {
-    // Reached the way the real flow reaches it. An earlier version of this
-    // check ran inside <SignIn/>, where no user is loaded yet, so
-    // `twoFactorEnabled` read undefined and the gate passed for everyone - and
-    // a test that pre-set the user blessed it.
+  it('offers to a 2FA user whose session arrives after the gate mounts', async () => {
+    // Reached the way the real flow reaches it: no user at mount, then the
+    // session lands. This previously asserted the OPPOSITE, because the gate
+    // excluded 2FA-enrolled users - which silenced the offer for every user on
+    // a project with MFA required.
     mocks.user = null;
     const view = render(app());
     expect(screen.getByText('the app')).toBeTruthy();
@@ -100,9 +100,22 @@ describe('PasskeyOfferGate', () => {
     mocks.user = { id: 'user-1', twoFactorEnabled: true };
     view.rerender(app());
 
-    await waitFor(() => expect(mocks.listPasskeys).not.toHaveBeenCalled());
-    expect(screen.queryByTestId('passkey-offer')).toBeNull();
-    expect(screen.getByText('the app')).toBeTruthy();
+    expect(await screen.findByTestId('passkey-offer')).toBeTruthy();
+  });
+
+
+
+  it('registers without narrowing the authenticator', async () => {
+    // Nothing is steered from the client. On a project with a second factor the
+    // SERVER registers with `userVerification: 'required'`, which admits a
+    // phone over hybrid and a PIN-protected key as well as a platform
+    // authenticator - and unlike an attachment restriction it actually
+    // guarantees the credential can clear the sign-in gate.
+    mocks.user = { id: 'user-1', twoFactorEnabled: true };
+    render(app());
+    fireEvent.click(await screen.findByText('passkeyOffer.submit'));
+
+    await waitFor(() => expect(mocks.addPasskey).toHaveBeenCalledWith());
   });
 
   it('shows the app, not the offer, to someone who already has a passkey', async () => {
