@@ -8,6 +8,7 @@ import {
 import { usePasskeys, usePublicConfig, useSession, useUser } from '../hooks';
 import { resolveProjectCapabilities } from '../project-capabilities';
 import { passkeyReachableForConfig } from '../signin-methods';
+import { currentPageHost } from './page-host';
 
 /**
  * Should this signed-in user be offered a passkey on this device, right now?
@@ -76,7 +77,7 @@ export function usePasskeyOffer(): {
     && resolveProjectCapabilities(config).passkeyAdd
     && typeof window !== 'undefined'
     && 'PublicKeyCredential' in window
-    && passkeyReachableForConfig(config, window.location.hostname);
+    && passkeyReachableForConfig(config, currentPageHost());
 
   // Null unless EVERY gate passes, so a caller cannot ask on a partially
   // satisfied predicate - and so ONE value answers "should anyone be asked".

@@ -39,6 +39,11 @@ const preview: Preview = {
       const consentRequired = context.parameters.authowl?.consentRequired === true;
       const configUnavailable = context.parameters.authowl?.configUnavailable === true;
       const privacyEnabled = context.parameters.authowl?.privacyEnabled === true;
+      // A story opts in to a relying party that covers the story's own host when
+      // it wants to SHOW a passkey surface; see PreviewAuth for why.
+      const passkeyRelyingPartyId = context.parameters.authowl?.passkeyReachable === true
+        ? window.location.hostname
+        : undefined;
       const primaryColor = typeof context.parameters.authowl?.primaryColor === 'string'
         ? context.parameters.authowl.primaryColor
         : undefined;
@@ -50,6 +55,7 @@ const preview: Preview = {
           consentRequired={consentRequired}
           configUnavailable={configUnavailable}
           privacyEnabled={privacyEnabled}
+          passkeyRelyingPartyId={passkeyRelyingPartyId}
           primaryColor={primaryColor}
         >
           <main

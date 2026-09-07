@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { PublicConfig } from '@authowl/core';
-import { resolveSignInMethods, emailAutocomplete } from './signin-methods';
+import { resolveSignInMethods, emailAutocomplete,
+  passkeyBlockingDomain,
+} from './signin-methods';
 import { makePublicConfig } from './test-fixtures';
 
 /** Build a PublicConfig with the fields the resolver reads, defaults for the rest. */
@@ -293,5 +295,69 @@ describe('passkey reachability from the published relying-party id', () => {
 
   it('supports a localhost id for development', () => {
     expect(resolveSignInMethods(withRp('localhost'), 'localhost').passkey).toBe(true);
+  });
+
+  // THE SECURITY BOUNDARY, and it had no test on either side of the refactor
+  // that moved it: the suffix check must be a DOT boundary, or any domain a
+  // squatter can register ending in the id string would be offered a ceremony
+  // for someone else's relying party.
+  it('requires a dot boundary, not a bare string suffix', () => {
+    expect(resolveSignInMethods(withRp('acme.com'), 'evilacme.com').passkey).toBe(false);
+    expect(resolveSignInMethods(withRp('acme.com'), 'acme.com.attacker.test').passkey).toBe(false);
+    expect(resolveSignInMethods(withRp('acme.com'), 'app.acme.com').passkey).toBe(true);
+  });
+
+  // A bare label is a public suffix; a browser refuses it outright, so offering
+  // the surface would be a guaranteed dead end - and honouring it would scope
+  // credentials across an entire TLD.
+  it('refuses a single-label relying party that is not localhost', () => {
+    expect(resolveSignInMethods(withRp('com'), 'acme.com').passkey).toBe(false);
+    expect(resolveSignInMethods(withRp('test'), 'test').passkey).toBe(false);
+  });
+
+  // Unknowable, so it FAILS OPEN and lets the click-time error speak. Pinned
+  // because the fallback ladder is the half a reader is most likely to "tidy".
+  it('offers the surface when the auth base url cannot be parsed', () => {
+    const broken = cfg({
+      enabledMethods: ['password', 'passkey'],
+      authBaseUrl: 'not a url',
+      authentication: {
+        email: { signUp: true, signIn: ['password'] },
+        phone: { signUp: false, signIn: false },
+        password: { signUp: true, add: true },
+        passkey: { signIn: true, add: true, relyingPartyId: null },
+        username: { collectOnSignUp: false, signIn: false },
+      },
+    } as never);
+    expect(resolveSignInMethods(broken, 'app.acme.com').passkey).toBe(true);
+  });
+
+  // A URL that PARSES but has an opaque path yields an empty hostname: the
+  // scheme-omitted typo `localhost:3000`, and `mailto:` / `about:blank`. Empty
+  // is an UNKNOWN id, so it must fail open like the unparseable case - not block
+  // every surface and render a sentence naming an empty domain.
+  it('treats an empty hostname as unknown, not as a blocking relying party', () => {
+    for (const authBaseUrl of ['localhost:3000', 'mailto:ops@acme.com', 'about:blank']) {
+      const cfgWithHost = cfg({
+        enabledMethods: ['password', 'passkey'],
+        authBaseUrl,
+        authentication: {
+          email: { signUp: true, signIn: ['password'] },
+          phone: { signUp: false, signIn: false },
+          password: { signUp: true, add: true },
+          passkey: { signIn: true, add: true, relyingPartyId: null },
+          username: { collectOnSignUp: false, signIn: false },
+        },
+      } as never);
+      expect(passkeyBlockingDomain(cfgWithHost, 'app.acme.com')).toBeUndefined();
+    }
+  });
+
+  // Hostnames are case-insensitive, and only one side was normalized: the
+  // authBaseUrl fallback arrives lowercased from `new URL()`, a tenant-entered
+  // id does not - so `Acme.com` hid passkeys on `app.acme.com`.
+  it('compares hosts case-insensitively on both sides', () => {
+    expect(resolveSignInMethods(withRp('Acme.com'), 'app.acme.com').passkey).toBe(true);
+    expect(resolveSignInMethods(withRp('acme.com'), 'APP.ACME.COM').passkey).toBe(true);
   });
 });

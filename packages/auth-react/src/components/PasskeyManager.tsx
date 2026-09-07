@@ -1,7 +1,9 @@
 'use client';
 import * as React from 'react';
 import type { AuthPasskey } from '@authowl/core';
-import { usePasskeys, useUser } from '../hooks';
+import { usePasskeys, usePublicConfig, useUser } from '../hooks';
+import { passkeyBlockingDomain } from '../signin-methods';
+import { currentPageHost } from './page-host';
 import { useT, useServerError } from '../i18n';
 import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
@@ -55,6 +57,25 @@ function PasskeyManagerBody({
   const api = usePasskeys();
   const apiRef = React.useRef(api);
   apiRef.current = api;
+
+  // WebAuthn binds a credential to ONE relying-party id and the browser checks
+  // it against the CALLING page, not the API host, so registration throws a
+  // SecurityError on any origin outside the relying party. `resolveSignInMethods`
+  // and `usePasskeyOffer` already hide their surfaces on that predicate; this one
+  // rendered its button unconditionally and sent people hunting through DNS for a
+  // ceremony that could never succeed. Same predicate, deliberately - a second
+  // copy is how the three drifted apart.
+  const { config, isLoading: configLoading, isError: configError } = usePublicConfig();
+  const blockedBy = passkeyBlockingDomain(config, currentPageHost());
+  // HOLD the button while the answer is still arriving. `config` starts null, and
+  // null reads as "not blocked", so on a blocked host a list that resolved before
+  // the config left a live, clickable "Add a passkey" that threw the exact
+  // SecurityError this gate exists to remove, then swapped to the guidance text.
+  //
+  // Keyed on LOADING, not on absence: a config fetch that failed must still offer
+  // the button, or a transient error would silently kill passkey enrolment on
+  // hosts where it works perfectly well.
+  const configPending = configLoading || (config === null && !configError);
 
   // Mutations share the loading/error envelope; the list load uses the same error
   // surface via `setError`.
@@ -153,7 +174,14 @@ function PasskeyManagerBody({
           )}
         </div>
       )}
-      {passkeys !== null && allowAdd && (
+      {passkeys !== null && allowAdd && !configPending && (blockedBy !== undefined ? (
+        // The add button is HIDDEN, not disabled, and the list stays: a user
+        // may hold passkeys enrolled on the relying-party origin and must
+        // still be able to rename or remove them from here.
+        <p className="ba-muted" data-testid="passkey-add-elsewhere">
+          {t('passkeys.addElsewhere', { domain: blockedBy })}
+        </p>
+      ) : (
         <button
           className="ba-button"
           type="button"
@@ -168,7 +196,7 @@ function PasskeyManagerBody({
         >
           <Busy busy={pending} label={t('common.working')}>{t('passkeys.add')}</Busy>
         </button>
-      )}
+      ))}
     </div>
   );
 }

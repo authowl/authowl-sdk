@@ -235,6 +235,7 @@ export const ar: Record<keyof typeof en, string> = {
   'passkeys.remove': 'إزالة',
   'passkeys.removeConfirm': 'هل تريد إزالة {name} من هذا الحساب؟',
   'passkeys.add': 'إضافة مفتاح مرور',
+  'passkeys.addElsewhere': 'تتم إضافة مفاتيح المرور لهذا الحساب على {domain}.',
   'passkeys.renamePrompt': 'اسم مفتاح المرور',
   'passkeys.error.loadFailed': 'تعذر تحميل مفاتيح المرور.',
   'passkeys.error.renameFailed': 'تعذر إعادة تسمية مفتاح المرور.',

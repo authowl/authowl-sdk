@@ -94,6 +94,7 @@ function createPreviewFetch(
   primaryColor: string,
   configUnavailable: boolean,
   privacyEnabled: boolean,
+  passkeyRelyingPartyId: string | undefined,
 ): typeof fetch {
   return async (input: RequestInfo | URL): Promise<Response> => {
     const url = new URL(String(input));
@@ -108,6 +109,24 @@ function createPreviewFetch(
           'https://auth.preview.test/api/projects/11111111-1111-1111-1111-111111111111/auth',
         branding: { appName: 'Cairo Studio', theme: 'light', primaryColor },
         enabledMethods: ['password', 'magic_link', 'passkey'],
+        // WebAuthn validates the relying-party id against the CALLING page, so
+        // passkey surfaces hide themselves unless the id covers the host the
+        // story renders on - and the preview API lives on `auth.preview.test`,
+        // which covers nothing. A story that wants to SHOW a passkey surface
+        // names the story's own host here, which is what a correctly configured
+        // project looks like. Left unset elsewhere so the default preview keeps
+        // demonstrating the honest cross-host behaviour.
+        ...(passkeyRelyingPartyId
+          ? {
+            authentication: {
+              email: { signUp: true, signIn: ['password', 'magic_link'] },
+              phone: { signUp: false, signIn: false },
+              password: { signUp: true, add: true },
+              username: { collectOnSignUp: false, signIn: false },
+              passkey: { signIn: true, add: true, relyingPartyId: passkeyRelyingPartyId },
+            },
+          }
+          : {}),
         socialProviders: ['google', 'github'],
         socialProviderClientIds: { google: 'preview-google-client-id.apps.googleusercontent.com' },
         requireEmailVerification: true,
@@ -190,10 +209,13 @@ function createPreviewFetch(
   };
 }
 
-export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; children: React.ReactNode }) {
+export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; children: React.ReactNode }) {
   const previewFetch = React.useMemo(
-    () => createPreviewFetch(signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled),
-    [configUnavailable, consentRequired, primaryColor, privacyEnabled, signedIn],
+    () => createPreviewFetch(
+      signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled,
+      passkeyRelyingPartyId,
+    ),
+    [configUnavailable, consentRequired, passkeyRelyingPartyId, primaryColor, privacyEnabled, signedIn],
   );
   return (
     <AuthOwlProvider

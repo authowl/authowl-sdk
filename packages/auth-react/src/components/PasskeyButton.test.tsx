@@ -1,0 +1,74 @@
+// @vitest-environment jsdom
+import * as React from 'react';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PublicConfig } from '@authowl/core';
+import { makePublicConfig } from '../test-fixtures';
+
+const mocks = vi.hoisted(() => ({
+  config: null as PublicConfig | null,
+  isLoading: false,
+  isError: false,
+}));
+
+vi.mock('../hooks', () => ({
+  usePublicConfig: () => ({
+    config: mocks.config, isLoading: mocks.isLoading, isError: mocks.isError,
+  }),
+  useAuthClient: () => ({ sessionStore: {} }),
+  useSignIn: () => ({ signInPasskey: vi.fn() }),
+}));
+vi.mock('../i18n', () => ({
+  useT: () => (key: string) => key,
+  useServerError: () => (_error: unknown, fallback: string) => fallback,
+}));
+
+import { PasskeyButton } from './PasskeyButton';
+
+const configFor = (authBaseUrl: string): PublicConfig =>
+  makePublicConfig({ enabledMethods: ['password', 'passkey'], authBaseUrl });
+
+describe('PasskeyButton reachability', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.isLoading = false;
+    mocks.isError = false;
+  });
+  afterEach(cleanup);
+
+  it('renders on an origin the relying party covers', () => {
+    mocks.config = configFor('http://localhost:3000');
+    render(<PasskeyButton />);
+
+    expect(screen.queryByTestId('passkey-button')).toBeTruthy();
+  });
+
+  // <SignIn/> renders this behind `plan.passkey`, which asks the same question,
+  // so the component was safe THERE and a dead end anywhere else. It is exported
+  // from the package index, so "anywhere else" is a supported way to use it.
+  it('renders nothing when mounted outside the relying party', () => {
+    mocks.config = configFor('https://acme-1234.accounts.authowl.dev');
+    render(<PasskeyButton />);
+
+    expect(screen.queryByTestId('passkey-button')).toBeNull();
+  });
+
+  it('renders nothing while the config is still loading', () => {
+    mocks.config = null;
+    mocks.isLoading = true;
+    render(<PasskeyButton />);
+
+    expect(screen.queryByTestId('passkey-button')).toBeNull();
+  });
+
+  // Fail OPEN only after the answer is known to be unavailable. A transient
+  // config failure should not permanently remove an explicitly mounted method,
+  // while the ceremony remains the click-time backstop.
+  it('renders when the config fetch failed outright', () => {
+    mocks.config = null;
+    mocks.isError = true;
+    render(<PasskeyButton />);
+
+    expect(screen.queryByTestId('passkey-button')).toBeTruthy();
+  });
+});

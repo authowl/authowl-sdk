@@ -237,6 +237,7 @@ export const en = {
   'passkeys.remove': 'Remove',
   'passkeys.removeConfirm': 'Remove {name} from this account?',
   'passkeys.add': 'Add a passkey',
+  'passkeys.addElsewhere': 'Passkeys for this account are added on {domain}.',
   'passkeys.renamePrompt': 'Passkey name',
   'passkeys.error.loadFailed': 'Could not load passkeys.',
   'passkeys.error.renameFailed': 'Could not rename the passkey.',
