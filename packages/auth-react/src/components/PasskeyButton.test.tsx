@@ -5,10 +5,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PublicConfig } from '@authowl/core';
 import { makePublicConfig } from '../test-fixtures';
 
-const mocks = vi.hoisted(() => ({ config: null as PublicConfig | null }));
+const mocks = vi.hoisted(() => ({
+  config: null as PublicConfig | null,
+  isLoading: false,
+  isError: false,
+}));
 
 vi.mock('../hooks', () => ({
-  usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
+  usePublicConfig: () => ({
+    config: mocks.config, isLoading: mocks.isLoading, isError: mocks.isError,
+  }),
   useAuthClient: () => ({ sessionStore: {} }),
   useSignIn: () => ({ signInPasskey: vi.fn() }),
 }));
@@ -23,7 +29,11 @@ const configFor = (authBaseUrl: string): PublicConfig =>
   makePublicConfig({ enabledMethods: ['password', 'passkey'], authBaseUrl });
 
 describe('PasskeyButton reachability', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.isLoading = false;
+    mocks.isError = false;
+  });
   afterEach(cleanup);
 
   it('renders on an origin the relying party covers', () => {
@@ -43,10 +53,20 @@ describe('PasskeyButton reachability', () => {
     expect(screen.queryByTestId('passkey-button')).toBeNull();
   });
 
-  // Fail OPEN on an unknown answer: config still loading must not blank a
-  // sign-in method that is probably fine, and the ceremony error still guards.
-  it('renders while the config is still unknown', () => {
+  it('renders nothing while the config is still loading', () => {
     mocks.config = null;
+    mocks.isLoading = true;
+    render(<PasskeyButton />);
+
+    expect(screen.queryByTestId('passkey-button')).toBeNull();
+  });
+
+  // Fail OPEN only after the answer is known to be unavailable. A transient
+  // config failure should not permanently remove an explicitly mounted method,
+  // while the ceremony remains the click-time backstop.
+  it('renders when the config fetch failed outright', () => {
+    mocks.config = null;
+    mocks.isError = true;
     render(<PasskeyButton />);
 
     expect(screen.queryByTestId('passkey-button')).toBeTruthy();

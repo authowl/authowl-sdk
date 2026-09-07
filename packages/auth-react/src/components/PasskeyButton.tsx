@@ -30,9 +30,10 @@ export function PasskeyButton({ redirectTo, onSignedIn }: PasskeyButtonProps) {
   // directly got a button whose ceremony the browser refuses outright. Nothing
   // useful can be said here, so it renders nothing: this is a sign-in METHOD,
   // and the page offers others.
-  const { config } = usePublicConfig();
+  const { config, isLoading: configLoading, isError: configError } = usePublicConfig();
+  const configPending = configLoading || (config === null && !configError);
   const blocked = passkeyBlockingDomain(config, currentPageHost()) !== undefined;
-  if (blocked) return null;
+  if (configPending || blocked) return null;
 
   return (
     <div className="ba-fields">
