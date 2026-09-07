@@ -17,7 +17,10 @@ import {
   RELEASE_PACKAGES,
   verifyReleaseArtifacts,
 } from './artifact-contract.mjs';
-import { supportsTrustedPublishing } from './npm-publisher.mjs';
+import {
+  supportsTrustedPublishing,
+  waitForPublishedIntegrity,
+} from './npm-publisher.mjs';
 import { parseArguments } from './release.mjs';
 import {
   assertScaffoldPinCoupling,
@@ -149,6 +152,56 @@ try {
     assert.equal(supportsTrustedPublishing(version), false, version);
   }
   assert.throws(() => supportsTrustedPublishing('not-a-version'), /unreadable version/);
+
+  // npm can acknowledge a publish before the new version becomes readable.
+  // The verifier must wait through transient 404s, stop as soon as the exact
+  // integrity appears, and remain bounded when it never does.
+  const publishedEntry = {
+    name: '@authowl/example',
+    version: '1.2.3',
+    integrity: 'sha512-expected',
+    sha256: 'artifact-digest',
+  };
+  let registryChecks = 0;
+  const registryDelays = [];
+  await waitForPublishedIntegrity(publishedEntry, {
+    inspect: () => {
+      registryChecks += 1;
+      return registryChecks < 3
+        ? { status: 'absent' }
+        : { status: 'published', integrity: publishedEntry.integrity };
+    },
+    sleep: async (milliseconds) => { registryDelays.push(milliseconds); },
+    attempts: 5,
+    delayMs: 123,
+  });
+  assert.equal(registryChecks, 3);
+  assert.deepEqual(registryDelays, [123, 123]);
+  await assert.rejects(
+    waitForPublishedIntegrity(publishedEntry, {
+      inspect: () => ({ status: 'published', integrity: 'sha512-different' }),
+      sleep: async () => {},
+      attempts: 2,
+      delayMs: 0,
+    }),
+    /registry integrity mismatch/,
+  );
+  let boundedChecks = 0;
+  let boundedSleeps = 0;
+  await assert.rejects(
+    waitForPublishedIntegrity(publishedEntry, {
+      inspect: () => {
+        boundedChecks += 1;
+        return { status: 'absent' };
+      },
+      sleep: async () => { boundedSleeps += 1; },
+      attempts: 3,
+      delayMs: 0,
+    }),
+    /timed out verifying @authowl\/example@1\.2\.3/,
+  );
+  assert.equal(boundedChecks, 3);
+  assert.equal(boundedSleeps, 2);
 
   for (const version of ['1.2.3', '1.2.3-alpha.1', '1.2.3+build.4', '1.2.3-alpha.1+build.4']) {
     assert.equal(isReleaseVersion(version), true, version);
