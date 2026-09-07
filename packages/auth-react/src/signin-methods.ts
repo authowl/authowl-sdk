@@ -100,7 +100,7 @@ export function emailAutocomplete(isPasskeyHost: boolean): string {
  * `undefined` pageHost means "not known here" (server render): do not hide, the
  * click-time error still guards.
  */
-export function passkeyReachableFrom(
+function passkeyReachableFrom(
   authBaseUrl: string | undefined,
   pageHost: string | undefined,
   /**
@@ -138,12 +138,25 @@ function resolveRelyingPartyId(
   }
 }
 
-/** `resolveRelyingPartyId` for a whole config, for copy that names the domain. */
-export function passkeyRelyingPartyId(config: PublicConfig | null): string | undefined {
-  return resolveRelyingPartyId(
+/**
+ * The relying-party domain that BLOCKS a ceremony on this page, or `undefined`
+ * when one can run here (including "the host is not knowable").
+ *
+ * Returning the domain instead of discarding it is what lets a caller both hide
+ * a surface AND name the domain responsible, from ONE answer. Two separate
+ * calls - "is it reachable" then "what is the id" - could disagree, and the
+ * caller would have to carry a fallback for a combination that cannot occur.
+ */
+export function passkeyBlockingDomain(
+  config: PublicConfig | null,
+  pageHost: string | undefined,
+): string | undefined {
+  const rpId = resolveRelyingPartyId(
     config?.authBaseUrl,
     config?.authentication?.passkey?.relyingPartyId,
   );
+  if (rpId === undefined) return undefined;
+  return passkeyReachableFrom(undefined, pageHost, rpId) ? undefined : rpId;
 }
 
 /**
@@ -155,11 +168,19 @@ export function passkeyReachableForConfig(
   config: PublicConfig | null,
   pageHost: string | undefined,
 ): boolean {
-  return passkeyReachableFrom(
-    config?.authBaseUrl,
-    pageHost,
-    config?.authentication?.passkey?.relyingPartyId,
-  );
+  return passkeyBlockingDomain(config, pageHost) === undefined;
+}
+
+/**
+ * The host a ceremony would run on, or `undefined` on a server render.
+ *
+ * Hand-rolled at three call sites before this, in two spellings that had already
+ * drifted: one read `window.location.hostname` bare and was safe only because a
+ * conjunct ahead of it short-circuited, so reordering that `&&` chain was a
+ * crash rather than a type error.
+ */
+export function currentPageHost(): string | undefined {
+  return typeof window === 'undefined' ? undefined : window.location.hostname;
 }
 
 export function resolveSignInMethods(

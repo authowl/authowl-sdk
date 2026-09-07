@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
 import { useT } from '../i18n';
-import { resolveSignInMethods, emailAutocomplete } from '../signin-methods';
+import { resolveSignInMethods, emailAutocomplete, currentPageHost } from '../signin-methods';
 import type { SignInPrimary } from '../signin-methods';
 import { finishSignIn } from './finish-sign-in';
 import { useSubmitAction } from './use-submit-action';
@@ -100,10 +100,7 @@ export function SignIn({
   // structural null default is never presented as real project configuration.
   // The page host decides whether a passkey ceremony is reachable at all (see
   // `passkeyReachableFrom`), so it has to come from the render environment.
-  const plan = resolveSignInMethods(
-    config,
-    typeof window === 'undefined' ? undefined : window.location.hostname,
-  );
+  const plan = resolveSignInMethods(config, currentPageHost());
 
   // Passkey conditional autofill (progressive enhancement): armed on the single
   // shared email input whenever passkey is enabled and an email field exists.

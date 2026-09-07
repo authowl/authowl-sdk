@@ -2,7 +2,7 @@
 import * as React from 'react';
 import type { AuthPasskey } from '@authowl/core';
 import { usePasskeys, usePublicConfig, useUser } from '../hooks';
-import { passkeyReachableForConfig, passkeyRelyingPartyId } from '../signin-methods';
+import { currentPageHost, passkeyBlockingDomain } from '../signin-methods';
 import { useT, useServerError } from '../i18n';
 import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
@@ -65,11 +65,7 @@ function PasskeyManagerBody({
   // ceremony that could never succeed. Same predicate, deliberately - a second
   // copy is how the three drifted apart.
   const { config } = usePublicConfig();
-  const relyingParty = passkeyRelyingPartyId(config);
-  const reachable = passkeyReachableForConfig(
-    config,
-    typeof window === 'undefined' ? undefined : window.location.hostname,
-  );
+  const blockedBy = passkeyBlockingDomain(config, currentPageHost());
 
   // Mutations share the loading/error envelope; the list load uses the same error
   // surface via `setError`.
@@ -168,15 +164,14 @@ function PasskeyManagerBody({
           )}
         </div>
       )}
-      {passkeys !== null && allowAdd && !reachable && (
+      {passkeys !== null && allowAdd && (blockedBy !== undefined ? (
         // The add button is HIDDEN, not disabled, and the list stays: a user
         // may hold passkeys enrolled on the relying-party origin and must
         // still be able to rename or remove them from here.
         <p className="ba-muted" data-testid="passkey-add-elsewhere">
-          {t('passkeys.addElsewhere', { domain: relyingParty ?? '' })}
+          {t('passkeys.addElsewhere', { domain: blockedBy })}
         </p>
-      )}
-      {passkeys !== null && allowAdd && reachable && (
+      ) : (
         <button
           className="ba-button"
           type="button"
@@ -191,7 +186,7 @@ function PasskeyManagerBody({
         >
           <Busy busy={pending} label={t('common.working')}>{t('passkeys.add')}</Busy>
         </button>
-      )}
+      ))}
     </div>
   );
 }

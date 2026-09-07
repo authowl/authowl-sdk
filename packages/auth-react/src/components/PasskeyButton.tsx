@@ -1,6 +1,7 @@
 'use client';
 import * as React from 'react';
-import { useAuthClient, useSignIn } from '../hooks';
+import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
+import { currentPageHost, passkeyBlockingDomain } from '../signin-methods';
 import { useT } from '../i18n';
 import { finishSignIn } from './finish-sign-in';
 import { useSubmitAction } from './use-submit-action';
@@ -23,6 +24,14 @@ export function PasskeyButton({ redirectTo, onSignedIn }: PasskeyButtonProps) {
   const { sessionStore } = useAuthClient();
   const { signInPasskey } = useSignIn();
   const { pending, error, run } = useSubmitAction();
+  // <SignIn/> renders this behind `plan.passkey`, which already asks this
+  // question - but the component is exported, and a consumer who mounts it
+  // directly got a button whose ceremony the browser refuses outright. Nothing
+  // useful can be said here, so it renders nothing: this is a sign-in METHOD,
+  // and the page offers others.
+  const { config } = usePublicConfig();
+  const blocked = passkeyBlockingDomain(config, currentPageHost()) !== undefined;
+  if (blocked) return null;
 
   return (
     <div className="ba-fields">

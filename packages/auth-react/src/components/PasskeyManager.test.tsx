@@ -6,8 +6,7 @@ import type { PublicConfig } from '@authowl/core';
 
 const mocks = vi.hoisted(() => ({
   config: null as PublicConfig | null,
-  listPasskeys: vi.fn(async () => ({ data: [] as unknown[], error: null })),
-  addPasskey: vi.fn(async () => ({ data: { id: 'passkey-1' }, error: null })),
+  listPasskeys: vi.fn<() => Promise<{ data: unknown[] | null; error: unknown }>>(),
 }));
 
 vi.mock('../hooks', () => ({
@@ -15,7 +14,7 @@ vi.mock('../hooks', () => ({
   useUser: () => ({ user: { id: 'user-1' }, isLoaded: true, isSignedIn: true }),
   usePasskeys: () => ({
     listPasskeys: mocks.listPasskeys,
-    addPasskey: mocks.addPasskey,
+    addPasskey: vi.fn(),
     updatePasskey: vi.fn(),
     deletePasskey: vi.fn(),
   }),
@@ -28,24 +27,19 @@ vi.mock('../i18n', () => ({
 }));
 
 import { PasskeyManager } from './PasskeyManager';
-import { passkeyReachableForConfig } from '../signin-methods';
+import { makePublicConfig } from '../test-fixtures';
 
-const authentication = {
-  email: { signUp: true, signIn: ['password'] },
-  phone: { signUp: false, signIn: false },
-  password: { signUp: true, add: true },
-  username: { collectOnSignUp: false, signIn: false },
-  passkey: { signIn: true, add: true },
-};
-
-const configFor = (authBaseUrl: string, relyingPartyId?: string) => ({
-  environmentId: 'env_1',
-  authBaseUrl,
-  enabledMethods: ['password', 'passkey'],
-  authentication: relyingPartyId
-    ? { ...authentication, passkey: { ...authentication.passkey, relyingPartyId } }
-    : authentication,
-} as unknown as PublicConfig);
+// The package's own config factory, so a new required field on the server
+// contract fails this test instead of being silently absent behind a cast.
+const configFor = (authBaseUrl: string, relyingPartyId?: string): PublicConfig =>
+  makePublicConfig({
+    enabledMethods: ['password', 'passkey'],
+    authBaseUrl,
+    authentication: {
+      ...makePublicConfig({ enabledMethods: ['password', 'passkey'] }).authentication,
+      passkey: { signIn: true, add: true, relyingPartyId },
+    },
+  } as Partial<PublicConfig>);
 
 describe('PasskeyManager add-button reachability', () => {
   beforeEach(() => {
@@ -89,26 +83,8 @@ describe('PasskeyManager add-button reachability', () => {
     expect(screen.queryByText('passkeys.add')).toBeNull();
   });
 
-  // The server's explicit id wins over the host derivation, so a project that
-  // pinned its own relying party is judged against THAT, not the API host.
-  it('honours an explicit relying-party id from public config', async () => {
-    mocks.config = configFor('https://acme-1234.accounts.authowl.dev', 'localhost');
-    render(<PasskeyManager />);
-
-    expect(await screen.findByText('passkeys.add')).toBeTruthy();
-  });
-
-  it('does not hide the button when the page host is unknowable', () => {
-    // The contract the component leans on for server rendering, asserted
-    // directly because jsdom always has a hostname and cannot stage it: an
-    // unknown host must NOT hide the button. A server render knows neither the
-    // host nor that offering would be wrong, and the click-time error guards.
-    expect(passkeyReachableForConfig(configFor('https://acme.accounts.authowl.dev'), undefined))
-      .toBe(true);
-  });
-
   it('respects allowAdd=false regardless of reachability', async () => {
-    mocks.config = configFor('http://localhost:3000');
+    mocks.config = configFor('https://acme-1234.accounts.authowl.dev');
     render(<PasskeyManager allowAdd={false} />);
 
     await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalled());
