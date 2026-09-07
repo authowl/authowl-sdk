@@ -5,6 +5,13 @@ const REGISTRY = 'https://registry.npmjs.org/';
 // workflow's OIDC credentials and fails with a bare authentication error, so
 // the version is checked up front where the message can say why.
 const TRUSTED_PUBLISHING_NPM = [11, 5, 1];
+// npm may accept a package, sign its provenance, and then return 404 for that
+// exact version while it is still being processed. Two consecutive releases
+// observed visibility delays longer than the old 20-second window. Keep this
+// bounded, but allow the registry the several minutes its own publish output
+// says processing can take.
+const PUBLISHED_INTEGRITY_ATTEMPTS = 60;
+const PUBLISHED_INTEGRITY_DELAY_MS = 5000;
 
 export async function publishRelease(release, publishOptions) {
   const registryState = release.packages.map((entry) => ({
@@ -130,9 +137,15 @@ function inspectRegistry(entry) {
   throw new Error(`release publish: npm registry lookup failed for ${entry.name}`);
 }
 
-async function waitForPublishedIntegrity(entry) {
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const state = inspectRegistry(entry);
+export async function waitForPublishedIntegrity(entry, options = {}) {
+  const inspect = options.inspect ?? inspectRegistry;
+  const sleep = options.sleep
+    ?? ((milliseconds) => new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)));
+  const attempts = options.attempts ?? PUBLISHED_INTEGRITY_ATTEMPTS;
+  const delayMs = options.delayMs ?? PUBLISHED_INTEGRITY_DELAY_MS;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const state = inspect(entry);
     if (state.status === 'published') {
       if (state.integrity !== entry.integrity) {
         throw new Error(
@@ -144,7 +157,7 @@ async function waitForPublishedIntegrity(entry) {
       );
       return;
     }
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 2000));
+    if (attempt + 1 < attempts) await sleep(delayMs);
   }
   throw new Error(`release publish: timed out verifying ${entry.name}@${entry.version}`);
 }
