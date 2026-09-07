@@ -76,44 +76,10 @@ export function emailAutocomplete(isPasskeyHost: boolean): string {
 }
 
 /**
- * Resolve the sign-in surfaces from a project's public config. A null config
- * gets a structural password default for callers that resolve before the fetch
- * settles; the drop-in components fail closed when the fetch itself errors.
+ * WebAuthn's own scoping rule: an origin may run a ceremony for `rpId` only when
+ * its host IS `rpId` or a subdomain of it.
  */
-/**
- * Can a WebAuthn ceremony started on `pageHost` even reach this project's auth
- * host?
- *
- * The engine builds its passkey plugin without an explicit `rpID`, so the RP id
- * is the AUTH host - `authowl.dev` for a shared-host project. WebAuthn requires
- * the RP id to be the page's own domain or a registrable suffix of it, and
- * `authowl.dev` is neither for a page on `localhost` or `app.acme.com`. The
- * browser then refuses the ceremony before any network call, surfacing as
- * "Passkey authentication could not be completed by this browser" - which reads
- * like a browser problem and is really a cross-site one that no browser can
- * satisfy.
- *
- * So passkey is not merely unlikely to work off-host, it is IMPOSSIBLE, and
- * offering the button is offering a dead end. Hidden rather than left to fail at
- * click time.
- *
- * `undefined` pageHost means "not known here" (server render): do not hide, the
- * click-time error still guards.
- */
-function passkeyReachableFrom(
-  authBaseUrl: string | undefined,
-  pageHost: string | undefined,
-  /**
-   * The id the SERVER will actually use, from `public-config`. Absent or null
-   * means the server derives it from the auth host - which is what every server
-   * before that field did, and why the fallback below is the old behaviour
-   * rather than a guess.
-   */
-  relyingPartyId?: string | null,
-): boolean {
-  if (pageHost === undefined) return true;
-  const rpId = resolveRelyingPartyId(authBaseUrl, relyingPartyId);
-  if (!rpId) return true;
+function hostCoveredByRelyingParty(pageHost: string, rpId: string): boolean {
   // A bare single label is a public suffix and a browser refuses it outright.
   // `localhost` is the one legitimate single label.
   if (rpId !== 'localhost' && !rpId.includes('.')) return false;
@@ -122,12 +88,15 @@ function passkeyReachableFrom(
 
 /**
  * The relying-party id the server will use, or `undefined` when it cannot be
- * known here. ONE owner: reachability and the copy that NAMES the domain must
- * never disagree about which host that is.
+ * known here.
+ *
+ * The explicit id comes from `public-config`. Absent or null means the server
+ * derives it from the auth host - which is what every server before that field
+ * did, and why the fallback is the old behaviour rather than a guess.
  */
 function resolveRelyingPartyId(
   authBaseUrl: string | undefined,
-  relyingPartyId?: string | null,
+  relyingPartyId: string | null | undefined,
 ): string | undefined {
   if (relyingPartyId) return relyingPartyId;
   if (!authBaseUrl) return undefined;
@@ -139,31 +108,44 @@ function resolveRelyingPartyId(
 }
 
 /**
- * The relying-party domain that BLOCKS a ceremony on this page, or `undefined`
- * when one can run here (including "the host is not knowable").
+ * The relying-party domain that BLOCKS a WebAuthn ceremony on this page, or
+ * `undefined` when one can run here.
  *
- * Returning the domain instead of discarding it is what lets a caller both hide
- * a surface AND name the domain responsible, from ONE answer. Two separate
- * calls - "is it reachable" then "what is the id" - could disagree, and the
- * caller would have to carry a fallback for a combination that cannot occur.
+ * The engine builds its passkey plugin without an explicit `rpID` unless a
+ * tenant proved one, so the id is usually the AUTH host. WebAuthn requires that
+ * id to be the page's own domain or a registrable suffix of it, and an auth host
+ * is neither for a page on `localhost` or `app.acme.com`. The browser refuses
+ * the ceremony before any network call, surfacing as a SecurityError that reads
+ * like a browser problem and is really a cross-site one no browser can satisfy.
+ *
+ * So a passkey is not merely unlikely to work off-host, it is IMPOSSIBLE, and
+ * offering the surface is offering a dead end. Hidden rather than left to fail
+ * at click time.
+ *
+ * Returning the DOMAIN rather than a boolean is what lets one answer both hide a
+ * surface and name the host responsible. Asking separately would be two calls
+ * that could disagree, forcing callers to carry a fallback for a state that
+ * cannot occur.
+ *
+ * FAILS OPEN, for two distinct unknowables, which is why they are separate lines
+ * rather than one clever expression: an unknown page host (a server render) and
+ * an unknown id (a config that has not loaded) both mean "no opinion", and the
+ * click-time error still guards.
  */
 export function passkeyBlockingDomain(
   config: PublicConfig | null,
   pageHost: string | undefined,
 ): string | undefined {
+  if (pageHost === undefined) return undefined;
   const rpId = resolveRelyingPartyId(
     config?.authBaseUrl,
     config?.authentication?.passkey?.relyingPartyId,
   );
   if (rpId === undefined) return undefined;
-  return passkeyReachableFrom(undefined, pageHost, rpId) ? undefined : rpId;
+  return hostCoveredByRelyingParty(pageHost, rpId) ? undefined : rpId;
 }
 
-/**
- * `passkeyReachableFrom` for a whole config, so the three-argument threading has
- * ONE owner. Sign-in and registration ask the same reachability question and
- * would otherwise both have to be updated when public-config grows a field.
- */
+/** `passkeyBlockingDomain` for callers that only need the yes/no. */
 export function passkeyReachableForConfig(
   config: PublicConfig | null,
   pageHost: string | undefined,
@@ -183,6 +165,11 @@ export function currentPageHost(): string | undefined {
   return typeof window === 'undefined' ? undefined : window.location.hostname;
 }
 
+/**
+ * Resolve the sign-in surfaces from a project's public config. A null config
+ * gets a structural password default for callers that resolve before the fetch
+ * settles; the drop-in components fail closed when the fetch itself errors.
+ */
 export function resolveSignInMethods(
   config: PublicConfig | null,
   /** The hostname the form is rendering on; omit when it is not knowable. */

@@ -99,7 +99,7 @@ export function SignIn({
   // tested helper. A failed request returns the fail-closed UI below, so this
   // structural null default is never presented as real project configuration.
   // The page host decides whether a passkey ceremony is reachable at all (see
-  // `passkeyReachableFrom`), so it has to come from the render environment.
+  // `passkeyBlockingDomain`), so it has to come from the render environment.
   const plan = resolveSignInMethods(config, currentPageHost());
 
   // Passkey conditional autofill (progressive enhancement): armed on the single
