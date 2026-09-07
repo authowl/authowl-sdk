@@ -112,19 +112,38 @@ export function passkeyReachableFrom(
   relyingPartyId?: string | null,
 ): boolean {
   if (pageHost === undefined) return true;
-  let rpId: string | undefined = relyingPartyId ?? undefined;
-  if (!rpId) {
-    if (!authBaseUrl) return true;
-    try {
-      rpId = new URL(authBaseUrl).hostname;
-    } catch {
-      return true;
-    }
-  }
+  const rpId = resolveRelyingPartyId(authBaseUrl, relyingPartyId);
+  if (!rpId) return true;
   // A bare single label is a public suffix and a browser refuses it outright.
   // `localhost` is the one legitimate single label.
   if (rpId !== 'localhost' && !rpId.includes('.')) return false;
   return pageHost === rpId || pageHost.endsWith(`.${rpId}`);
+}
+
+/**
+ * The relying-party id the server will use, or `undefined` when it cannot be
+ * known here. ONE owner: reachability and the copy that NAMES the domain must
+ * never disagree about which host that is.
+ */
+function resolveRelyingPartyId(
+  authBaseUrl: string | undefined,
+  relyingPartyId?: string | null,
+): string | undefined {
+  if (relyingPartyId) return relyingPartyId;
+  if (!authBaseUrl) return undefined;
+  try {
+    return new URL(authBaseUrl).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+/** `resolveRelyingPartyId` for a whole config, for copy that names the domain. */
+export function passkeyRelyingPartyId(config: PublicConfig | null): string | undefined {
+  return resolveRelyingPartyId(
+    config?.authBaseUrl,
+    config?.authentication?.passkey?.relyingPartyId,
+  );
 }
 
 /**

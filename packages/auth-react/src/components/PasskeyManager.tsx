@@ -1,7 +1,8 @@
 'use client';
 import * as React from 'react';
 import type { AuthPasskey } from '@authowl/core';
-import { usePasskeys, useUser } from '../hooks';
+import { usePasskeys, usePublicConfig, useUser } from '../hooks';
+import { passkeyReachableForConfig, passkeyRelyingPartyId } from '../signin-methods';
 import { useT, useServerError } from '../i18n';
 import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
@@ -55,6 +56,20 @@ function PasskeyManagerBody({
   const api = usePasskeys();
   const apiRef = React.useRef(api);
   apiRef.current = api;
+
+  // WebAuthn binds a credential to ONE relying-party id and the browser checks
+  // it against the CALLING page, not the API host, so registration throws a
+  // SecurityError on any origin outside the relying party. `resolveSignInMethods`
+  // and `usePasskeyOffer` already hide their surfaces on that predicate; this one
+  // rendered its button unconditionally and sent people hunting through DNS for a
+  // ceremony that could never succeed. Same predicate, deliberately - a second
+  // copy is how the three drifted apart.
+  const { config } = usePublicConfig();
+  const relyingParty = passkeyRelyingPartyId(config);
+  const reachable = passkeyReachableForConfig(
+    config,
+    typeof window === 'undefined' ? undefined : window.location.hostname,
+  );
 
   // Mutations share the loading/error envelope; the list load uses the same error
   // surface via `setError`.
@@ -153,7 +168,15 @@ function PasskeyManagerBody({
           )}
         </div>
       )}
-      {passkeys !== null && allowAdd && (
+      {passkeys !== null && allowAdd && !reachable && (
+        // The add button is HIDDEN, not disabled, and the list stays: a user
+        // may hold passkeys enrolled on the relying-party origin and must
+        // still be able to rename or remove them from here.
+        <p className="ba-muted" data-testid="passkey-add-elsewhere">
+          {t('passkeys.addElsewhere', { domain: relyingParty ?? '' })}
+        </p>
+      )}
+      {passkeys !== null && allowAdd && reachable && (
         <button
           className="ba-button"
           type="button"
