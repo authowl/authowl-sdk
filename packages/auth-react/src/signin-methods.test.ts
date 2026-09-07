@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { PublicConfig } from '@authowl/core';
-import { resolveSignInMethods, emailAutocomplete } from './signin-methods';
+import { resolveSignInMethods, emailAutocomplete,
+  passkeyBlockingDomain,
+} from './signin-methods';
 import { makePublicConfig } from './test-fixtures';
 
 /** Build a PublicConfig with the fields the resolver reads, defaults for the rest. */
@@ -328,5 +330,34 @@ describe('passkey reachability from the published relying-party id', () => {
       },
     } as never);
     expect(resolveSignInMethods(broken, 'app.acme.com').passkey).toBe(true);
+  });
+
+  // A URL that PARSES but has an opaque path yields an empty hostname: the
+  // scheme-omitted typo `localhost:3000`, and `mailto:` / `about:blank`. Empty
+  // is an UNKNOWN id, so it must fail open like the unparseable case - not block
+  // every surface and render a sentence naming an empty domain.
+  it('treats an empty hostname as unknown, not as a blocking relying party', () => {
+    for (const authBaseUrl of ['localhost:3000', 'mailto:ops@acme.com', 'about:blank']) {
+      const cfgWithHost = cfg({
+        enabledMethods: ['password', 'passkey'],
+        authBaseUrl,
+        authentication: {
+          email: { signUp: true, signIn: ['password'] },
+          phone: { signUp: false, signIn: false },
+          password: { signUp: true, add: true },
+          passkey: { signIn: true, add: true, relyingPartyId: null },
+          username: { collectOnSignUp: false, signIn: false },
+        },
+      } as never);
+      expect(passkeyBlockingDomain(cfgWithHost, 'app.acme.com')).toBeUndefined();
+    }
+  });
+
+  // Hostnames are case-insensitive, and only one side was normalized: the
+  // authBaseUrl fallback arrives lowercased from `new URL()`, a tenant-entered
+  // id does not - so `Acme.com` hid passkeys on `app.acme.com`.
+  it('compares hosts case-insensitively on both sides', () => {
+    expect(resolveSignInMethods(withRp('Acme.com'), 'app.acme.com').passkey).toBe(true);
+    expect(resolveSignInMethods(withRp('acme.com'), 'APP.ACME.COM').passkey).toBe(true);
   });
 });

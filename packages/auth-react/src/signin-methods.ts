@@ -80,10 +80,16 @@ export function emailAutocomplete(isPasskeyHost: boolean): string {
  * its host IS `rpId` or a subdomain of it.
  */
 function hostCoveredByRelyingParty(pageHost: string, rpId: string): boolean {
+  // BOTH sides lowercased. Hostnames are case-insensitive, and only one side was
+  // normalized: the `authBaseUrl` fallback comes through `new URL()` already
+  // lowercased, while a tenant-entered id from public-config is used verbatim -
+  // so `Acme.com` hid the surface on `app.acme.com`.
+  const host = pageHost.toLowerCase();
+  const id = rpId.toLowerCase();
   // A bare single label is a public suffix and a browser refuses it outright.
   // `localhost` is the one legitimate single label.
-  if (rpId !== 'localhost' && !rpId.includes('.')) return false;
-  return pageHost === rpId || pageHost.endsWith(`.${rpId}`);
+  if (id !== 'localhost' && !id.includes('.')) return false;
+  return host === id || host.endsWith(`.${id}`);
 }
 
 /**
@@ -101,7 +107,11 @@ function resolveRelyingPartyId(
   if (relyingPartyId) return relyingPartyId;
   if (!authBaseUrl) return undefined;
   try {
-    return new URL(authBaseUrl).hostname;
+    // `''` for a URL that parses with an opaque path (`localhost:3000`,
+    // `mailto:`, `about:blank`). That is an UNKNOWN id, and this function
+    // promises to fail open on those - returning it would block instead,
+    // and render a sentence naming an empty domain.
+    return new URL(authBaseUrl).hostname || undefined;
   } catch {
     return undefined;
   }
@@ -153,17 +163,6 @@ export function passkeyReachableForConfig(
   return passkeyBlockingDomain(config, pageHost) === undefined;
 }
 
-/**
- * The host a ceremony would run on, or `undefined` on a server render.
- *
- * Hand-rolled at three call sites before this, in two spellings that had already
- * drifted: one read `window.location.hostname` bare and was safe only because a
- * conjunct ahead of it short-circuited, so reordering that `&&` chain was a
- * crash rather than a type error.
- */
-export function currentPageHost(): string | undefined {
-  return typeof window === 'undefined' ? undefined : window.location.hostname;
-}
 
 /**
  * Resolve the sign-in surfaces from a project's public config. A null config

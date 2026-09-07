@@ -1,7 +1,8 @@
 'use client';
 import * as React from 'react';
 import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
-import { currentPageHost, passkeyBlockingDomain } from '../signin-methods';
+import { passkeyBlockingDomain } from '../signin-methods';
+import { currentPageHost } from './page-host';
 import { useT } from '../i18n';
 import { finishSignIn } from './finish-sign-in';
 import { useSubmitAction } from './use-submit-action';

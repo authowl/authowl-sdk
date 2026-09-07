@@ -6,11 +6,15 @@ import type { PublicConfig } from '@authowl/core';
 
 const mocks = vi.hoisted(() => ({
   config: null as PublicConfig | null,
+  isLoading: false,
+  isError: false,
   listPasskeys: vi.fn<() => Promise<{ data: unknown[] | null; error: unknown }>>(),
 }));
 
 vi.mock('../hooks', () => ({
-  usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
+  usePublicConfig: () => ({
+    config: mocks.config, isLoading: mocks.isLoading, isError: mocks.isError,
+  }),
   useUser: () => ({ user: { id: 'user-1' }, isLoaded: true, isSignedIn: true }),
   usePasskeys: () => ({
     listPasskeys: mocks.listPasskeys,
@@ -46,6 +50,8 @@ const configFor = (authBaseUrl: string): PublicConfig =>
 describe('PasskeyManager add-button reachability', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.isLoading = false;
+    mocks.isError = false;
     mocks.listPasskeys.mockResolvedValue({ data: [], error: null });
   });
   afterEach(cleanup);
@@ -92,5 +98,30 @@ describe('PasskeyManager add-button reachability', () => {
     await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalled());
     expect(screen.queryByText('passkeys.add')).toBeNull();
     expect(screen.queryByTestId('passkey-add-elsewhere')).toBeNull();
+  });
+
+  // THE RESIDUAL SLIVER of the founder-facing bug. `config` starts null and null
+  // reads as "not blocked", so whenever the passkey list resolved before the
+  // config did, a blocked host still showed a live, clickable Add button that
+  // threw the SecurityError this whole gate exists to remove.
+  it('holds the add button while the config is still loading', async () => {
+    mocks.config = null;
+    mocks.isLoading = true;
+    render(<PasskeyManager />);
+
+    await waitFor(() => expect(mocks.listPasskeys).toHaveBeenCalled());
+    expect(screen.queryByText('passkeys.add')).toBeNull();
+    expect(screen.queryByTestId('passkey-add-elsewhere')).toBeNull();
+  });
+
+  // Keyed on LOADING, not absence: a config fetch that FAILED must still offer
+  // the button, or one transient error silently kills enrolment on a host where
+  // passkeys work perfectly well. The click-time error remains the backstop.
+  it('offers the add button when the config fetch failed outright', async () => {
+    mocks.config = null;
+    mocks.isError = true;
+    render(<PasskeyManager />);
+
+    expect(await screen.findByText('passkeys.add')).toBeTruthy();
   });
 });

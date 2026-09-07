@@ -2,7 +2,8 @@
 import * as React from 'react';
 import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
 import { useT } from '../i18n';
-import { resolveSignInMethods, emailAutocomplete, currentPageHost } from '../signin-methods';
+import { resolveSignInMethods, emailAutocomplete } from '../signin-methods';
+import { currentPageHost } from './page-host';
 import type { SignInPrimary } from '../signin-methods';
 import { finishSignIn } from './finish-sign-in';
 import { useSubmitAction } from './use-submit-action';

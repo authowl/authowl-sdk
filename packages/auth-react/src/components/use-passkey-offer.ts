@@ -7,7 +7,8 @@ import {
 } from '@authowl/core';
 import { usePasskeys, usePublicConfig, useSession, useUser } from '../hooks';
 import { resolveProjectCapabilities } from '../project-capabilities';
-import { currentPageHost, passkeyReachableForConfig } from '../signin-methods';
+import { passkeyReachableForConfig } from '../signin-methods';
+import { currentPageHost } from './page-host';
 
 /**
  * Should this signed-in user be offered a passkey on this device, right now?
