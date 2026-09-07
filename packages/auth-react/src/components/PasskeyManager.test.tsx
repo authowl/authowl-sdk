@@ -21,25 +21,27 @@ vi.mock('../hooks', () => ({
 }));
 
 vi.mock('../i18n', () => ({
-  useT: () => (key: string, vars?: Record<string, string>) =>
-    vars ? `${key}:${JSON.stringify(vars)}` : key,
+  // Mirrors `formatMessage`'s own `{name}` substitution rather than dumping the
+  // params: a component that passed `{ host }` for a `{domain}` template would
+  // otherwise satisfy every assertion here and still render a literal
+  // placeholder to a user.
+  useT: () => (key: string, vars?: Record<string, string>) => {
+    const template = key === 'passkeys.addElsewhere' ? `${key}: added on {domain}` : key;
+    return template.replace(
+      /\{(\w+)\}/g,
+      (match, name: string) => (vars && name in vars ? String(vars[name]) : match),
+    );
+  },
   useServerError: () => (_error: unknown, fallback: string) => fallback,
 }));
 
 import { PasskeyManager } from './PasskeyManager';
 import { makePublicConfig } from '../test-fixtures';
 
-// The package's own config factory, so a new required field on the server
-// contract fails this test instead of being silently absent behind a cast.
-const configFor = (authBaseUrl: string, relyingPartyId?: string): PublicConfig =>
-  makePublicConfig({
-    enabledMethods: ['password', 'passkey'],
-    authBaseUrl,
-    authentication: {
-      ...makePublicConfig({ enabledMethods: ['password', 'passkey'] }).authentication,
-      passkey: { signIn: true, add: true, relyingPartyId },
-    },
-  } as Partial<PublicConfig>);
+// The package's own config factory, unmodified, so a new required field on the
+// server contract reaches this test instead of being frozen out by a literal.
+const configFor = (authBaseUrl: string): PublicConfig =>
+  makePublicConfig({ enabledMethods: ['password', 'passkey'], authBaseUrl });
 
 describe('PasskeyManager add-button reachability', () => {
   beforeEach(() => {
