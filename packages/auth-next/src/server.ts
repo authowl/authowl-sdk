@@ -1,14 +1,9 @@
 import { headers as nextHeaders, cookies as nextCookies } from 'next/headers.js';
+import { sessionCookieName } from '@authowl/core/server';
+import { appSessionCookieNames } from './bridge-contract';
 import {
-  SESSION_TRANSPORT_BEARER,
-  SESSION_TRANSPORT_HEADER,
-  sessionCookieName,
-} from '@authowl/core/server';
-import {
-  AUTHOWL_SECRET_KEY_HEADER,
-  appSessionCookieNames,
-} from './bridge-contract';
-import {
+  bearerSessionHeaders,
+  configuredBridge,
   getAuthConfig,
   initAuthConfig,
   type AuthOwlNextServerConfig,
@@ -145,6 +140,19 @@ export async function auth(): Promise<Session> {
     : allCookies.find((cookie) => cookie.name === bridgeNames.secure)?.value
       ?? allCookies.find((cookie) => cookie.name === bridgeNames.local)?.value
       ?? null;
+  // A bridge cookie exists only because the bridge route held the secret key,
+  // so a missing key here is a configuration split, never a runtime state.
+  // Fail at the door: `bearerSessionHeaders` says why unkeyed is not a fallback.
+  let bridgeHeaders: Record<string, string> = {};
+  if (bridgeToken) {
+    const bridge = configuredBridge(cfg);
+    if (!bridge) {
+      throw new Error(
+        'AuthOwl session bridge cookie found, but auth() has no secret key. Set AUTHOWL_SECRET_KEY or pass secretKey to initAuth(); the secretKey option of createAuthOwlSessionBridge() does not configure auth().',
+      );
+    }
+    bridgeHeaders = bearerSessionHeaders(bridge, bridgeToken);
+  }
 
   const hdrs = await nextHeaders();
   const url = `${new URL(cfg.apiUrl).origin}/api/projects/${projectId}/auth/get-session`;
@@ -158,15 +166,7 @@ export async function auth(): Promise<Session> {
         cookie: cookieHeader,
         'x-publishable-key': cfg.publishableKey,
         'user-agent': hdrs.get('user-agent') ?? 'next-auth-helper',
-        ...(bridgeToken
-          ? {
-              authorization: `Bearer ${bridgeToken}`,
-              [SESSION_TRANSPORT_HEADER]: SESSION_TRANSPORT_BEARER,
-              ...(cfg.secretKey
-                ? { [AUTHOWL_SECRET_KEY_HEADER]: cfg.secretKey }
-                : {}),
-            }
-          : {}),
+        ...bridgeHeaders,
       },
       cache: 'no-store',
       signal: timeout.signal,

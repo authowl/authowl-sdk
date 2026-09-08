@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const PROJECT_ID_MIXED = '2F1C9A84-6B3D-4E57-9A10-5C8D7E2B4F60';
 const PROJECT_ID = PROJECT_ID_MIXED.toLowerCase();
@@ -23,6 +23,10 @@ describe('auth() project-id case', () => {
   let sentCookie: string | undefined;
   let sentUrl: string | undefined;
   let sentHeaders: Headers | undefined;
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
 
   beforeEach(() => {
     cookieJar.length = 0;
@@ -110,6 +114,30 @@ describe('auth() project-id case', () => {
     expect(sentHeaders?.get('authorization')).toBeNull();
     expect(sentHeaders?.get('x-authowl-session-transport')).toBeNull();
     expect(sentHeaders?.get('x-authowl-secret-key')).toBeNull();
+  });
+
+  describe('without a secret key', () => {
+    beforeEach(() => {
+      vi.stubEnv('AUTHOWL_SECRET_KEY', '');
+      initAuth({ publishableKey: MIXED_CASE_KEY, apiUrl: 'https://auth.example.com' });
+    });
+
+    it('refuses to present a bridge cookie, before any request leaves', async () => {
+      cookieJar.push({ name: appSessionCookieNames(PROJECT_ID).secure, value: 'bridge-token.sig' });
+
+      await expect(auth()).rejects.toThrow(/AUTHOWL_SECRET_KEY.*initAuth/);
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('still reads a native cookie, which that path never needed a key for', async () => {
+      cookieJar.push({ name: SERVER_COOKIE, value: 'native-token' });
+
+      const session = await auth();
+
+      expect(session?.user.id).toBe('u1');
+      expect(sentCookie).toBe(`${SERVER_COOKIE}=native-token`);
+      expect(sentHeaders?.get('x-authowl-secret-key')).toBeNull();
+    });
   });
 
   it('reports native and bridge cookie presence without exposing cookie-name internals', async () => {

@@ -1,17 +1,15 @@
 import {
-  SESSION_TRANSPORT_BEARER,
-  SESSION_TRANSPORT_HEADER,
-} from '@authowl/core/server';
-import {
   APP_SESSION_BRIDGE_CODE_MAX_LENGTH,
   APP_SESSION_BRIDGE_HEADER,
-  AUTHOWL_SECRET_KEY_HEADER,
   appSessionCookieNames,
 } from './bridge-contract';
 import {
+  bearerSessionHeaders,
+  configuredBridge,
   getAuthConfig,
   resolveAuthConfig,
   type AuthOwlNextServerConfig,
+  type ConfiguredBridgeConfig,
   type ServerAuthConfig,
 } from './server-config';
 const MAX_BODY_BYTES = 16_384;
@@ -20,8 +18,6 @@ const AUTH_FETCH_TIMEOUT_MS = 10_000;
 export type AuthOwlSessionBridgeOptions = Omit<AuthOwlNextServerConfig, 'secretKey'> & Readonly<{
   secretKey: string;
 }>;
-
-type ConfiguredBridgeConfig = ServerAuthConfig & Readonly<{ secretKey: string }>;
 
 type SessionEnvelope = {
   user?: unknown;
@@ -136,10 +132,6 @@ type GetSessionOutcome =
   | { kind: 'auth_service_unavailable' }
   | { kind: 'auth_service_error' };
 
-function configuredBridge(config: ServerAuthConfig): ConfiguredBridgeConfig | null {
-  return config.secretKey ? { ...config, secretKey: config.secretKey } : null;
-}
-
 function requireConfiguredBridge(config: ServerAuthConfig): ConfiguredBridgeConfig {
   const configured = configuredBridge(config);
   if (configured) return configured;
@@ -190,10 +182,8 @@ async function validateSession(
       {
         method: 'GET',
         headers: {
-          authorization: `Bearer ${token}`,
-          [SESSION_TRANSPORT_HEADER]: SESSION_TRANSPORT_BEARER,
-          [AUTHOWL_SECRET_KEY_HEADER]: config.secretKey,
           'x-publishable-key': config.publishableKey,
+          ...bearerSessionHeaders(config, token),
         },
         cache: 'no-store',
         redirect: 'error',
