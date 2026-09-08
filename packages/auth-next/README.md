@@ -39,7 +39,10 @@ session bridge. It preserves AuthOwl's browser bearer fallback for browsers that
 block cross-site cookies while giving `auth()` a validated, host-only HttpOnly
 session on your application origin. `AUTHOWL_SECRET_KEY` is required and must
 belong to the same project and environment with the `sessions:read` scope. It is
-used only by the server route and must never use a `NEXT_PUBLIC_` prefix.
+used only on the server and must never use a `NEXT_PUBLIC_` prefix. Both the
+bridge route and `auth()` present it: configure it where `auth()` runs, through
+the env or `initAuth({ secretKey })`, not only through the bridge's own
+`secretKey` option. `auth()` throws when it finds a bridge cookie without one.
 
 ```ts
 // app/api/authowl/session/route.ts
