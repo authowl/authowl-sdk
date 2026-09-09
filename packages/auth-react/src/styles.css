@@ -99,6 +99,8 @@
 .ba-success { color: var(--ba-success); font-size: 13px; margin: 0; }
 .ba-muted { color: var(--ba-muted); font-size: 13px; margin: 0; }
 .ba-turnstile { min-height: 65px; max-width: 100%; overflow: hidden; }
+.ba-hosted-frame { width: 100%; height: 700px; max-height: 85vh; overflow: hidden; border-radius: 6px; }
+.ba-hosted-frame iframe { display: block; width: 100%; height: 100%; border: none; }
 .ba-auth-challenge .ba-turnstile { min-height: 0; }
 .ba-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 

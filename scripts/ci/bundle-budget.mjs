@@ -236,15 +236,23 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // costs 0.82kb and the new ceiling keeps roughly the usual half a kilobyte of
 // regression headroom. (Measurement and ceiling are different numbers; naming
 // both is what stops the next person's arithmetic drifting.)
+// Akedly V2 hosted verification (2026-09-09) raises React 75.25->76.25: the
+// ordinary phone and code stages stay static so opening phone sign-in never
+// flashes a Suspense skeleton, while only the rare hosted iframe controller
+// remains lazy. The reviewed payload measures 76.04kb; rounding up to the next
+// quarter-kilobyte keeps the adjustment to the minimum required by this gate.
+// The plan 44 cleanup raises Core 24.5->24.75 for the public hosted-widget URL,
+// message-source, passkey-permission, and polling-budget contract. The shared
+// helpers measure 24.69kb and keep custom UIs aligned with the React component.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 75.25,
+    maxGzipKb: 76.25,
     label: '@authowl/react (provider + hooks + components)',
   },
   {
     entry: 'packages/auth-core/dist/index.js',
-    maxGzipKb: 24.5,
+    maxGzipKb: 24.75,
     label: '@authowl/core (framework-neutral fetch/state client)',
   },
 ];

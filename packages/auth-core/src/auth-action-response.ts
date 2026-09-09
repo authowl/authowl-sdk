@@ -5,6 +5,7 @@ import type {
   MagicLinkData,
   PasswordResetData,
   PhoneAuthUser,
+  PhoneOtpCompleteData,
   PhoneOtpStartData,
   PhoneOtpChallengeData,
   PhoneOtpVerifyData,
@@ -30,6 +31,7 @@ import {
   invalidResponse,
   optionalNullableString,
 } from './response-schema';
+import { AKEDLY_WIDGET_ORIGIN } from './akedly-widget';
 
 const MAX_REDIRECT_URL_LENGTH = 4_096;
 const MAX_TOTP_URI_LENGTH = 4_096;
@@ -145,18 +147,44 @@ export function decodeSendOtp(value: unknown): SendOtpData {
 }
 
 export function decodePhoneOtpStart(value: unknown): PhoneOtpStartData {
-  if (asRecord(value).status !== 'pending') invalidResponse();
-  return { status: 'pending' };
+  const row = asRecord(value);
+  const status = row.status;
+  if (status === 'pending') return { status };
+  if (status !== 'hosted') invalidResponse();
+  const attemptId = asString(row.attemptId);
+  const iframeUrl = asString(row.iframeUrl);
+  const attemptToken = asString(row.attemptToken);
+  if (
+    attemptId.length > 255
+    || attemptToken.length < 32
+    || asUrl(iframeUrl).origin !== AKEDLY_WIDGET_ORIGIN
+  ) invalidResponse();
+  return {
+    status,
+    attemptId,
+    iframeUrl,
+    attemptToken,
+    expiresAt: asDate(row.expiresAt),
+    passkeys: asBoolean(row.passkeys),
+  };
 }
 
 export function decodePhoneOtpChallenge(value: unknown): PhoneOtpChallengeData {
   const row = asRecord(value);
-  if (row.kind === 'authowl_turnstile') return { kind: 'authowl_turnstile' };
-  if (row.kind !== 'akedly_shield_v1_2') invalidResponse();
+  const kind = row.kind;
+  if (kind === 'authowl_turnstile') return { kind };
+  if (kind === 'akedly_widget_v2') {
+    return {
+      kind,
+      connectionId: asString(row.connectionId),
+      passkeys: asBoolean(row.passkeys),
+    };
+  }
+  if (kind !== 'akedly_shield_v1_2') invalidResponse();
   const turnstile = asRecord(row.turnstile);
   const siteKey = turnstile.siteKey === null ? null : asString(turnstile.siteKey);
   return {
-    kind: 'akedly_shield_v1_2',
+    kind,
     connectionId: asString(row.connectionId),
     challenge: asString(row.challenge),
     difficulty: asProofOfWorkDifficulty(row.difficulty),
@@ -179,10 +207,10 @@ export function decodePhoneOtpChallenge(value: unknown): PhoneOtpChallengeData {
 function asProofOfWorkDifficulty(value: unknown): number {
   if (
     !Number.isSafeInteger(value)
-    || Number(value) < 0
-    || Number(value) > MAX_PROOF_OF_WORK_DIFFICULTY
+    || (value as number) < 0
+    || (value as number) > MAX_PROOF_OF_WORK_DIFFICULTY
   ) invalidResponse();
-  return Number(value);
+  return value as number;
 }
 
 export function decodePhoneOtpVerify(value: unknown): PhoneOtpVerifyData {
@@ -193,6 +221,11 @@ export function decodePhoneOtpVerify(value: unknown): PhoneOtpVerifyData {
     sessionCreated: true,
     user: decodePhoneAuthUser(row.user),
   };
+}
+
+export function decodePhoneOtpComplete(value: unknown): PhoneOtpCompleteData {
+  const status = asRecord(value).status;
+  return status === 'pending' ? { status } : decodePhoneOtpVerify(value);
 }
 
 export function decodePasswordReset(value: unknown): PasswordResetData {
@@ -264,12 +297,7 @@ function decodeNavigationUrl(
 ): string {
   const raw = nonEmptyString(value, MAX_REDIRECT_URL_LENGTH);
   if (/[\u0000-\u0020\u007f]/u.test(raw)) invalidResponse();
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    return invalidResponse();
-  }
+  const parsed = asUrl(raw);
   if (parsed.username || parsed.password) invalidResponse();
   if (parsed.protocol === 'https:') return parsed.href;
   if (
@@ -293,12 +321,7 @@ function isLoopbackHostname(hostname: string): boolean {
 
 function decodeTotpUri(value: unknown): string {
   const raw = nonEmptyString(value, MAX_TOTP_URI_LENGTH);
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch {
-    return invalidResponse();
-  }
+  const parsed = asUrl(raw);
   const secret = parsed.searchParams.get('secret');
   if (
     parsed.protocol !== 'otpauth:'
@@ -314,6 +337,14 @@ function decodeTotpUri(value: unknown): string {
     invalidResponse();
   }
   return raw;
+}
+
+function asUrl(value: string): URL {
+  try {
+    return new URL(value);
+  } catch {
+    return invalidResponse();
+  }
 }
 
 function decodeBackupCodes(value: unknown): string[] {
