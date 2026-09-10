@@ -9,6 +9,7 @@ import type {
   MagicLinkData,
   PhoneOtpStartData,
   PhoneOtpChallengeData,
+  PhoneOtpCompleteData,
   PhoneOtpVerifyData,
   PasswordResetData,
   SendOtpData,
@@ -127,6 +128,7 @@ import {
   decodePasswordReset,
   decodePhoneOtpStart,
   decodePhoneOtpChallenge,
+  decodePhoneOtpComplete,
   decodePhoneOtpVerify,
   decodeSendOtp,
   decodeSendTwoFactorOtp,
@@ -488,6 +490,13 @@ export function createAuthActionClient(
         await beginSession();
         return sessionEstablishedMutation<PhoneOtpVerifyData>(
           post('/phone-otp/verify', params, fetchOptions, decodePhoneOtpVerify),
+        );
+      },
+      complete: async (params, fetchOptions) => {
+        await beginSession();
+        return sessionEstablishedMutation<PhoneOtpCompleteData>(
+          post('/phone-otp/complete', params, fetchOptions, decodePhoneOtpComplete),
+          (data) => data.status === true,
         );
       },
     },

@@ -4,6 +4,7 @@ import {
   createIdempotencyKey,
   solvePhoneOtpChallenge,
   type PhoneOtpChallengeData,
+  type PhoneOtpStartData,
 } from '@authowl/core';
 import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
 import { Bidi, useT } from '../i18n';
@@ -24,10 +25,17 @@ export type PhoneOTPProps = {
 };
 
 type SendAttempt = { phoneNumber: string; idempotencyKey: string };
+type HostedAttempt = Extract<PhoneOtpStartData, { status: 'hosted' }>;
+type HostedAttemptState = { attempt: HostedAttempt; connectionId: string };
 type GuardState =
   | { status: 'loading' }
   | { status: 'ready'; data: PhoneOtpChallengeData }
   | { status: 'error' };
+
+const HostedPhoneOtp = React.lazy(async () => {
+  const component = await import('./HostedPhoneOtp');
+  return { default: component.HostedPhoneOtp };
+});
 
 /** Egyptian phone sign-in with managed Turnstile, retry-safe send, and code verification. */
 export function PhoneOTP({
@@ -41,11 +49,12 @@ export function PhoneOTP({
   const { config, isLoading } = usePublicConfig();
   const { preparePhoneOtp, startPhoneOtp, verifyPhoneOtp } = useSignIn();
   const { pending, error, setError, run } = useSubmitAction();
-  const [stage, setStage] = React.useState<'phone' | 'code'>('phone');
+  const [stage, setStage] = React.useState<'phone' | 'code' | 'hosted'>('phone');
   const [phoneNumber, setPhoneNumber] = React.useState('');
   const [code, setCode] = React.useState('');
   const [turnstileToken, setTurnstileToken] = React.useState<string | null>(null);
   const [guardState, setGuardState] = React.useState<GuardState>({ status: 'loading' });
+  const [hostedAttempt, setHostedAttempt] = React.useState<HostedAttemptState | null>(null);
   const [accepted, setAccepted] = React.useState(false);
   const attempt = React.useRef<SendAttempt | null>(null);
   const guardRequest = React.useRef(0);
@@ -56,6 +65,7 @@ export function PhoneOTP({
     && guardState.data.kind === 'authowl_turnstile'
     && !turnstileToken;
   const humanCheckError = t('phoneOtp.error.humanCheck');
+  const consentVersion = legal?.required ? legal.version : undefined;
 
   const loadGuard = React.useCallback(async () => {
     const request = ++guardRequest.current;
@@ -81,6 +91,28 @@ export function PhoneOTP({
     void loadGuard();
     return () => { guardRequest.current += 1; };
   }, [loadGuard]);
+
+  const handleStartedAttempt = React.useCallback((
+    data: PhoneOtpStartData | null,
+    connectionId: string | null,
+  ) => {
+    if (!data) throw new Error('Phone OTP did not return an attempt.');
+    if (data.status === 'pending') {
+      setStage('code');
+      return;
+    }
+    if (!connectionId) throw new Error('Hosted phone OTP did not return a connection.');
+    setHostedAttempt({ attempt: data, connectionId });
+    setStage('hosted');
+  }, []);
+
+  const changePhone = React.useCallback(() => {
+    setStage('phone');
+    setCode('');
+    setHostedAttempt(null);
+    setError(null);
+    attempt.current = null;
+  }, [setError]);
 
   if (isLoading) {
     return (
@@ -150,15 +182,31 @@ export function PhoneOTP({
           type="button"
           className="ba-link-button"
           onClick={() => {
-            setStage('phone');
-            setCode('');
-            setError(null);
-            attempt.current = null;
+            changePhone();
           }}
         >
           {t('phoneOtp.changePhone')}
         </button>
       </form>
+    );
+  }
+
+  if (stage === 'hosted' && hostedAttempt) {
+    return (
+      <React.Suspense fallback={<div className="ba-skeleton" aria-busy="true" />}>
+        <HostedPhoneOtp
+          key={hostedAttempt.attempt.attemptId}
+          attempt={hostedAttempt.attempt}
+          connectionId={hostedAttempt.connectionId}
+          phoneNumber={phoneNumber}
+          consentVersion={consentVersion}
+          redirectTo={redirectTo}
+          onSignedIn={onSignedIn}
+          onMfaPasswordRequired={onMfaPasswordRequired}
+          onStarted={(data) => handleStartedAttempt(data, hostedAttempt.connectionId)}
+          onChangePhone={changePhone}
+        />
+      </React.Suspense>
     );
   }
 
@@ -184,6 +232,9 @@ export function PhoneOTP({
           attempt.current = { phoneNumber, idempotencyKey: createIdempotencyKey() };
         }
         const idempotencyKey = attempt.current.idempotencyKey;
+        const hostedConnectionId = guard?.kind === 'akedly_widget_v2'
+          ? guard.connectionId
+          : null;
         void run(
           async () => {
             const selected = guard?.kind === 'akedly_shield_v1_2'
@@ -199,6 +250,13 @@ export function PhoneOTP({
               const akedlyShield = await solvePhoneOtpChallenge(current);
               return startPhoneOtp({ phoneNumber, akedlyShield, idempotencyKey });
             }
+            if (current?.kind === 'akedly_widget_v2') {
+              return startPhoneOtp({
+                phoneNumber,
+                akedlyWidget: { connectionId: current.connectionId },
+                idempotencyKey,
+              });
+            }
             if (current?.kind === 'authowl_turnstile' && turnstileToken) {
               return startPhoneOtp({ phoneNumber, turnstileToken, idempotencyKey });
             }
@@ -206,7 +264,7 @@ export function PhoneOTP({
           },
           {
             failure: t('phoneOtp.error.sendFailed'),
-            onSuccess: () => setStage('code'),
+            onSuccess: (result) => handleStartedAttempt(result.data, hostedConnectionId),
           },
         );
       }}

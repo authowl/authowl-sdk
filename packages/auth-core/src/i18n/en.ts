@@ -136,6 +136,9 @@ export const en = {
   'phoneOtp.error.invalidCode': 'That code is invalid or expired.',
   'phoneOtp.error.humanCheck': 'Complete the human verification to continue.',
   'phoneOtp.retryHumanCheck': 'Retry human verification',
+  'phoneOtp.retryHosted': 'Try again',
+  'phoneOtp.error.hostedUnconfirmed': 'Verification is not confirmed yet. Try again.',
+  'phoneOtp.error.hostedFailed': 'Phone verification failed. Try again.',
 
   'authChallenge.checking': 'Checking that you are human…',
   'authChallenge.error.failed': 'Human verification failed. Try again.',

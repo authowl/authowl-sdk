@@ -41,6 +41,7 @@ export { resolveConfig, type AuthConfig, type ResolvedAuthConfig } from './confi
 export { getPublicConfig, type PublicConfig } from './public-config';
 export { LOCALES, directionFor, isLocale, type Locale } from './i18n';
 export { createIdempotencyKey } from './idempotency';
+export { AKEDLY_WIDGET_ORIGIN } from './akedly-widget';
 export { buildPrivacySignUpEvidence } from './privacy-evidence';
 export {
   type CreatePrivacyRightsRequestOptions,

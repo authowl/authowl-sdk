@@ -104,6 +104,11 @@ describe('AuthOwl HTTP client', () => {
         token: 'durable-phone',
         user: { id: 'user-1' },
       }],
+      ['/phone-otp/complete', {
+        status: true,
+        token: 'durable-hosted-phone',
+        user: { id: 'user-1' },
+      }],
       ['/passkey/verify-authentication', {
         token: 'durable-passkey-top-level',
         session: { id: 'session-current', token: 'durable-passkey-session' },
