@@ -87,7 +87,7 @@ function validActionResponse(path: string): unknown {
   if (path.endsWith('/sign-in/email-otp')) return { user: USER_WIRE };
   if (path.endsWith('/phone-otp/start')) return { status: 'pending' };
   if (path.endsWith('/phone-otp/challenge')) return { kind: 'authowl_turnstile' };
-  if (path.endsWith('/phone-otp/verify')) {
+  if (path.endsWith('/phone-otp/verify') || path.endsWith('/phone-otp/complete')) {
     return {
       status: true,
       sessionCreated: true,
@@ -412,6 +412,40 @@ describe('auth action client session mutation wiring', () => {
     expect(onSessionMutation).not.toHaveBeenCalled();
   });
 
+  it('notifies session observers only after hosted phone completion succeeds', async () => {
+    const onSessionMutation = vi.fn();
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ status: 'pending' }, { status: 202 }))
+      .mockResolvedValueOnce(Response.json({
+        status: true,
+        sessionCreated: true,
+        user: {
+          id: 'phone-user',
+          phoneNumber: '+201000000000',
+          phoneNumberVerified: true,
+        },
+      }));
+    const client = createAuthActionClient(
+      resolveConfig({
+        publishableKey: PK,
+        apiUrl: 'https://auth.example.com',
+        fetch: fetchImpl,
+      }),
+      onSessionMutation,
+    );
+    const params = {
+      phoneNumber: '01000000000',
+      attemptId: 'attempt-1',
+      attemptToken: 't'.repeat(32),
+    };
+
+    await client.phoneOtp.complete(params);
+    expect(onSessionMutation).not.toHaveBeenCalled();
+    await client.phoneOtp.complete(params);
+    expect(onSessionMutation).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps intentional MFA secrets out of lifecycle and error contexts', async () => {
     const totpURI =
       'otpauth://totp/AuthOwl:user?secret=NEVER-IN-HOOKS&issuer=AuthOwl';
@@ -624,6 +658,11 @@ describe('createAuthOwlClient consent wiring', () => {
         otp: '123456',
       })],
       ['phoneOtp.verify', () => client.phoneOtp.verify({ phoneNumber: '01000000000', code: '123456' })],
+      ['phoneOtp.complete', () => client.phoneOtp.complete({
+        phoneNumber: '01000000000',
+        attemptId: 'attempt-1',
+        attemptToken: 't'.repeat(32),
+      })],
       ['signUp.email', () => client.signUp.email({ email: 'b@x.co', password: 'pw-123456', name: 'B' })],
       ['twoFactor.verifyTotp', () => client.twoFactor.verifyTotp({ code: '123456' })],
       ['twoFactor.verifyBackupCode', () => client.twoFactor.verifyBackupCode({ code: 'abc-def' })],
@@ -926,6 +965,7 @@ describe('createAuthOwlClient consent wiring', () => {
     expect(typeof client.signIn.username).toBe('function');
     expect(typeof client.phoneOtp.start).toBe('function');
     expect(typeof client.phoneOtp.verify).toBe('function');
+    expect(typeof client.phoneOtp.complete).toBe('function');
     expect(typeof client.signOut).toBe('function');
     expect(typeof client.sessionStore.subscribe).toBe('function');
     expect(typeof client.sessionStore.getSnapshot).toBe('function');
@@ -971,6 +1011,11 @@ describe('createAuthOwlClient consent wiring', () => {
       idempotencyKey: '11111111-2222-4333-8444-555555555555',
     }, options);
     await client.phoneOtp.verify({ phoneNumber: '01000000000', code: '123456' }, options);
+    await client.phoneOtp.complete({
+      phoneNumber: '01000000000',
+      attemptId: 'attempt-1',
+      attemptToken: 't'.repeat(32),
+    }, options);
     await client.signIn.passkey({}, options);
     await client.getSession();
     await client.signOut(options);
@@ -1010,6 +1055,7 @@ describe('createAuthOwlClient consent wiring', () => {
       `POST /api/projects/${PROJECT_ID}/auth/sign-in/email-otp`,
       `POST /api/projects/${PROJECT_ID}/auth/phone-otp/start`,
       `POST /api/projects/${PROJECT_ID}/auth/phone-otp/verify`,
+      `POST /api/projects/${PROJECT_ID}/auth/phone-otp/complete`,
       `GET /api/projects/${PROJECT_ID}/auth/passkey/generate-authenticate-options`,
       `POST /api/projects/${PROJECT_ID}/auth/passkey/verify-authentication`,
       `GET /api/projects/${PROJECT_ID}/auth/get-session`,

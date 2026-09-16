@@ -420,6 +420,11 @@ export type PhoneOtpChallengeData =
       challengeToken: string;
       challengeRequired: boolean;
       turnstile: Readonly<{ required: boolean; siteKey: string | null }>;
+    }>
+  | Readonly<{
+      kind: 'akedly_widget_v2';
+      connectionId: string;
+      passkeys: boolean;
     }>;
 
 export type AkedlyShieldStartProof = Readonly<{
@@ -435,23 +440,47 @@ export type PhoneOtpStartOptions =
       phoneNumber: string;
       turnstileToken: string;
       akedlyShield?: never;
+      akedlyWidget?: never;
       idempotencyKey?: string;
     }>
   | Readonly<{
       phoneNumber: string;
       turnstileToken?: never;
       akedlyShield: AkedlyShieldStartProof;
+      akedlyWidget?: never;
+      idempotencyKey?: string;
+    }>
+  | Readonly<{
+      phoneNumber: string;
+      turnstileToken?: never;
+      akedlyShield?: never;
+      akedlyWidget: Readonly<{ connectionId: string }>;
       idempotencyKey?: string;
     }>;
 
-export interface PhoneOtpStartData {
-  status: 'pending';
-}
+export type PhoneOtpStartData =
+  | Readonly<{ status: 'pending' }>
+  | Readonly<{
+      status: 'hosted';
+      attemptId: string;
+      iframeUrl: string;
+      attemptToken: string;
+      expiresAt: Date;
+      passkeys: boolean;
+    }>;
 
 /** Verify the SMS code and create or resume the phone user's session. */
 export interface PhoneOtpVerifyOptions {
   phoneNumber: string;
   code: string;
+  consentVersion?: number;
+}
+
+/** Confirm a hosted phone verification after Akedly signals completion. */
+export interface PhoneOtpCompleteOptions {
+  phoneNumber: string;
+  attemptId: string;
+  attemptToken: string;
   consentVersion?: number;
 }
 
@@ -469,6 +498,8 @@ export interface PhoneOtpVerifyData {
   sessionCreated: true;
   user: PhoneAuthUser;
 }
+
+export type PhoneOtpCompleteData = Readonly<{ status: 'pending' }> | PhoneOtpVerifyData;
 
 /** Options to request a password-reset email. */
 export interface RequestPasswordResetOptions {
@@ -777,6 +808,10 @@ export interface AuthOwlClient {
       params: PhoneOtpVerifyOptions,
       fetchOptions?: ActionFetchOptions,
     ): Promise<AuthActionResult<PhoneOtpVerifyData>>;
+    complete(
+      params: PhoneOtpCompleteOptions,
+      fetchOptions?: ActionFetchOptions,
+    ): Promise<AuthActionResult<PhoneOtpCompleteData>>;
   };
   /** Email a password-reset link to the user (no session issued). */
   requestPasswordReset(
@@ -982,6 +1017,7 @@ export function createAuthOwlClient(config: ResolvedAuthConfig): AuthOwlClient {
       prepare: client.phoneOtp.prepare,
       start: client.phoneOtp.start,
       verify: clearThen(client.phoneOtp.verify),
+      complete: clearThen(client.phoneOtp.complete),
     },
     signOut: clearThen(client.signOut),
     // `satisfies` keeps every wrapper signature pinned to the published interface.

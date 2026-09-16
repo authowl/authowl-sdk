@@ -658,6 +658,43 @@ void main() {
       await client.dispose();
     });
 
+    test('recognizes hosted phone OTP and returns an unsupported result',
+        () async {
+      final recorder = Recorder((_) => http.Response('{}', 500));
+      final client = AuthOwlClient(
+        publishableKey: publishableKey,
+        apiUrl: 'https://api.authowl.dev',
+        storage: InMemoryAuthOwlStorage(),
+        httpClient: recorder.client,
+      );
+      final challenge = PhoneOtpChallenge.fromJson({
+        'kind': 'akedly_widget_v2',
+        'connectionId': 'connection_hosted',
+        'passkeys': true,
+      });
+
+      expect(challenge, isA<AkedlyHostedWidgetChallenge>());
+      final hosted = challenge! as AkedlyHostedWidgetChallenge;
+      expect(hosted.connectionId, 'connection_hosted');
+      expect(hosted.passkeys, isTrue);
+
+      final result = await client.startPhoneOtp(
+        phoneNumber: '+201001112222',
+        idempotencyKey: 'otp_hosted_1',
+        turnstileToken: 'must-not-be-posted',
+        akedlyWidget: hosted,
+      );
+
+      expect(result.error?.code, 'UNSUPPORTED_CEREMONY');
+      expect(
+        result.error?.message,
+        'hosted verification is not yet supported on Flutter; '
+        'use the web SDK or a system browser.',
+      );
+      expect(recorder.requests, isEmpty);
+      await client.dispose();
+    });
+
     test('bounds Shield work and refuses incomplete proof pairs', () {
       expect(
         PhoneOtpChallenge.fromJson({

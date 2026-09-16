@@ -439,6 +439,7 @@ export function projectBrowserAuthPayload(path: string, payload: unknown): unkno
   const stripsTopLevelToken =
     path === '/change-password' ||
     path === '/passkey/verify-authentication' ||
+    path === '/phone-otp/complete' ||
     path === '/phone-otp/verify' ||
     path === '/sign-up/email' ||
     path.startsWith('/sign-in/') ||

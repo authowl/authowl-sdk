@@ -85,6 +85,8 @@ export {
   type AkedlyShieldStartProof,
   type PhoneOtpVerifyOptions,
   type PhoneOtpVerifyData,
+  type PhoneOtpCompleteOptions,
+  type PhoneOtpCompleteData,
   type PhoneAuthUser,
   type RequestPasswordResetOptions,
   type ResetPasswordOptions,
@@ -111,6 +113,14 @@ export {
   type TwoFactorStatusData,
 } from './client';
 export { solvePhoneOtpChallenge } from './phone-otp-shield';
+export {
+  AKEDLY_PASSKEY_ALLOW,
+  AKEDLY_WIDGET_ORIGIN,
+  HOSTED_PHONE_OTP_POLLING,
+  isAkedlyWidgetMessage,
+  trustedAkedlyIframeUrl,
+  type AkedlyWidgetMessage,
+} from './akedly-widget';
 // The cross-site transport is an internal detail of `signIn.social`/`signIn.sso`
 // and is deliberately NOT exported: nothing outside this package drives it, and
 // exporting five functions would put a support surface under semver for no

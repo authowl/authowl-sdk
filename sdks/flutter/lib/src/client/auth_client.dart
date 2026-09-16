@@ -211,13 +211,24 @@ class AuthOwlClient {
     required String idempotencyKey,
     String? turnstileToken,
     AkedlyShieldProof? akedlyShield,
-  }) =>
-      _transport.send('/phone-otp/start', body: {
-        'phoneNumber': phoneNumber,
-        'idempotencyKey': idempotencyKey,
-        if (turnstileToken != null) 'turnstileToken': turnstileToken,
-        if (akedlyShield != null) 'akedlyShield': akedlyShield.toJson(),
-      });
+    AkedlyHostedWidgetChallenge? akedlyWidget,
+  }) {
+    if (akedlyWidget != null) {
+      return Future.value(const AuthResult(
+        error: AuthError(
+          code: 'UNSUPPORTED_CEREMONY',
+          message: 'hosted verification is not yet supported on Flutter; '
+              'use the web SDK or a system browser.',
+        ),
+      ));
+    }
+    return _transport.send('/phone-otp/start', body: {
+      'phoneNumber': phoneNumber,
+      'idempotencyKey': idempotencyKey,
+      if (turnstileToken != null) 'turnstileToken': turnstileToken,
+      if (akedlyShield != null) 'akedlyShield': akedlyShield.toJson(),
+    });
+  }
 
   Future<AuthResult<Object?>> verifyPhoneOtp({
     required String phoneNumber,

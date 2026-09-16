@@ -9,8 +9,8 @@
     "metadata-client.ts",
     "session-handoff.ts"
   ],
-  "operationCount": 72,
-  "nativeOperationCount": 66,
+  "operationCount": 73,
+  "nativeOperationCount": 67,
   "operations": [
     {
       "id": "changeEmail",
@@ -369,6 +369,14 @@
       "method": "POST",
       "path": "/phone-otp/challenge",
       "decoder": "decodePhoneOtpChallenge",
+      "native": true,
+      "source": "native-client.ts"
+    },
+    {
+      "id": "phoneOtp.complete",
+      "method": "POST",
+      "path": "/phone-otp/complete",
+      "decoder": "decodePhoneOtpComplete",
       "native": true,
       "source": "native-client.ts"
     },

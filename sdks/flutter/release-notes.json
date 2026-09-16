@@ -1,4 +1,10 @@
 {
+  "0.4.2": {
+    "date": "2026-09-16",
+    "notes": [
+      "Recognize hosted Akedly phone verification and return a clear unsupported-platform error on native clients instead of attempting the legacy OTP flow."
+    ]
+  },
   "0.4.1": {
     "date": "2026-09-05",
     "notes": [

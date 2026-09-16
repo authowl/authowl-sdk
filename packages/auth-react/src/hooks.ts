@@ -420,6 +420,8 @@ export type UseSignInResult = {
   startPhoneOtp: AuthOwlClient['phoneOtp']['start'];
   /** Managed SMS: verify the phone code and establish a session. */
   verifyPhoneOtp: AuthOwlClient['phoneOtp']['verify'];
+  /** Managed SMS: confirm a hosted verification and establish a session. */
+  completePhoneOtp: AuthOwlClient['phoneOtp']['complete'];
 };
 
 export function useSignIn(): UseSignInResult {
@@ -436,6 +438,7 @@ export function useSignIn(): UseSignInResult {
     preparePhoneOtp: client.phoneOtp.prepare,
     startPhoneOtp: client.phoneOtp.start,
     verifyPhoneOtp: client.phoneOtp.verify,
+    completePhoneOtp: client.phoneOtp.complete,
   };
 }
 

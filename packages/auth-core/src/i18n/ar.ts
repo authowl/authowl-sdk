@@ -136,6 +136,9 @@ export const ar: Record<keyof typeof en, string> = {
   'phoneOtp.error.invalidCode': 'هذا الرمز غير صالح أو منتهي الصلاحية.',
   'phoneOtp.error.humanCheck': 'أكمل التحقق البشري للمتابعة.',
   'phoneOtp.retryHumanCheck': 'أعد محاولة التحقق البشري',
+  'phoneOtp.retryHosted': 'حاول مرة أخرى',
+  'phoneOtp.error.hostedUnconfirmed': 'لم يصل تأكيد التحقق بعد. حاول مرة أخرى.',
+  'phoneOtp.error.hostedFailed': 'تعذر التحقق من رقم الهاتف. حاول مرة أخرى.',
 
   'authChallenge.checking': 'جارٍ التحقق من أنك شخص حقيقي…',
   'authChallenge.error.failed': 'فشل التحقق البشري. حاول مرة أخرى.',

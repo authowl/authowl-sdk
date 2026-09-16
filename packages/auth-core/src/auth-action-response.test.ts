@@ -5,6 +5,7 @@ import {
   decodeEmailSignUp,
   decodeMagicLink,
   decodePasswordReset,
+  decodePhoneOtpComplete,
   decodePhoneOtpStart,
   decodePhoneOtpChallenge,
   decodePhoneOtpVerify,
@@ -156,8 +157,34 @@ describe('auth action response projection', () => {
     expect(decodePhoneOtpStart({ status: 'pending', provider: 'drop-me' })).toEqual({
       status: 'pending',
     });
+    expect(decodePhoneOtpStart({
+      status: 'hosted',
+      attemptId: 'attempt-1',
+      iframeUrl: 'https://auth.akedly.io/auth?attemptId=attempt-1',
+      attemptToken: 't'.repeat(32),
+      expiresAt: now,
+      passkeys: true,
+      providerSecret: 'drop-me',
+    })).toEqual({
+      status: 'hosted',
+      attemptId: 'attempt-1',
+      iframeUrl: 'https://auth.akedly.io/auth?attemptId=attempt-1',
+      attemptToken: 't'.repeat(32),
+      expiresAt: now,
+      passkeys: true,
+    });
     expect(decodePhoneOtpChallenge({ kind: 'authowl_turnstile', secret: 'drop-me' })).toEqual({
       kind: 'authowl_turnstile',
+    });
+    expect(decodePhoneOtpChallenge({
+      kind: 'akedly_widget_v2',
+      connectionId: 'connection-2',
+      passkeys: true,
+      publicKey: 'drop-me',
+    })).toEqual({
+      kind: 'akedly_widget_v2',
+      connectionId: 'connection-2',
+      passkeys: true,
     });
     expect(decodePhoneOtpChallenge({
       kind: 'akedly_shield_v1_2',
@@ -207,6 +234,51 @@ describe('auth action response projection', () => {
       token: 'durable-session-secret',
       user: userWire,
     })).toEqual({ status: true });
+  });
+
+  it('refuses unsafe or malformed hosted phone OTP attempts', () => {
+    const hosted = {
+      status: 'hosted',
+      attemptId: 'attempt-1',
+      iframeUrl: 'https://auth.akedly.io/auth?attemptId=attempt-1',
+      attemptToken: 't'.repeat(32),
+      expiresAt: now,
+      passkeys: false,
+    };
+    for (const invalid of [
+      { ...hosted, iframeUrl: 'not a url' },
+      { ...hosted, iframeUrl: 'https://auth.akedly.io.evil.test/auth' },
+      { ...hosted, iframeUrl: 'https://api.akedly.io/auth' },
+      { ...hosted, attemptId: 'a'.repeat(256) },
+      { ...hosted, attemptToken: 't'.repeat(31) },
+      { ...hosted, expiresAt: new Date(Number.NaN) },
+    ]) {
+      expect(() => decodePhoneOtpStart(invalid)).toThrow(TypeError);
+    }
+  });
+
+  it('decodes pending and verified hosted completion responses', () => {
+    expect(decodePhoneOtpComplete({ status: 'pending', token: 'drop-me' })).toEqual({
+      status: 'pending',
+    });
+    expect(decodePhoneOtpComplete({
+      status: true,
+      sessionCreated: true,
+      token: 'durable-session-secret',
+      user: {
+        id: 'phone-user',
+        phoneNumber: '+201000000000',
+        phoneNumberVerified: true,
+      },
+    })).toEqual({
+      status: true,
+      sessionCreated: true,
+      user: {
+        id: 'phone-user',
+        phoneNumber: '+201000000000',
+        phoneNumberVerified: true,
+      },
+    });
   });
 
   it('projects phone verification to the exact phone-safe user', () => {

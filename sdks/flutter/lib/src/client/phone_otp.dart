@@ -14,6 +14,15 @@ sealed class PhoneOtpChallenge {
     if (value['kind'] == 'authowl_turnstile') {
       return const AuthOwlTurnstileChallenge();
     }
+    if (value['kind'] == 'akedly_widget_v2') {
+      if (value['connectionId'] is! String || value['passkeys'] is! bool) {
+        return null;
+      }
+      return AkedlyHostedWidgetChallenge(
+        connectionId: value['connectionId'] as String,
+        passkeys: value['passkeys'] as bool,
+      );
+    }
     if (value['kind'] != 'akedly_shield_v1_2') return null;
 
     final turnstile = value['turnstile'];
@@ -46,6 +55,21 @@ sealed class PhoneOtpChallenge {
 /// AuthOwl's standard Turnstile ceremony.
 final class AuthOwlTurnstileChallenge extends PhoneOtpChallenge {
   const AuthOwlTurnstileChallenge();
+}
+
+/// An Akedly V2 hosted widget challenge.
+///
+/// Flutter recognizes this server-selected ceremony but does not launch its
+/// system-browser flow yet. Pass it to `startPhoneOtp` to receive a readable
+/// unsupported result without sending a request.
+final class AkedlyHostedWidgetChallenge extends PhoneOtpChallenge {
+  const AkedlyHostedWidgetChallenge({
+    required this.connectionId,
+    required this.passkeys,
+  });
+
+  final String connectionId;
+  final bool passkeys;
 }
 
 /// An Akedly Shield V1.2 challenge.
