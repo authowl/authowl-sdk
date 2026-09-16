@@ -70,10 +70,12 @@ export function HostedPhoneOtp({
     let polls = 0;
     let pollTimer: number | undefined;
     let expiryTimer: number | undefined;
+    let confirmationTimer: number | undefined;
 
     const clear = () => {
       if (pollTimer !== undefined) window.clearTimeout(pollTimer);
       if (expiryTimer !== undefined) window.clearTimeout(expiryTimer);
+      if (confirmationTimer !== undefined) window.clearTimeout(confirmationTimer);
       window.removeEventListener('message', onMessage);
     };
     const fail = (message: string) => {
@@ -126,6 +128,11 @@ export function HostedPhoneOtp({
         fail(failedMessage);
       } else if (!polling) {
         polling = true;
+        // Bound elapsed time, including time spent awaiting slow requests.
+        confirmationTimer = window.setTimeout(
+          () => fail(unconfirmedMessage),
+          HOSTED_PHONE_OTP_POLLING.intervalMs * HOSTED_PHONE_OTP_POLLING.maxAttempts,
+        );
         pollTimer = window.setTimeout(
           () => { void poll(); },
           HOSTED_PHONE_OTP_POLLING.intervalMs,

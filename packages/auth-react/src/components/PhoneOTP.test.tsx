@@ -368,7 +368,38 @@ describe('PhoneOTP challenge gating', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('shows the unconfirmed error after the twenty-poll deadline', async () => {
+  it('uses the refreshed connection when the route changes from Shield to hosted', async () => {
+    preparePhoneOtp.mockResolvedValueOnce({ data: shieldChallenge, error: null })
+      .mockResolvedValueOnce({ data: hostedChallenge(false), error: null });
+    startPhoneOtp.mockResolvedValue({ data: hostedStart(false), error: null });
+    render(<PhoneOTP />);
+    await waitFor(() => expect(sendButton().disabled).toBe(false));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '01000000000' } });
+    fireEvent.click(sendButton());
+    await waitFor(() => expect(screen.getByTestId('phoneotp-hosted-frame')).toBeTruthy());
+    expect(startPhoneOtp).toHaveBeenCalledWith(expect.objectContaining({
+      akedlyWidget: { connectionId: 'connection-hosted' },
+    }));
+  });
+
+  it('ends confirmation after twenty seconds even while a completion request is slow', async () => {
+    const frame = await renderHosted(false);
+    const response = deferred<unknown>();
+    completePhoneOtp.mockReturnValue(response.promise);
+    vi.useFakeTimers();
+    window.dispatchEvent(new MessageEvent('message', {
+      origin: 'https://auth.akedly.io', source: frame.contentWindow, data: { type: 'AUTH_SUCCESS' },
+    }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(20_000); });
+    expect(screen.getByText('phoneOtp.error.hostedUnconfirmed')).toBeTruthy();
+    await act(async () => {
+      response.resolve({ data: { status: true, sessionCreated: true }, error: null });
+      await Promise.resolve();
+    });
+    expect(finishSignIn).not.toHaveBeenCalled();
+  });
+
+  it('shows the unconfirmed error at the twenty-second deadline', async () => {
     createIdempotencyKey
       .mockReturnValueOnce('idem-1')
       .mockReturnValueOnce('idem-2');
@@ -383,7 +414,8 @@ describe('PhoneOTP challenge gating', () => {
     }));
     await act(async () => { await vi.advanceTimersByTimeAsync(20_000); });
 
-    expect(completePhoneOtp).toHaveBeenCalledTimes(20);
+    // The deadline cancels the poll that would otherwise start at 20 seconds.
+    expect(completePhoneOtp).toHaveBeenCalledTimes(19);
     expect(screen.getByText('phoneOtp.error.hostedUnconfirmed')).toBeTruthy();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'phoneOtp.retryHosted' }));

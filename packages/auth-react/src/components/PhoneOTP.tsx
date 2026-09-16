@@ -232,9 +232,7 @@ export function PhoneOTP({
           attempt.current = { phoneNumber, idempotencyKey: createIdempotencyKey() };
         }
         const idempotencyKey = attempt.current.idempotencyKey;
-        const hostedConnectionId = guard?.kind === 'akedly_widget_v2'
-          ? guard.connectionId
-          : null;
+        let hostedConnectionId: string | null = null;
         void run(
           async () => {
             const selected = guard?.kind === 'akedly_shield_v1_2'
@@ -251,6 +249,7 @@ export function PhoneOTP({
               return startPhoneOtp({ phoneNumber, akedlyShield, idempotencyKey });
             }
             if (current?.kind === 'akedly_widget_v2') {
+              hostedConnectionId = current.connectionId;
               return startPhoneOtp({
                 phoneNumber,
                 akedlyWidget: { connectionId: current.connectionId },
