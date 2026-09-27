@@ -7,7 +7,7 @@
  * on both sides of that decision. The fake below implements the engine's gate
  * instead of gifting the wrapper a set-auth-token header.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createAuthOwlClient,
   resolveConfig,
@@ -73,6 +73,7 @@ function fakeEngine(
   const mintedCodes = new Set<string>();
   let cookieSession = false;
   let mintCount = 0;
+  let browserSessionResult: 'healthy' | 'network' | 'malformed' | 'empty' | 429 | 503 = 'healthy';
 
   const engineFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const rawUrl = String(input);
@@ -165,6 +166,14 @@ function fakeEngine(
       const serverPresentation =
         headers.get('authorization') === `Bearer ${SESSION_TOKEN}`
         && headers.get('x-authowl-secret-key') === SECRET_KEY;
+      if (!serverPresentation) {
+        if (browserSessionResult === 'network') throw new TypeError('Network unavailable');
+        if (browserSessionResult === 'malformed') return Response.json({ unexpected: true });
+        if (browserSessionResult === 'empty') return Response.json(null);
+        if (typeof browserSessionResult === 'number') {
+          return Response.json({ error: 'temporarily_unavailable' }, { status: browserSessionResult });
+        }
+      }
       if (!serverPresentation && !cookieSession && !bearerSession) {
         return Response.json(null);
       }
@@ -194,7 +203,10 @@ function fakeEngine(
     fetch: engineFetch,
   });
 
-  return { fetch: engineFetch, calls, appBridgePosts, appBridgeResults };
+  return {
+    fetch: engineFetch, calls, appBridgePosts, appBridgeResults,
+    setBrowserSessionResult(result: typeof browserSessionResult) { browserSessionResult = result; },
+  };
 }
 
 type CoreClient = ReturnType<typeof createAuthOwlClient>;
@@ -214,21 +226,18 @@ async function signInThroughNext(
   const projectId = freshProject();
   const engine = fakeEngine(projectId, cookieSupported, deploymentSecret);
   const publishableKey = `pk_test_${projectId}_abcdefghijklmnopqrstuvwxyz012345`;
-  const nextFetch = createAuthOwlNextFetch({
+  const createClient = () => createAuthOwlClient(resolveConfig({
     publishableKey,
     apiUrl: API_URL,
-    fetch: engine.fetch,
-  });
-  const client = createAuthOwlClient(resolveConfig({
-    publishableKey,
-    apiUrl: API_URL,
-    fetch: nextFetch,
+    fetch: createAuthOwlNextFetch({ publishableKey, apiUrl: API_URL, fetch: engine.fetch }),
   }));
+  const client = createClient();
 
   await signIn(client);
   expect(codePosts(engine.appBridgePosts)).toHaveLength(1);
   return {
     client,
+    createClient,
     engine,
     storageKey: `authowl:next-session-bridge:${projectId}`,
   };
@@ -268,6 +277,56 @@ describe('SDK-ENGINE SESSION BRIDGE CONTRACT', () => {
     expect(signIn.headers.get(SESSION_TRANSPORT_HEADER)).toBe(SESSION_TRANSPORT_BEARER);
     expect(mint.headers.get('authorization')).toBe(`Bearer ${SESSION_TOKEN}`);
     expect(mint.headers.has('x-authowl-session-proof')).toBe(true);
+  });
+
+  describe.each([
+    ['cookie-capable', true],
+    ['sender-bound bearer', false],
+  ] as const)('%s session checks', (_label, cookieSupported) => {
+    it.each([503, 429, 'network', 'malformed'] as const)(
+      'preserves the app session after a %s failure and recovers without re-bridging',
+      async (failure) => {
+        const { client, engine, storageKey } = await signInThroughNext(cookieSupported);
+        await vi.waitFor(() => expect(client.sessionStore.getSnapshot().data?.session.id).toBe('session_1'));
+        engine.setBrowserSessionResult(failure);
+        client.sessionStore.getSnapshot().refetch();
+        await vi.waitFor(() => expect(client.sessionStore.getSnapshot().error).not.toBeNull());
+
+        expect(sessionStorage.getItem(storageKey)).toBe('1');
+        expect(engine.appBridgePosts).not.toContainEqual({ token: null });
+        expect(engine.appBridgeResults).toHaveLength(1);
+
+        engine.setBrowserSessionResult('healthy');
+        client.sessionStore.getSnapshot().refetch();
+        await vi.waitFor(() => expect(client.sessionStore.getSnapshot().data?.session.id).toBe('session_1'));
+        expect(client.sessionStore.getSnapshot().error).toBeNull();
+        expect(codePosts(engine.appBridgePosts)).toHaveLength(1);
+
+        // A later successful empty read still invalidates the projection.
+        engine.setBrowserSessionResult('empty');
+        client.sessionStore.getSnapshot().refetch();
+        await vi.waitFor(() => expect(engine.appBridgeResults.at(-1)?.setCookie).toContain('Max-Age=0'));
+        expect(sessionStorage.getItem(storageKey)).toBeNull();
+      },
+    );
+
+    it('preserves an existing projection when initial hydration fails', async () => {
+      const { createClient, engine, storageKey } = await signInThroughNext(cookieSupported);
+      engine.setBrowserSessionResult(503);
+      const reloaded = createClient();
+      await vi.waitFor(() => expect(reloaded.sessionStore.getSnapshot().error).not.toBeNull());
+      expect(sessionStorage.getItem(storageKey)).toBe('1');
+      expect(engine.appBridgePosts).not.toContainEqual({ token: null });
+
+      engine.setBrowserSessionResult('healthy');
+      reloaded.sessionStore.getSnapshot().refetch();
+      await vi.waitFor(() => expect(reloaded.sessionStore.getSnapshot().data?.session.id).toBe('session_1'));
+      expect(codePosts(engine.appBridgePosts)).toHaveLength(1);
+
+      await reloaded.signOut();
+      expect(engine.appBridgePosts.at(-1)).toEqual({ token: null });
+      expect(sessionStorage.getItem(storageKey)).toBeNull();
+    });
   });
 
   it('surfaces and latches a rejected deployment key instead of minting forever', async () => {
