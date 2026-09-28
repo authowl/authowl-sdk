@@ -210,7 +210,9 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
 
   const synchronizeSession = (): void => {
     const snapshot = connection?.sessionStore.getSnapshot();
-    if (!snapshot || snapshot.isPending || snapshot.isRefetching) return;
+    // A failed read cannot establish whether the session ended. Preserve the
+    // projection until a successful read or an explicit session-ending event.
+    if (!snapshot || snapshot.isPending || snapshot.isRefetching || snapshot.error) return;
     const sessionId = snapshot.data?.session.id ?? null;
     if (!sessionId) {
       const projected = currentSessionId !== null || hasEnsuredProjection();
