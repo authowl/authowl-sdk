@@ -74,7 +74,8 @@ export type OrganizationInvitationStatus =
   | 'pending'
   | 'accepted'
   | 'rejected'
-  | 'canceled';
+  | 'canceled'
+  | 'expired';
 
 export interface OrganizationInvitation {
   id: string;
@@ -82,7 +83,7 @@ export interface OrganizationInvitation {
   email: string;
   role: string;
   status: OrganizationInvitationStatus;
-  inviterId: string;
+  inviterId: string | null;
   expiresAt: Date;
   createdAt: Date;
 }

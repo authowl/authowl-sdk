@@ -6,6 +6,7 @@ import { useT } from '../i18n';
 import { CreateOrganization } from './CreateOrganization';
 import { OrganizationModal } from './organization/OrganizationModal';
 import { useOrganizationsResource } from './organization/use-organizations-resource';
+import { IncomingInvitations } from './organization/IncomingInvitations';
 import { OrganizationProfile } from './OrganizationProfile';
 import { useSubmitAction } from './use-submit-action';
 import { FormError } from './FormError';
@@ -25,7 +26,7 @@ export function OrganizationSwitcherContent({ showPersonalWorkspace = true, onOr
   const { organizations, isLoading, error: loadError, refresh } = useOrganizationsResource(enabled);
   const { pending, error, run } = useSubmitAction();
   const [open, setOpen] = React.useState(false);
-  const [dialog, setDialog] = React.useState<'create' | 'profile' | null>(null);
+  const [dialog, setDialog] = React.useState<'create' | 'profile' | 'invitations' | null>(null);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -146,12 +147,14 @@ export function OrganizationSwitcherContent({ showPersonalWorkspace = true, onOr
               </div>
             )}
             <div className="ba-organization-menu-actions">
+              <button className="ba-menu-item" type="button" role="menuitem" onClick={() => { setOpen(false); setDialog('invitations'); }}>{t('organization.list.invitationsTitle')}</button>
               {active && <button className="ba-menu-item" type="button" role="menuitem" onClick={() => { setOpen(false); setDialog('profile'); }}>{t('organization.switcher.manage')}</button>}
               <button className="ba-menu-item" type="button" role="menuitem" onClick={() => { setOpen(false); setDialog('create'); }}>{t('organization.switcher.create')}</button>
             </div>
           </div>
         )}
       </div>
+      {dialog === 'invitations' && <OrganizationModal title={t('organization.list.invitationsTitle')} returnFocusRef={triggerRef} onClose={() => setDialog(null)}><IncomingInvitations onChanged={refresh} /></OrganizationModal>}
       {dialog === 'create' && (
         <OrganizationModal title={t('organization.create.title')} returnFocusRef={triggerRef} onClose={() => setDialog(null)}>
           <CreateOrganization

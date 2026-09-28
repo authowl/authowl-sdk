@@ -115,7 +115,7 @@ const mocks = vi.hoisted(() => {
     team,
     teamMember,
     organization,
-    config: { organizations: true },
+    config: { organizations: true, organizationInvitations: { maxBatchSize: 20, maxPending: 100, resendCooldownSeconds: 60 } },
     session: { activeOrganizationId: 'org-cairo' as string | null },
     refetch: vi.fn(async () => undefined),
     serverError: vi.fn((_error: unknown, fallback: string) => fallback),
@@ -288,6 +288,32 @@ describe('organization components', () => {
     expect(mocks.refetch).toHaveBeenCalled();
   });
 
+  it('deduplicates a bulk invite, keeps failed recipients for retry, and resends explicitly', async () => {
+    mocks.organization.inviteMember.mockRejectedValueOnce(new Error('network'));
+    render(<OrganizationProfile organizationId="org-cairo" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'organization.profile.nav.invitations' }));
+    const emails = screen.getByLabelText('organization.profile.invitations.emails');
+    fireEvent.change(emails, { target: { value: 'first@example.test, SECOND@example.test; second@example.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'organization.profile.invitations.invite' }));
+    await waitFor(() => expect(mocks.organization.inviteMember).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect((emails as HTMLTextAreaElement).value).toBe('first@example.test'));
+    fireEvent.click(screen.getByRole('button', { name: 'organization.profile.invitations.invite' }));
+    await waitFor(() => expect((emails as HTMLTextAreaElement).value).toBe(''));
+    expect(mocks.organization.inviteMember).toHaveBeenCalledTimes(3);
+    fireEvent.click(screen.getByRole('button', { name: 'organization.profile.invitations.resend' }));
+    await waitFor(() => expect(mocks.organization.inviteMember).toHaveBeenLastCalledWith({ organizationId: 'org-cairo', email: 'new@example.test', role: 'member', resend: true }));
+  });
+
+  it('offers incoming invitations from the switcher and refreshes membership after joining', async () => {
+    render(<OrganizationSwitcher />);
+    fireEvent.click(await screen.findByRole('button', { name: /Cairo Studio/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'organization.list.invitationsTitle' }));
+    expect(await screen.findByText('Alexandria Labs')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'organization.list.accept' }));
+    await waitFor(() => expect(mocks.organization.acceptInvitation).toHaveBeenCalledWith({ invitationId: 'invitation-user' }));
+    await waitFor(() => expect(mocks.refetch).toHaveBeenCalled());
+  });
+
   it('drives details, ownership promotion, invitations, and deletion from the profile', async () => {
     const onDeleted = vi.fn();
     render(<OrganizationProfile organizationId="org-cairo" onDeleted={onDeleted} />);
@@ -302,7 +328,7 @@ describe('organization components', () => {
     await waitFor(() => expect(mocks.organization.updateMemberRole).toHaveBeenCalledWith({ organizationId: 'org-cairo', memberId: 'member-teammate', role: 'owner' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'organization.profile.nav.invitations' }));
-    fireEvent.change(screen.getByLabelText('organization.profile.invitations.email'), { target: { value: 'team@example.test' } });
+    fireEvent.change(screen.getByLabelText('organization.profile.invitations.emails'), { target: { value: 'team@example.test' } });
     fireEvent.click(screen.getByRole('button', { name: 'organization.profile.invitations.invite' }));
     await waitFor(() => expect(mocks.organization.inviteMember).toHaveBeenCalledWith({ organizationId: 'org-cairo', email: 'team@example.test', role: 'member' }));
 

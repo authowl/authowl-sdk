@@ -2,6 +2,7 @@
 import * as React from 'react';
 import {
   clearInvitationClaim,
+  captureInvitationClaim,
   createMembershipHas,
   readInvitationClaim,
   type AuthClientError,
@@ -230,10 +231,12 @@ export type UseOrganizationInvitationResult = {
   /** The stashed invitation once it has been read back, else null. */
   invitation: OrganizationInvitationDetails | null;
   status: InvitationPromptStatus;
+  error: AuthClientError | null;
   /** Redeem it. Resolves true when the membership was written. */
   accept: () => Promise<boolean>;
   /** Forget it locally. Never rejects it server-side - that is a terminal state. */
   dismiss: () => void;
+  retry: () => void;
 };
 
 export type UseInvitationRecipientHintResult = {
@@ -267,7 +270,7 @@ export function useInvitationRecipientHint(): UseInvitationRecipientHintResult {
   });
   React.useEffect(() => {
     let active = true;
-    const claim = readInvitationClaim();
+    const claim = captureInvitationClaim();
     if (!claim) {
       setResult({ recipientHint: null, isLoaded: true });
       return () => {
@@ -318,10 +321,12 @@ export function useOrganizationInvitation(): UseOrganizationInvitationResult {
   const [claim, setClaim] = React.useState<InvitationClaim | null>(null);
   const [invitation, setInvitation] = React.useState<OrganizationInvitationDetails | null>(null);
   const [status, setStatus] = React.useState<InvitationPromptStatus>('idle');
+  const [error, setError] = React.useState<AuthClientError | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
   const requestRef = React.useRef(0);
 
   React.useEffect(() => {
-    setClaim(readInvitationClaim());
+    setClaim(captureInvitationClaim());
   }, [identity]);
 
   React.useEffect(() => {
@@ -334,6 +339,7 @@ export function useOrganizationInvitation(): UseOrganizationInvitationResult {
       return;
     }
     setStatus('loading');
+    setError(null);
     void (async () => {
       const result = await apiRef.current.getInvitation({ id: claim.id });
       if (token !== requestRef.current) return;
@@ -346,20 +352,27 @@ export function useOrganizationInvitation(): UseOrganizationInvitationResult {
       // invitation any more". Both are dead ends for THIS session and neither
       // should keep re-asking on every mount.
       setInvitation(null);
-      setStatus(result.error?.code === 'YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION'
-        ? 'wrong_account'
-        : 'gone');
-    })();
+      setError(result.error ?? null);
+      const code = result.error?.code;
+      setStatus(code === 'YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION' ? 'wrong_account'
+        : code?.startsWith('EMAIL_VERIFICATION_REQUIRED') ? 'verify_email'
+        : code === 'INVITATION_NOT_FOUND' || code === 'INVITATION_EXPIRED' ? 'gone' : 'error');
+    })().catch(() => {
+      if (token === requestRef.current) setStatus('error');
+    });
     return () => {
       requestRef.current += 1;
     };
-  }, [claim, identity, isPending]);
+  }, [claim, identity, isPending, retryCount]);
 
   const accept = React.useCallback(async () => {
     const current = readInvitationClaim();
     if (!current) return false;
     setStatus('joining');
-    const result = await apiRef.current.acceptInvitation({ invitationId: current.id });
+    setError(null);
+    let result;
+    try { result = await apiRef.current.acceptInvitation({ invitationId: current.id }); }
+    catch { setStatus('error'); return false; }
     if (result.data) {
       clearInvitationClaim();
       setClaim(null);
@@ -373,6 +386,7 @@ export function useOrganizationInvitation(): UseOrganizationInvitationResult {
       // switched it before the condition was evaluated.
       return true;
     }
+    setError(result.error ?? null);
     const code = result.error?.code;
     if (code === 'YOU_ARE_NOT_THE_RECIPIENT_OF_THE_INVITATION') setStatus('wrong_account');
     else if (code !== undefined && code.startsWith('EMAIL_VERIFICATION_REQUIRED')) {
@@ -394,7 +408,7 @@ export function useOrganizationInvitation(): UseOrganizationInvitationResult {
     setStatus('idle');
   }, []);
 
-  return { invitation, status, accept, dismiss };
+  return { invitation, status, error, accept, dismiss, retry: () => setRetryCount((count) => count + 1) };
 }
 
 export type UseSignInResult = {

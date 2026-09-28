@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import { useOrganizationInvitation, useSignOut } from '../hooks';
-import { useT } from '../i18n';
+import { useServerError, useT } from '../i18n';
 import { ModalSurface } from './ModalSurface';
 
 /**
@@ -23,7 +23,8 @@ import { ModalSurface } from './ModalSurface';
  */
 export function InvitationPrompt() {
   const t = useT();
-  const { invitation, status, accept, dismiss } = useOrganizationInvitation();
+  const toMessage = useServerError();
+  const { invitation, status, error, accept, dismiss, retry } = useOrganizationInvitation();
   const { signOut } = useSignOut();
   const headingId = React.useId();
 
@@ -38,7 +39,7 @@ export function InvitationPrompt() {
       case 'gone':
         return t('organization.invitationPrompt.error.gone');
       case 'error':
-        return t('organization.invitationPrompt.error.generic');
+        return toMessage(error, t('organization.invitationPrompt.error.generic'));
       default:
         return null;
     }
@@ -47,7 +48,7 @@ export function InvitationPrompt() {
   const joining = status === 'joining';
   // A dead invitation and a wrong account both have nothing left to accept, so
   // the only honest control is the one that closes the notice.
-  const canAccept = status === 'ready' || status === 'error' || joining;
+  const canAccept = status === 'ready' || (status === 'error' && invitation !== null) || joining;
 
   return (
     <ModalSurface
@@ -71,6 +72,9 @@ export function InvitationPrompt() {
         </p>
       ) : null}
       <div className="ba-invitation-actions">
+        {status === 'error' && !invitation && (
+          <button type="button" className="ba-button" onClick={retry}>{t('organization.retry')}</button>
+        )}
         {canAccept ? (
           <button
             type="button"

@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { createIdempotencyKey } from '@authowl/core';
+import { createIdempotencyKey, readInvitationClaim } from '@authowl/core';
 import { usePublicConfig, useSignUp } from '../hooks';
 import { useLocale, useT, useServerError } from '../i18n';
 import { SocialButtons } from './SocialButtons';
@@ -20,6 +20,9 @@ import { PublicConfigError } from './PublicConfigError';
 import { PrivacySignUpEvidence } from './PrivacySignUpEvidence';
 
 export type SignUpProps = {
+  /** Mailbox proof supplied by AcceptApplicationInvitation. */
+  applicationInvitationProof?: string;
+  initialEmail?: string;
   redirectTo?: string;
   onSignedUp?: () => void;
   /**
@@ -40,6 +43,8 @@ export type SignUpProps = {
 };
 
 export function SignUp({
+  applicationInvitationProof,
+  initialEmail = '',
   redirectTo,
   onSignedUp,
   verifyEmailUrl,
@@ -53,7 +58,7 @@ export function SignUp({
   const { signUp } = useSignUp();
   const { config, isLoading, isError } = usePublicConfig();
   const authChallenge = useAuthChallenge();
-  const [email, setEmail] = React.useState('');
+  const [email, setEmail] = React.useState(initialEmail);
   const [password, setPassword] = React.useState('');
   const [name, setName] = React.useState('');
   const [firstName, setFirstName] = React.useState('');
@@ -113,6 +118,8 @@ export function SignUp({
         signUp(
           {
             email,
+            invitationProof: applicationInvitationProof ? undefined : readInvitationClaim()?.proof,
+            applicationInvitationProof,
             password,
             name: capabilities.firstLastName
               ? [firstName.trim(), lastName.trim()].filter(Boolean).join(' ')
@@ -187,7 +194,7 @@ export function SignUp({
   // social always creates an account on first use. Fall back to password when
   // config is unavailable.
   const methods = config?.enabledMethods ?? ['password'];
-  const publicSignupAllowed = config?.signUp?.mode !== 'restricted';
+  const publicSignupAllowed = config?.signUp?.mode !== 'restricted' || Boolean(applicationInvitationProof);
   const exactPrivacyEvidenceRequired = (config?.privacy?.notices.length ?? 0) > 0;
   // Under required legal acceptance or exact privacy-notice delivery, drop
   // social from the sign-up surface: a keyless OAuth callback cannot carry the
@@ -196,7 +203,7 @@ export function SignUp({
   // users. (A consent-required, social-only project therefore has no sign-up path,
   // surfaced as the "no methods" state below.)
   const social =
-    consentRequired || exactPrivacyEvidenceRequired || !publicSignupAllowed
+    applicationInvitationProof || consentRequired || exactPrivacyEvidenceRequired || !publicSignupAllowed
       ? []
       : (config?.socialProviders ?? []);
   const showPassword =
@@ -205,7 +212,8 @@ export function SignUp({
     && capabilities.emailSignUp
     && capabilities.passwordSignUp;
   const showPasswordless =
-    publicSignupAllowed
+    !applicationInvitationProof
+    && publicSignupAllowed
     && capabilities.emailOtpSignIn
     && capabilities.emailSignUp
     && !consentRequired

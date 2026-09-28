@@ -914,6 +914,79 @@
         }
       }
     },
+    "/sessions/bridge-code": {
+      "post": {
+        "operationId": "redeemSessionBridgeCode",
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "Redeem a session bridge code",
+        "x-authowl-scope": "sessions:read",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session token carried by the bridge code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "token",
+                    "expiresAt"
+                  ],
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBridgeCode"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
     "/sessions/{sessionId}": {
       "parameters": [
         {
@@ -1399,7 +1472,8 @@
         "tags": [
           "Organizations"
         ],
-        "summary": "List custom roles",
+        "summary": "List project custom roles through an authorized organization",
+        "description": "Project-authored roles are returned for every organization in the project. During the transition from organization-local authoring, rows without a matching project role are also returned for this organization with source organization_legacy; those entries are read-only through these endpoints.",
         "x-authowl-scope": "orgs:read",
         "parameters": [
           {
@@ -1435,7 +1509,8 @@
         "tags": [
           "Organizations"
         ],
-        "summary": "Create a custom role",
+        "summary": "Create a project-wide custom role",
+        "description": "The organization id authorizes and scopes the request, but the role is authored once for the project and projected into every organization in that project. This replaces the former per-organization authoring behavior.",
         "x-authowl-scope": "orgs:write",
         "requestBody": {
           "required": true,
@@ -1490,7 +1565,8 @@
         "tags": [
           "Organizations"
         ],
-        "summary": "Update a custom role",
+        "summary": "Update a project-wide custom role",
+        "description": "Updates the project role and reprojects its system permissions across every organization in the project. Legacy organization-local entries returned by list are read-only and return 404 here.",
         "x-authowl-scope": "orgs:write",
         "requestBody": {
           "required": true,
@@ -1535,7 +1611,8 @@
         "tags": [
           "Organizations"
         ],
-        "summary": "Delete a custom role",
+        "summary": "Delete a project-wide custom role",
+        "description": "Deletes the project role and removes its projections from every organization in the project. The organization id remains an authorization boundary. Legacy organization-local entries returned by list are read-only and return 404 here.",
         "x-authowl-scope": "orgs:write",
         "responses": {
           "204": {
@@ -1633,6 +1710,141 @@
         }
       }
     },
+    "/invitations/bulk": {
+      "post": {
+        "operationId": "createInvitationBatch",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Create an atomic batch of up to 20 invitations",
+        "description": "Each recipient uses the existing managed email allowance. Any failure rolls back the entire batch.",
+        "x-authowl-scope": "orgs:write",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "invitations"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "invitations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "$ref": "#/components/schemas/CreateInvitation"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitations created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Invitation"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/invitations/{invitationId}/resend": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/InvitationId"
+        }
+      ],
+      "post": {
+        "operationId": "resendInvitation",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Resend a pending invitation",
+        "description": "Uses the existing email allowance, rotates the email proof, and renews the expiry. Subject to a resend cooldown.",
+        "x-authowl-scope": "orgs:write",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "redirect_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation resent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invitation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
     "/invitations/{invitationId}": {
       "parameters": [
         {
@@ -1678,6 +1890,264 @@
         ],
         "summary": "Revoke an invitation",
         "x-authowl-scope": "orgs:write",
+        "responses": {
+          "204": {
+            "description": "Invitation revoked"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/application-invitations": {
+      "get": {
+        "operationId": "listApplicationInvitations",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "List invitations",
+        "x-authowl-scope": "users:read",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ApplicationInvitationPage"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createApplicationInvitation",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Invite a new user to the application",
+        "x-authowl-scope": "users:write",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApplicationInvitation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitation created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationInvitation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/application-invitations/bulk": {
+      "post": {
+        "operationId": "createApplicationInvitationBatch",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Create an atomic batch of up to 20 invitations",
+        "description": "Each recipient uses the existing managed email allowance. Any failure rolls back the entire batch.",
+        "x-authowl-scope": "users:write",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "invitations"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "invitations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "$ref": "#/components/schemas/CreateApplicationInvitation"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitations created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ApplicationInvitation"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/application-invitations/{invitationId}/resend": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/InvitationId"
+        }
+      ],
+      "post": {
+        "operationId": "resendApplicationInvitation",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Resend a pending invitation",
+        "description": "Uses the existing email allowance, rotates the email proof, and preserves the original expiry. Subject to a resend cooldown.",
+        "x-authowl-scope": "users:write",
+        "responses": {
+          "200": {
+            "description": "Invitation resent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationInvitation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/application-invitations/{invitationId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/InvitationId"
+        }
+      ],
+      "get": {
+        "operationId": "getApplicationInvitation",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Get an invitation",
+        "x-authowl-scope": "users:read",
+        "responses": {
+          "200": {
+            "description": "Invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationInvitation"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "revokeApplicationInvitation",
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Revoke an invitation",
+        "x-authowl-scope": "users:write",
         "responses": {
           "204": {
             "description": "Invitation revoked"
@@ -2614,6 +3084,16 @@
           }
         }
       },
+      "InvalidBridgeCode": {
+        "description": "The bridge code is unknown, expired, already used, or belongs to another environment",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
       "RateLimited": {
         "description": "Plan rate limit exceeded",
         "headers": {
@@ -2702,6 +3182,16 @@
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/RolePage"
+            }
+          }
+        }
+      },
+      "ApplicationInvitationPage": {
+        "description": "Invitation page",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApplicationInvitationPage"
             }
           }
         }
@@ -3491,23 +3981,58 @@
           "id",
           "organization_id",
           "name",
-          "permissions"
+          "display_name",
+          "description",
+          "is_default",
+          "permissions",
+          "custom_permission_ids",
+          "source"
         ],
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "format": "uuid"
           },
           "organization_id": {
-            "type": "string"
+            "type": "string",
+            "description": "The organization used to authorize and scope this request. Project-sourced roles apply to every organization in the project."
           },
           "name": {
+            "type": "string",
+            "description": "Stable role key stored on memberships and invitations."
+          },
+          "display_name": {
             "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_default": {
+            "type": "boolean"
           },
           "permissions": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/OrganizationPermissionId"
             }
+          },
+          "custom_permission_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "project",
+              "organization_legacy"
+            ],
+            "description": "organization_legacy entries predate project-level authoring and are exposed read-only during the transition."
           }
         },
         "additionalProperties": false
@@ -3544,16 +4069,114 @@
             "maxLength": 100,
             "pattern": "^[a-z][a-z0-9_-]*$"
           },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          },
+          "is_default": {
+            "type": "boolean"
+          },
           "permissions": {
             "type": "array",
             "maxItems": 100,
             "items": {
               "$ref": "#/components/schemas/OrganizationPermissionId"
             },
-            "uniqueItems": true
+            "uniqueItems": true,
+            "description": "Closed system-permission half. Retained for compatibility with existing callers."
+          },
+          "custom_permission_ids": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Custom permission row ids from this project's organization permission catalog. Unknown or cross-project ids are rejected."
           }
         },
         "additionalProperties": false
+      },
+      "ApplicationInvitation": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "status",
+          "public_metadata",
+          "expires_at",
+          "created_at"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "revoked",
+              "expired"
+            ]
+          },
+          "public_metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateApplicationInvitation": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "redirect_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
+          },
+          "expires_in_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 30
+          },
+          "public_metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
       },
       "Invitation": {
         "type": "object",
@@ -3612,6 +4235,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 100
+          },
+          "redirect_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048
           }
         },
         "additionalProperties": false
@@ -3960,6 +4588,7 @@
           "session.created",
           "session.updated",
           "session.revoked",
+          "session.client_changed",
           "organization.created",
           "organization.updated",
           "organization.deleted",
@@ -3983,6 +4612,7 @@
           "session.created",
           "session.updated",
           "session.revoked",
+          "session.client_changed",
           "organization.created",
           "organization.updated",
           "organization.deleted",
@@ -4380,6 +5010,24 @@
                 "type": "array",
                 "items": {
                   "$ref": "#/components/schemas/OrganizationRole"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ApplicationInvitationPage": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Page"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ApplicationInvitation"
                 }
               }
             }
