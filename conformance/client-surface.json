@@ -4,14 +4,31 @@
     "native-client.ts",
     "account-client.ts",
     "organization-client.ts",
+    "application-invitations.ts",
     "passkey-client.ts",
     "session-store.ts",
     "metadata-client.ts",
     "session-handoff.ts"
   ],
-  "operationCount": 73,
-  "nativeOperationCount": 67,
+  "operationCount": 75,
+  "nativeOperationCount": 69,
   "operations": [
+    {
+      "id": "applicationInvitations.accept",
+      "method": "POST",
+      "path": "/application-invitations/accept",
+      "decoder": null,
+      "native": true,
+      "source": "application-invitations.ts"
+    },
+    {
+      "id": "applicationInvitations.inspect",
+      "method": "POST",
+      "path": "/application-invitations/inspect",
+      "decoder": null,
+      "native": true,
+      "source": "application-invitations.ts"
+    },
     {
       "id": "changeEmail",
       "method": "POST",

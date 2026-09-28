@@ -37,6 +37,7 @@ const SOURCES = [
   'native-client.ts',
   'account-client.ts',
   'organization-client.ts',
+  'application-invitations.ts',
   'passkey-client.ts',
   'session-store.ts',
   'metadata-client.ts',

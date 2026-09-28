@@ -1,3 +1,4 @@
+import type { createApplicationInvitationClient } from './application-invitations';
 import { createAuthActionClient } from './native-client';
 import { createPasskeyClient } from './passkey-client';
 import { browserPasskeyCeremony } from './passkey-browser';
@@ -262,6 +263,9 @@ export interface UsernameSignInOptions {
 }
 
 export interface EmailSignUpOptions {
+  /** Mailbox proof from a received organization invitation; never a management id. */
+  invitationProof?: string;
+  applicationInvitationProof?: string;
   email: string;
   password: string;
   name: string;
@@ -722,6 +726,7 @@ export interface AuthOwlClient {
   account: AccountClient;
   /** Signed-in organization, membership, role, and invitation actions. */
   organization: OrganizationClient;
+  applicationInvitations: ReturnType<typeof createApplicationInvitationClient>;
   /** Signed-in privacy preferences and data-subject-rights actions. */
   privacy: PrivacyClient;
   signIn: {

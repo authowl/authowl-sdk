@@ -109,7 +109,10 @@ async function renderHosted(passkeys: boolean) {
   await waitFor(() => expect(sendButton().disabled).toBe(false));
   fireEvent.change(screen.getByRole('textbox'), { target: { value: '01000000000' } });
   fireEvent.click(sendButton());
-  return waitFor(() => screen.getByTestId('phoneotp-hosted-frame') as HTMLIFrameElement);
+  const frame = await waitFor(() => screen.getByTestId('phoneotp-hosted-frame') as HTMLIFrameElement);
+  // The frame can enter the DOM before the passive message listener is installed.
+  await act(async () => {});
+  return frame;
 }
 
 describe('PhoneOTP challenge gating', () => {

@@ -32,6 +32,7 @@ const INVITATION_STATUSES = new Set<OrganizationInvitationStatus>([
   'accepted',
   'rejected',
   'canceled',
+  'expired',
 ]);
 const MAX_PUBLIC_STRING_LENGTH = 10_000;
 
@@ -172,7 +173,7 @@ export function decodeInvitation(
     email: asDisplayString(row.email),
     role: asString(row.role),
     status,
-    inviterId: asString(row.inviterId),
+    inviterId: row.inviterId === null ? null : asString(row.inviterId),
     expiresAt: asDate(row.expiresAt),
     createdAt: asDate(row.createdAt),
   };

@@ -1,3 +1,4 @@
+import { createApplicationInvitationClient } from './application-invitations';
 import type {
   AuthActionResult,
   AuthOwlClient,
@@ -294,6 +295,7 @@ export function createAuthActionClient(
     sessionStore: session.store,
     getSession: session.getSession,
     account: createAccountClient(http, notifyMutation),
+    applicationInvitations: createApplicationInvitationClient(http),
     organization: createOrganizationClient(
       http,
       notifyMutation,

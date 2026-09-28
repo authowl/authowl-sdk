@@ -367,6 +367,18 @@ describe('organization client', () => {
     expect(new URL(String(calls[0]![0])).searchParams.get('organizationId')).toBe('org-1');
   });
 
+  it('decodes operator invitations without an end-user inviter and expired list entries', async () => {
+    const fetchImpl = vi.fn(async () => Response.json({ ...invitationWire(), inviterId: null, inviterEmail: null, organizationName: 'Cairo Studio', organizationSlug: 'cairo-studio' })) as unknown as typeof fetch;
+    const client = clientWith(fetchImpl);
+    const details = await client.organization.getInvitation({ id: 'invitation-1' });
+    expect(details.error).toBeNull();
+    expect(details.data).toMatchObject({ inviterId: null, inviterEmail: null });
+    (fetchImpl as ReturnType<typeof vi.fn>).mockResolvedValueOnce(Response.json([{ ...invitationWire(), inviterId: null, status: 'expired' }]));
+    const list = await client.organization.listInvitations({ organizationId: 'org-1' });
+    expect(list.error).toBeNull();
+    expect(list.data?.[0]?.status).toBe('expired');
+  });
+
   it('resolves and validates an invitation recipient hint without a session', async () => {
     const fetchImpl = vi.fn(
       async () => Response.json({ recipientHint: 'new_user' }),

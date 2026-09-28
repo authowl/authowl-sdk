@@ -62,6 +62,8 @@ export type { AuthOwlBrandingProps } from './components/AuthOwlBranding';
 export { PhoneOTP } from './components/PhoneOTP';
 export type { PhoneOTPProps } from './components/PhoneOTP';
 export { SignUp } from './components/SignUp';
+export { AcceptOrganizationInvitation } from './components/AcceptOrganizationInvitation';
+export type { AcceptOrganizationInvitationProps } from './components/AcceptOrganizationInvitation';
 export type { SignUpProps } from './components/SignUp';
 export { Waitlist } from './components/Waitlist';
 export type { WaitlistProps } from './components/Waitlist';
@@ -157,3 +159,5 @@ export type {
   OrganizationUserInvitation,
 } from '@authowl/core';
 export { useLastUsedSignInMethod } from './last-used-method';
+
+export { AcceptApplicationInvitation, type AcceptApplicationInvitationProps } from './components/AcceptApplicationInvitation';

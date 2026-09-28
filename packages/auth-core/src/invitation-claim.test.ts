@@ -26,6 +26,22 @@ beforeEach(() => {
 });
 
 describe('captureInvitationClaim', () => {
+  it('captures mailbox proof from the fragment, removes it, and preserves it across redirects', () => {
+    const proof = `inv_123.${'a'.repeat(43)}`;
+    visit(`?authowl_invitation=inv_123&page=2#authowl_invitation_proof=${proof}&tab=join`);
+    expect(captureInvitationClaim(1_000)).toEqual({ id: 'inv_123', proof, capturedAt: 1_000 });
+    expect(window.location.search).toBe('?page=2');
+    expect(window.location.hash).toBe('#tab=join');
+    visit('/sign-up');
+    expect(readInvitationClaim(2_000)?.proof).toBe(proof);
+  });
+
+  it('never associates proof from another invitation with the management id', () => {
+    visit(`?authowl_invitation=inv_123#authowl_invitation_proof=other.${'a'.repeat(43)}`);
+    expect(captureInvitationClaim(1_000)).toEqual({ id: 'inv_123', capturedAt: 1_000 });
+    expect(window.location.hash).toBe('');
+  });
+
   it('captures the id, strips only our parameter, and survives the URL', () => {
     visit('?authowl_invitation=inv_123&page=2');
 

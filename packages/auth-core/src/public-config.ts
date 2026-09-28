@@ -186,6 +186,7 @@ export type PublicConfig = {
   accountDeletion: boolean;
   /** Whether organization routes and components are available for this project. */
   organizations: boolean;
+  organizationInvitations?: { maxBatchSize: number; resendCooldownSeconds: number; maxPending: number };
   /**
    * Whether inbound enterprise SSO is enabled for this project. SSO IS a sign-in
    * method, so when true the server also pushes `'sso'` into `enabledMethods`;
@@ -321,6 +322,12 @@ function decodePublicConfig(
       || jwt.aud !== config.decoded.projectId
       || (issuer.protocol !== 'https:' && issuer.origin !== config.apiUrl)
     ) throw invalidPublicConfig();
+  }
+  if (row.organizationInvitations !== undefined) {
+    const policy = asObject(row.organizationInvitations);
+    for (const key of ['maxBatchSize', 'resendCooldownSeconds', 'maxPending']) {
+      if (!Number.isSafeInteger(policy[key]) || (policy[key] as number) < 1) throw invalidPublicConfig();
+    }
   }
   if (row.signUp !== undefined) {
     const mode = asObject(row.signUp).mode;

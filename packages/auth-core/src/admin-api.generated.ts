@@ -305,6 +305,23 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/sessions/bridge-code": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /** Redeem a session bridge code */
+        readonly post: operations["redeemSessionBridgeCode"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/sessions/{sessionId}": {
         readonly parameters: {
             readonly query?: never;
@@ -415,10 +432,16 @@ export interface paths {
             };
             readonly cookie?: never;
         };
-        /** List custom roles */
+        /**
+         * List project custom roles through an authorized organization
+         * @description Project-authored roles are returned for every organization in the project. During the transition from organization-local authoring, rows without a matching project role are also returned for this organization with source organization_legacy; those entries are read-only through these endpoints.
+         */
         readonly get: operations["listOrganizationRoles"];
         readonly put?: never;
-        /** Create a custom role */
+        /**
+         * Create a project-wide custom role
+         * @description The organization id authorizes and scopes the request, but the role is authored once for the project and projected into every organization in that project. This replaces the former per-organization authoring behavior.
+         */
         readonly post: operations["createOrganizationRole"];
         readonly delete?: never;
         readonly options?: never;
@@ -439,11 +462,17 @@ export interface paths {
         readonly get?: never;
         readonly put?: never;
         readonly post?: never;
-        /** Delete a custom role */
+        /**
+         * Delete a project-wide custom role
+         * @description Deletes the project role and removes its projections from every organization in the project. The organization id remains an authorization boundary. Legacy organization-local entries returned by list are read-only and return 404 here.
+         */
         readonly delete: operations["deleteOrganizationRole"];
         readonly options?: never;
         readonly head?: never;
-        /** Update a custom role */
+        /**
+         * Update a project-wide custom role
+         * @description Updates the project role and reprojects its system permissions across every organization in the project. Legacy organization-local entries returned by list are read-only and return 404 here.
+         */
         readonly patch: operations["updateOrganizationRole"];
         readonly trace?: never;
     };
@@ -465,6 +494,48 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/invitations/bulk": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Create an atomic batch of up to 20 invitations
+         * @description Each recipient uses the existing managed email allowance. Any failure rolls back the entire batch.
+         */
+        readonly post: operations["createInvitationBatch"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/invitations/{invitationId}/resend": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly invitationId: components["parameters"]["InvitationId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Resend a pending invitation
+         * @description Uses the existing email allowance, rotates the email proof, and renews the expiry. Subject to a resend cooldown.
+         */
+        readonly post: operations["resendInvitation"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/invitations/{invitationId}": {
         readonly parameters: {
             readonly query?: never;
@@ -480,6 +551,86 @@ export interface paths {
         readonly post?: never;
         /** Revoke an invitation */
         readonly delete: operations["revokeInvitation"];
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/application-invitations": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** List invitations */
+        readonly get: operations["listApplicationInvitations"];
+        readonly put?: never;
+        /** Invite a new user to the application */
+        readonly post: operations["createApplicationInvitation"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/application-invitations/bulk": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Create an atomic batch of up to 20 invitations
+         * @description Each recipient uses the existing managed email allowance. Any failure rolls back the entire batch.
+         */
+        readonly post: operations["createApplicationInvitationBatch"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/application-invitations/{invitationId}/resend": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly invitationId: components["parameters"]["InvitationId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /**
+         * Resend a pending invitation
+         * @description Uses the existing email allowance, rotates the email proof, and preserves the original expiry. Subject to a resend cooldown.
+         */
+        readonly post: operations["resendApplicationInvitation"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/application-invitations/{invitationId}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly invitationId: components["parameters"]["InvitationId"];
+            };
+            readonly cookie?: never;
+        };
+        /** Get an invitation */
+        readonly get: operations["getApplicationInvitation"];
+        readonly put?: never;
+        readonly post?: never;
+        /** Revoke an invitation */
+        readonly delete: operations["revokeApplicationInvitation"];
         readonly options?: never;
         readonly head?: never;
         readonly patch?: never;
@@ -929,16 +1080,60 @@ export interface components {
             readonly role: string;
         };
         readonly OrganizationRole: {
+            /** Format: uuid */
             readonly id: string;
+            /** @description The organization used to authorize and scope this request. Project-sourced roles apply to every organization in the project. */
             readonly organization_id: string;
+            /** @description Stable role key stored on memberships and invitations. */
             readonly name: string;
+            readonly display_name: string;
+            readonly description: string | null;
+            readonly is_default: boolean;
             readonly permissions: readonly components["schemas"]["OrganizationPermissionId"][];
+            readonly custom_permission_ids: readonly string[];
+            /**
+             * @description organization_legacy entries predate project-level authoring and are exposed read-only during the transition.
+             * @enum {string}
+             */
+            readonly source: "project" | "organization_legacy";
         };
         /** @enum {string} */
         readonly OrganizationPermissionId: "organization:update" | "organization:delete" | "member:create" | "member:update" | "member:delete" | "invitation:create" | "invitation:cancel" | "team:create" | "team:update" | "team:delete" | "ac:create" | "ac:read" | "ac:update" | "ac:delete";
         readonly RoleInput: {
             readonly name: string;
+            readonly display_name?: string;
+            readonly description?: string | null;
+            readonly is_default?: boolean;
+            /** @description Closed system-permission half. Retained for compatibility with existing callers. */
             readonly permissions: readonly components["schemas"]["OrganizationPermissionId"][];
+            /** @description Custom permission row ids from this project's organization permission catalog. Unknown or cross-project ids are rejected. */
+            readonly custom_permission_ids?: readonly string[];
+        };
+        readonly ApplicationInvitation: {
+            /** Format: uuid */
+            readonly id: string;
+            /** Format: email */
+            readonly email: string;
+            /** @enum {string} */
+            readonly status: "pending" | "accepted" | "revoked" | "expired";
+            readonly public_metadata: {
+                readonly [key: string]: unknown;
+            };
+            /** Format: date-time */
+            readonly expires_at: string;
+            /** Format: date-time */
+            readonly created_at: string;
+        };
+        readonly CreateApplicationInvitation: {
+            /** Format: email */
+            readonly email: string;
+            /** Format: uri */
+            readonly redirect_url?: string;
+            /** @default 30 */
+            readonly expires_in_days: number;
+            readonly public_metadata?: {
+                readonly [key: string]: unknown;
+            };
         };
         readonly Invitation: {
             readonly id: string;
@@ -955,6 +1150,8 @@ export interface components {
             /** Format: email */
             readonly email: string;
             readonly role: string;
+            /** Format: uri */
+            readonly redirect_url?: string;
         };
         readonly Event: {
             readonly id: string;
@@ -1038,9 +1235,9 @@ export interface components {
             readonly delivered_at: string | null;
         };
         /** @enum {string} */
-        readonly WebhookSubscriptionEventType: "user.created" | "user.updated" | "user.deleted" | "user.banned" | "session.created" | "session.updated" | "session.revoked" | "organization.created" | "organization.updated" | "organization.deleted" | "organization_membership.created" | "organization_membership.deleted" | "mfa.enrolled" | "mfa.reset" | "message.accepted" | "message.skipped" | "message.delivered" | "message.failed";
+        readonly WebhookSubscriptionEventType: "user.created" | "user.updated" | "user.deleted" | "user.banned" | "session.created" | "session.updated" | "session.revoked" | "session.client_changed" | "organization.created" | "organization.updated" | "organization.deleted" | "organization_membership.created" | "organization_membership.deleted" | "mfa.enrolled" | "mfa.reset" | "message.accepted" | "message.skipped" | "message.delivered" | "message.failed";
         /** @enum {string} */
-        readonly WebhookEventType: "user.created" | "user.updated" | "user.deleted" | "user.banned" | "session.created" | "session.updated" | "session.revoked" | "organization.created" | "organization.updated" | "organization.deleted" | "organization_membership.created" | "organization_membership.deleted" | "mfa.enrolled" | "mfa.reset" | "message.accepted" | "message.skipped" | "message.delivered" | "message.failed" | "webhook.test";
+        readonly WebhookEventType: "user.created" | "user.updated" | "user.deleted" | "user.banned" | "session.created" | "session.updated" | "session.revoked" | "session.client_changed" | "organization.created" | "organization.updated" | "organization.deleted" | "organization_membership.created" | "organization_membership.deleted" | "mfa.enrolled" | "mfa.reset" | "message.accepted" | "message.skipped" | "message.delivered" | "message.failed" | "webhook.test";
         readonly WebhookEndpoint: {
             /** Format: uuid */
             readonly id: string;
@@ -1138,6 +1335,9 @@ export interface components {
         readonly RolePage: components["schemas"]["Page"] & {
             readonly data?: readonly components["schemas"]["OrganizationRole"][];
         };
+        readonly ApplicationInvitationPage: components["schemas"]["Page"] & {
+            readonly data?: readonly components["schemas"]["ApplicationInvitation"][];
+        };
         readonly InvitationPage: components["schemas"]["Page"] & {
             readonly data?: readonly components["schemas"]["Invitation"][];
         };
@@ -1211,6 +1411,15 @@ export interface components {
                 readonly "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description The bridge code is unknown, expired, already used, or belongs to another environment */
+        readonly InvalidBridgeCode: {
+            headers: {
+                readonly [name: string]: unknown;
+            };
+            content: {
+                readonly "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description Plan rate limit exceeded */
         readonly RateLimited: {
             headers: {
@@ -1276,6 +1485,15 @@ export interface components {
             };
             content: {
                 readonly "application/json": components["schemas"]["RolePage"];
+            };
+        };
+        /** @description Invitation page */
+        readonly ApplicationInvitationPage: {
+            headers: {
+                readonly [name: string]: unknown;
+            };
+            content: {
+                readonly "application/json": components["schemas"]["ApplicationInvitationPage"];
             };
         };
         /** @description Invitation page */
@@ -1866,6 +2084,41 @@ export interface operations {
             readonly 429: components["responses"]["RateLimited"];
         };
     };
+    readonly redeemSessionBridgeCode: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": {
+                    readonly code: string;
+                };
+            };
+        };
+        readonly responses: {
+            /** @description Session token carried by the bridge code */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": {
+                        readonly token: string;
+                        /** Format: date-time */
+                        readonly expiresAt: string;
+                    };
+                };
+            };
+            readonly 400: components["responses"]["InvalidRequest"];
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 422: components["responses"]["InvalidBridgeCode"];
+            readonly 429: components["responses"]["RateLimited"];
+        };
+    };
     readonly getSession: {
         readonly parameters: {
             readonly query?: never;
@@ -2344,6 +2597,73 @@ export interface operations {
             readonly 429: components["responses"]["RateLimited"];
         };
     };
+    readonly createInvitationBatch: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": {
+                    readonly invitations: readonly components["schemas"]["CreateInvitation"][];
+                };
+            };
+        };
+        readonly responses: {
+            /** @description Invitations created */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": {
+                        readonly data: readonly components["schemas"]["Invitation"][];
+                    };
+                };
+            };
+            readonly 400: components["responses"]["InvalidRequest"];
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 404: components["responses"]["NotFound"];
+            readonly 429: components["responses"]["RateLimited"];
+        };
+    };
+    readonly resendInvitation: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly invitationId: components["parameters"]["InvitationId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": {
+                    /** Format: uri */
+                    readonly redirect_url?: string;
+                };
+            };
+        };
+        readonly responses: {
+            /** @description Invitation resent */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["Invitation"];
+                };
+            };
+            readonly 400: components["responses"]["InvalidRequest"];
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 404: components["responses"]["NotFound"];
+            readonly 429: components["responses"]["RateLimited"];
+        };
+    };
     readonly getInvitation: {
         readonly parameters: {
             readonly query?: never;
@@ -2371,6 +2691,163 @@ export interface operations {
         };
     };
     readonly revokeInvitation: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly invitationId: components["parameters"]["InvitationId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Invitation revoked */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 404: components["responses"]["NotFound"];
+            readonly 429: components["responses"]["RateLimited"];
+        };
+    };
+    readonly listApplicationInvitations: {
+        readonly parameters: {
+            readonly query?: {
+                readonly limit?: components["parameters"]["Limit"];
+                readonly cursor?: components["parameters"]["Cursor"];
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            readonly 200: components["responses"]["ApplicationInvitationPage"];
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 429: components["responses"]["RateLimited"];
+        };
+    };
+    readonly createApplicationInvitation: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["CreateApplicationInvitation"];
+            };
+        };
+        readonly responses: {
+            /** @description Invitation created */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ApplicationInvitation"];
+                };
+            };
+            readonly 400: components["responses"]["InvalidRequest"];
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 404: components["responses"]["NotFound"];
+            readonly 429: components["responses"]["RateLimited"];
+        };
+    };
+    readonly createApplicationInvitationBatch: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": {
+                    readonly invitations: readonly components["schemas"]["CreateApplicationInvitation"][];
+                };
+            };
+        };
+        readonly responses: {
+            /** @description Invitations created */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": {
+                        readonly data: readonly components["schemas"]["ApplicationInvitation"][];
+                    };
+                };
+            };
+            readonly 400: components["responses"]["InvalidRequest"];
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 404: components["responses"]["NotFound"];
+            readonly 429: components["responses"]["RateLimited"];
+        };
+    };
+    readonly resendApplicationInvitation: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly invitationId: components["parameters"]["InvitationId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Invitation resent */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ApplicationInvitation"];
+                };
+            };
+            readonly 400: components["responses"]["InvalidRequest"];
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 404: components["responses"]["NotFound"];
+            readonly 429: components["responses"]["RateLimited"];
+        };
+    };
+    readonly getApplicationInvitation: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly invitationId: components["parameters"]["InvitationId"];
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Invitation */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ApplicationInvitation"];
+                };
+            };
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 404: components["responses"]["NotFound"];
+            readonly 429: components["responses"]["RateLimited"];
+        };
+    };
+    readonly revokeApplicationInvitation: {
         readonly parameters: {
             readonly query?: never;
             readonly header?: never;

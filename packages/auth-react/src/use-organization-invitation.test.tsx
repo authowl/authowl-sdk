@@ -248,6 +248,20 @@ describe('InvitationPrompt', () => {
     expect(readInvitationClaim()).not.toBeNull();
   });
 
+  it('recovers from transport failures while reading and accepting an invitation', async () => {
+    stash();
+    mocks.getInvitation.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ data: invitationDetails, error: null });
+    mocks.acceptInvitation.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ data: { invitation: invitationDetails, member: { id: 'm1', organizationId: 'org-1' } }, error: null });
+    render(<InvitationPrompt />);
+    (await screen.findByRole('button', { name: 'Try again' })).click();
+    (await screen.findByRole('button', { name: 'Join organization' })).click();
+    await screen.findByRole('alert');
+    const retry = screen.getByRole('button', { name: 'Join organization' });
+    expect((retry as HTMLButtonElement).disabled).toBe(false);
+    retry.click();
+    await waitFor(() => expect(readInvitationClaim()).toBeNull());
+  });
+
   it('surfaces a failure to accept instead of reporting success', async () => {
     stash();
     mocks.getInvitation.mockResolvedValue({ data: invitationDetails, error: null });
@@ -259,7 +273,7 @@ describe('InvitationPrompt', () => {
 
     (await screen.findByRole('button', { name: 'Join organization' })).click();
     const alert = await screen.findByRole('alert');
-    expect(alert.textContent).toContain('Could not accept');
+    expect(alert.textContent).toContain('reached its member limit');
     // Still claimable: the cap may be raised, and the user can retry.
     expect(readInvitationClaim()).not.toBeNull();
   });

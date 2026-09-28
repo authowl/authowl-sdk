@@ -235,3 +235,5 @@ export { TransportError, type TransportErrorKind } from './transport';
 export { LOCALES, directionFor, isLocale, type Locale } from './i18n';
 export { activeLocale, setActiveLocale } from './active-locale';
 export { AUTH_LOCALE_HEADER } from './http-client';
+
+export { captureApplicationInvitationProof, clearApplicationInvitationProof, type ApplicationInvitationDetails } from './application-invitations';

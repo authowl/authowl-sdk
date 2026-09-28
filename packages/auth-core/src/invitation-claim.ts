@@ -38,6 +38,7 @@ export type InvitationRecipientHint = 'new_user';
 
 export type InvitationClaim = {
   id: string;
+  proof?: string;
   /** Epoch milliseconds, for age display and for expiring a forgotten claim. */
   capturedAt: number;
 };
@@ -64,13 +65,21 @@ export function captureInvitationClaim(now: number = Date.now()): InvitationClai
   const requested = url.searchParams.get(INVITATION_QUERY_PARAM);
   if (requested === null) return readInvitationClaim(now);
   url.searchParams.delete(INVITATION_QUERY_PARAM);
+  const fragment = new URLSearchParams(url.hash.slice(1));
+  const proof = fragment.get('authowl_invitation_proof');
+  if (fragment.has('authowl_invitation_proof')) {
+    fragment.delete('authowl_invitation_proof');
+    url.hash = fragment.toString();
+  }
   try {
     window.history.replaceState(window.history.state, '', url.toString());
   } catch {
     // A page that refuses history rewriting still gets the claim below.
   }
   if (!CLAIM_ID_PATTERN.test(requested)) return readInvitationClaim(now);
-  const claim: InvitationClaim = { id: requested, capturedAt: now };
+  const claim: InvitationClaim = { id: requested, capturedAt: now,
+    ...(proof && validProof(requested, proof) ? { proof } : {}),
+  };
   writeTo(localStore(), CLAIM_KEY, JSON.stringify(claim));
   return claim;
 }
@@ -90,7 +99,7 @@ export function readInvitationClaim(now: number = Date.now()): InvitationClaim |
     clearInvitationClaim();
     return null;
   }
-  const { id, capturedAt } = parsed as Partial<InvitationClaim>;
+  const { id, capturedAt, proof } = parsed as Partial<InvitationClaim>;
   if (typeof id !== 'string' || !CLAIM_ID_PATTERN.test(id) || typeof capturedAt !== 'number') {
     clearInvitationClaim();
     return null;
@@ -101,7 +110,11 @@ export function readInvitationClaim(now: number = Date.now()): InvitationClaim |
     clearInvitationClaim();
     return null;
   }
-  return { id, capturedAt };
+  return { id, capturedAt, ...(typeof proof === 'string' && validProof(id, proof) ? { proof } : {}) };
+}
+
+function validProof(id: string, proof: string): boolean {
+  return proof.startsWith(`${id}.`) && /^[A-Za-z0-9_-]{43}$/.test(proof.slice(id.length + 1));
 }
 
 export function clearInvitationClaim(): void {

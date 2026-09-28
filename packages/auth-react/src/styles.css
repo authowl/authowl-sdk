@@ -445,3 +445,5 @@
 .authowl-root[dir='rtl'] .ba-profile input {
   font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif;
 }
+
+.ba-organization-invite-results { margin-block: 16px; }
