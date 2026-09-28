@@ -245,15 +245,24 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // The plan 44 cleanup raises Core 24.5->25 for the public hosted-widget URL,
 // message-source, passkey-permission, and polling-budget contract. The shared
 // helpers measure 24.69kb locally and 24.81kb on the gate.
+// Application and organization invitation onboarding (2026-09-28) raises
+// React 76.5->80.5 and Core 25->26. The last passing pinned Linux gate measured
+// 76.27kb and 24.81kb; this release measures 79.74kb and 25.30kb. The increase
+// covers two recipient journeys, mailbox-proof signup/claim handling, typed
+// recipient operations, and English/Arabic copy. Admin API code stays server-only.
+// Splitting both recipient pages was measured locally and saved less than
+// 0.2kb because shared authentication code still loads and separate chunks lose
+// compression; the extra loading boundaries were rejected. These ceilings keep
+// about 0.7kb of explicit headroom, with the same measurement and enforcement.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 76.5,
+    maxGzipKb: 80.5,
     label: '@authowl/react (provider + hooks + components)',
   },
   {
     entry: 'packages/auth-core/dist/index.js',
-    maxGzipKb: 25,
+    maxGzipKb: 26,
     label: '@authowl/core (framework-neutral fetch/state client)',
   },
 ];
