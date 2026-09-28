@@ -250,8 +250,8 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // 76.27kb and 24.81kb; this release measures 79.74kb and 25.30kb. The increase
 // covers two recipient journeys, mailbox-proof signup/claim handling, typed
 // recipient operations, and English/Arabic copy. Admin API code stays server-only.
-// Splitting both recipient pages was measured locally and saved less than
-// 0.2kb because shared authentication code still loads and separate chunks lose
+// Splitting both recipient pages increased the local result from 79.43kb to
+// 79.53kb because shared authentication code still loads and separate chunks lose
 // compression; the extra loading boundaries were rejected. These ceilings keep
 // about 0.7kb of explicit headroom, with the same measurement and enforcement.
 const BUDGETS = [
