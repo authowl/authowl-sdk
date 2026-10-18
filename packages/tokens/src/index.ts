@@ -1,5 +1,5 @@
 export {
-  ACCENT_COLORS,
+  BRAND_COLORS,
   BRANDS,
   brands,
   COLOR_TOKENS,
@@ -14,12 +14,12 @@ export {
   SCHEMES,
   space,
   type,
-  type AccentColor,
   type Brand,
+  type BrandColor,
   type ColorToken,
   type NeutralColor,
   type Scheme,
 } from './tokens';
 export { contrastRatio, inSrgbGamut, oklch, toCss, toHex, type Oklch } from './color';
 export { CONTRAST_PAIRS, measureContrast, type ContrastPair, type ContrastResult } from './contrast';
-export { cssVar, PREFIX, shadcnCss, themeCss, tokensCss, type CssVarName } from './css';
+export { cssVar, PREFIX, shadcnCss, THEME_COLORS, themeCss, tokensCss, type CssVarName } from './css';

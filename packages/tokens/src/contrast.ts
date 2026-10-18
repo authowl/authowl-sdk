@@ -4,8 +4,7 @@ import { BRANDS, palette, SCHEMES, type Brand, type ColorToken, type Scheme } fr
 /**
  * The foreground and background pairings the design uses, and the WCAG 2
  * minimum each must meet: 4.5 for text, 3 for focus rings and chart marks.
- * Anything not listed is not an approved pairing (for example `fg-faint` is
- * never set on `raised`).
+ * Anything not listed is not an approved pairing.
  */
 export type ContrastPair = {
   fg: ColorToken;
@@ -20,21 +19,22 @@ const pairs = (min: ContrastPair['min']) => (fg: ColorToken, bgs: ColorToken[], 
 const text = pairs(4.5);
 const graphic = pairs(3);
 
+const SURFACES: ColorToken[] = ['canvas', 'surface', 'raised', 'inset', 'highlight'];
+
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
-  ...text('fg', ['canvas', 'surface', 'raised', 'inset']),
-  ...text('fg-muted', ['canvas', 'surface', 'raised', 'inset']),
-  ...text('fg-faint', ['canvas', 'surface', 'inset']),
-  ...text('accent-fg', ['canvas', 'surface', 'raised']),
-  ...text('on-accent', ['accent']),
-  ...text('on-danger', ['danger-solid']),
-  ...text('success', ['canvas', 'surface']),
-  ...text('warning', ['canvas', 'surface']),
-  ...text('danger', ['canvas', 'surface']),
+  ...text('fg', SURFACES),
+  ...text('fg-muted', SURFACES),
+  ...text('fg-faint', SURFACES),
+  ...text('brand-text', ['canvas', 'surface', 'raised', 'highlight']),
+  ...text('on-brand', ['brand', 'brand-hover']),
+  ...text('success', ['canvas', 'surface', 'raised', 'highlight']),
+  ...text('warning', ['canvas', 'surface', 'raised', 'highlight']),
+  ...text('danger', ['canvas', 'surface', 'raised', 'highlight']),
   ...text('success', ['success-soft'], 'surface'),
   ...text('warning', ['warning-soft'], 'surface'),
   ...text('danger', ['danger-soft'], 'surface'),
-  ...text('accent-fg', ['accent-soft'], 'surface'),
-  ...graphic('ring', ['canvas', 'surface']),
+  ...text('brand-text', ['brand-soft'], 'surface'),
+  ...graphic('ring', ['canvas', 'surface', 'raised']),
   ...graphic('chart-1', ['surface']),
   ...graphic('chart-muted', ['surface']),
 ];

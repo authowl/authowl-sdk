@@ -36,7 +36,8 @@
     },
     "./tokens.css": "./dist/tokens.css",
     "./theme.css": "./dist/theme.css",
-    "./shadcn.css": "./dist/shadcn.css"
+    "./shadcn.css": "./dist/shadcn.css",
+    "./package.json": "./package.json"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -50,9 +51,12 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean && node scripts/build-css.mjs && node ../../scripts/gen-notices.mjs src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs"
+    "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs",
+    "test:browser": "vitest run --config vitest.browser.config.ts"
   },
   "devDependencies": {
+    "@vitest/browser-playwright": "4.1.10",
+    "playwright": "1.62.1",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^4.1.10"

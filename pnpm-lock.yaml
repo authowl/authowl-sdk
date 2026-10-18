@@ -348,6 +348,12 @@ importers:
 
   packages/tokens:
     devDependencies:
+      '@vitest/browser-playwright':
+        specifier: 4.1.10
+        version: 4.1.10(playwright@1.62.1)(vite@7.3.6(@types/node@22.20.0)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.0))(vitest@4.1.10)
+      playwright:
+        specifier: 1.62.1
+        version: 1.62.1
       tsup:
         specifier: ^8.3.5
         version: 8.5.1(postcss@8.5.23)(typescript@5.9.3)(yaml@2.9.0)

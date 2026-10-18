@@ -42,42 +42,68 @@ export function cssVar(name: CssVarName): string {
 }
 
 /**
- * shadcn/ui's variable names and the token each one reads, so its new-york
- * primitives render in the suite look unchanged.
+ * The colour vocabulary products write: shadcn/ui's names plus a few extras
+ * that do not collide with them, each reading one token. theme.css turns
+ * these into Tailwind utilities (`bg-card`, `text-muted-foreground`) and
+ * shadcn.css into shadcn's raw variables (`--card`), so a pulled shadcn
+ * component is themed by the tokens with no edits.
  */
-export const SHADCN_ALIASES = {
+export const THEME_COLORS = {
   background: 'canvas',
   foreground: 'fg',
+  'foreground-faint': 'fg-faint',
   card: 'surface',
   'card-foreground': 'fg',
   popover: 'raised',
   'popover-foreground': 'fg',
-  primary: 'accent',
-  'primary-foreground': 'on-accent',
-  secondary: 'raised',
+  primary: 'brand',
+  'primary-foreground': 'on-brand',
+  'primary-hover': 'brand-hover',
+  'primary-text': 'brand-text',
+  'primary-soft': 'brand-soft',
+  secondary: 'highlight',
   'secondary-foreground': 'fg',
   muted: 'inset',
   'muted-foreground': 'fg-muted',
-  accent: 'raised',
+  accent: 'highlight',
   'accent-foreground': 'fg',
-  destructive: 'danger-solid',
+  destructive: 'danger',
+  'destructive-soft': 'danger-soft',
+  success: 'success',
+  'success-soft': 'success-soft',
+  warning: 'warning',
+  'warning-soft': 'warning-soft',
   border: 'line',
   input: 'line-strong',
   ring: 'ring',
+  // A neutral ramp behind the one series a chart is about (`chart-1`).
   'chart-1': 'chart-1',
   'chart-2': 'chart-muted',
-  'chart-3': 'success',
-  'chart-4': 'warning',
-  'chart-5': 'danger',
+  'chart-3': 'fg-faint',
+  'chart-4': 'fg-muted',
+  'chart-5': 'fg',
   sidebar: 'surface',
   'sidebar-foreground': 'fg',
-  'sidebar-primary': 'accent',
-  'sidebar-primary-foreground': 'on-accent',
-  'sidebar-accent': 'raised',
+  'sidebar-primary': 'brand',
+  'sidebar-primary-foreground': 'on-brand',
+  'sidebar-accent': 'highlight',
   'sidebar-accent-foreground': 'fg',
   'sidebar-border': 'line',
   'sidebar-ring': 'ring',
 } as const satisfies Record<string, ColorToken>;
+
+/**
+ * Tailwind's shadow scale. The boards are flat, so the small steps (cards,
+ * outline buttons) cast nothing and only floating layers cast a shadow.
+ */
+const SHADOWS: Record<string, keyof (typeof elevation)[Scheme] | null> = {
+  xs: null,
+  sm: null,
+  md: 'popover',
+  lg: 'dialog',
+  xl: 'dialog',
+  '2xl': 'dialog',
+};
 
 const HEADER = '/* @authowl/tokens: generated, do not edit. */';
 const LAYER_HEADER = '/* @authowl/tokens: generated, do not edit. Import "@authowl/tokens/tokens.css" first. */';
@@ -98,7 +124,9 @@ function staticDecls(): string[] {
   return [
     ...Object.entries(type).flatMap(([name, step]) => [
       decl(`text-${name}`, `${step.size / 16}rem`),
-      decl(`text-${name}-line-height`, `${step.lineHeight / 16}rem`),
+      // A unitless ratio, as Tailwind writes it, so a larger child that sets
+      // no leading of its own does not inherit a too-small line box.
+      decl(`text-${name}-line-height`, `calc(${step.lineHeight} / ${step.size})`),
       ...('tracking' in step ? [decl(`text-${name}-tracking`, `${step.tracking}em`)] : []),
     ]),
     ...Object.entries(radius).map(([name, px]) => decl(`radius-${name}`, `${px}px`)),
@@ -108,10 +136,15 @@ function staticDecls(): string[] {
   ];
 }
 
+/** A brand's dark colours apply with `.dark` on the same element, above it, or below it. */
+const darkBrandSelector = (brand: string) =>
+  `.dark[data-brand="${brand}"],\n.dark [data-brand="${brand}"],\n[data-brand="${brand}"] .dark`;
+
 /**
  * `tokens.css`: the variables. Light on `:root`, dark under `.dark` (the
- * next-themes and shadcn convention every product already uses), and a brand
- * other than AuthOwl under `[data-brand]`, set on `<html>` with the scheme.
+ * next-themes and shadcn convention every product already uses), and each
+ * brand under `[data-brand]`. The scheme and the brand can each sit on
+ * `<html>` or on any container, in either nesting order.
  */
 export function tokensCss(): string {
   return file(HEADER, [
@@ -120,9 +153,9 @@ export function tokensCss(): string {
     // again on `body`: next/font's variable class lands on <html> or <body>.
     block(':root,\nbody', Object.entries(font).map(([name, stack]) => decl(`font-${name}`, stack))),
     block('.dark', ['color-scheme: dark;', ...colorDecls(palette(DEFAULT_BRAND, 'dark')), ...shadowDecls('dark')]),
-    ...BRANDS.filter((brand) => brand !== DEFAULT_BRAND).flatMap((brand) => [
+    ...BRANDS.flatMap((brand) => [
       block(`[data-brand="${brand}"]`, colorDecls(brands[brand].light)),
-      block(`.dark[data-brand="${brand}"],\n.dark [data-brand="${brand}"]`, colorDecls(brands[brand].dark)),
+      block(darkBrandSelector(brand), colorDecls(brands[brand].dark)),
     ]),
     // People who ask for less motion get none: every duration collapses to 0.
     block('@media (prefers-reduced-motion: reduce)', [
@@ -132,14 +165,17 @@ export function tokensCss(): string {
 }
 
 /**
- * `theme.css`: the Tailwind 4 `@theme` entry. Utilities read the variables,
- * so `bg-surface`, `text-fg-muted`, `rounded-card` and `shadow-popover` follow
- * the scheme and brand without a rebuild. Import `tokens.css` first.
+ * `theme.css`: the one Tailwind 4 `@theme` a product needs. It replaces the
+ * product's own `@theme inline` block: shadcn's colour names, Tailwind's type,
+ * radius and shadow scales, and the default transition all read the tokens,
+ * so utilities follow the scheme and brand without a rebuild. Import
+ * `tokens.css` first.
  */
 export function themeCss(): string {
   return file(LAYER_HEADER, [
+    '@custom-variant dark (&:is(.dark *));\n',
     block('@theme inline', [
-      ...COLOR_TOKENS.map((token) => `--color-${token}: ${ref(token)};`),
+      ...Object.entries(THEME_COLORS).map(([name, token]) => `--color-${name}: ${ref(token)};`),
       ...Object.keys(font).map((name) => `--font-${name}: ${ref(`font-${name}`)};`),
       ...Object.entries(type).flatMap(([name, step]) => [
         `--text-${name}: ${ref(`text-${name}`)};`,
@@ -147,22 +183,25 @@ export function themeCss(): string {
         ...('tracking' in step ? [`--text-${name}--letter-spacing: ${ref(`text-${name}-tracking`)};`] : []),
       ]),
       ...Object.keys(radius).map((name) => `--radius-${name}: ${ref(`radius-${name}`)};`),
-      `--spacing: ${ref('space-unit')};`,
-      ...Object.keys(elevation.light).map((name) => `--shadow-${name}: ${ref(`shadow-${name}`)};`),
+      ...Object.entries(SHADOWS).map(([name, shadow]) => `--shadow-${name}: ${shadow ? ref(`shadow-${shadow}`) : '0 0 #0000'};`),
       ...Object.keys(motion.easing).map((name) => `--ease-${name}: ${ref(`ease-${name}`)};`),
+      `--default-transition-duration: ${ref('duration-base')};`,
+      `--default-transition-timing-function: ${ref('ease-standard')};`,
     ]),
   ]);
 }
 
 /**
- * `shadcn.css`: shadcn/ui's variables pointed at the tokens. For Tailwind 4
- * shadcn setups (oklch values, not the Tailwind 3 `hsl(var(--x))` form).
+ * `shadcn.css`: shadcn/ui's raw variables (`--background`, `--primary` and
+ * the rest), for code that reads them with `var()` instead of a utility.
+ * Declared on every scope that changes a token, so each one resolves to the
+ * scheme and brand in force there.
  */
 export function shadcnCss(): string {
   return file(LAYER_HEADER, [
-    block(':root', [
-      ...Object.entries(SHADCN_ALIASES).map(([name, token]) => `--${name}: ${cssVar(token)};`),
-      `--radius: ${cssVar('radius-control')};`,
+    block(':root,\n.dark,\n[data-brand]', [
+      ...Object.entries(THEME_COLORS).map(([name, token]) => `--${name}: ${cssVar(token)};`),
+      `--radius: ${cssVar('radius-md')};`,
     ]),
   ]);
 }

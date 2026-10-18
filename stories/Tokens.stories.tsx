@@ -22,14 +22,14 @@ import {
 const RESULTS = measureContrast();
 const cell: React.CSSProperties = { padding: '6px 8px' };
 
-function Code({ children, size = 'meta' }: { children: React.ReactNode; size?: 'meta' | 'caption' }) {
+function Code({ children, size = 'xs' }: { children: React.ReactNode; size?: 'xs' | '11' }) {
   return <code style={{ fontFamily: cssVar('font-mono'), fontSize: cssVar(`text-${size}`), color: cssVar('fg-muted') }}>{children}</code>;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section style={{ display: 'grid', gap: 12 }}>
-      <h2 style={{ margin: 0, fontSize: cssVar('text-title'), fontWeight: 600 }}>{title}</h2>
+      <h2 style={{ margin: 0, fontSize: cssVar('text-base'), fontWeight: 600 }}>{title}</h2>
       {children}
     </section>
   );
@@ -45,7 +45,7 @@ function Swatch({ token, value }: { token: ColorToken; value: string }) {
           background: cssVar(token), border: `1px solid ${cssVar('line-strong')}`,
         }}
       />
-      <span style={{ flex: 1, fontSize: cssVar('text-body') }}>{token}</span>
+      <span style={{ flex: 1, fontSize: cssVar('text-sm') }}>{token}</span>
       <Code>{value}</Code>
     </div>
   );
@@ -60,12 +60,12 @@ function TokensPage({ brand, scheme }: { brand: Brand; scheme: Scheme }) {
       data-brand={brand}
       style={{
         background: cssVar('canvas'), color: cssVar('fg'), fontFamily: cssVar('font-sans'),
-        padding: 32, borderRadius: cssVar('radius-card'), display: 'grid', gap: 32,
+        padding: 32, borderRadius: cssVar('radius-xl'), display: 'grid', gap: 32,
       }}
     >
       <header style={{ display: 'grid', gap: 6 }}>
-        <span style={{ fontSize: cssVar('text-meta'), color: cssVar('accent-fg'), fontWeight: 600 }}>@authowl/tokens</span>
-        <h1 style={{ margin: 0, fontSize: cssVar('text-display-sm'), letterSpacing: cssVar('text-display-sm-tracking') }}>
+        <span style={{ fontSize: cssVar('text-xs'), color: cssVar('brand-text'), fontWeight: 600 }}>@authowl/tokens</span>
+        <h1 style={{ margin: 0, fontSize: cssVar('text-2xl'), letterSpacing: cssVar('text-2xl-tracking') }}>
           {brand} · {scheme}
         </h1>
       </header>
@@ -79,7 +79,7 @@ function TokensPage({ brand, scheme }: { brand: Brand; scheme: Scheme }) {
       </Section>
 
       <Section title="Contrast, every approved pairing">
-        <table aria-label="Contrast results" style={{ borderCollapse: 'collapse', fontSize: cssVar('text-body-sm') }}>
+        <table aria-label="Contrast results" style={{ borderCollapse: 'collapse', fontSize: cssVar('text-13') }}>
           <thead>
             <tr style={{ textAlign: 'left', color: cssVar('fg-muted') }}>
               <th style={cell}>Text or mark</th>
@@ -128,18 +128,18 @@ function TokensPage({ brand, scheme }: { brand: Brand; scheme: Scheme }) {
           {(Object.keys(radius) as (keyof typeof radius)[]).map((name) => (
             <div key={name} style={{ display: 'grid', justifyItems: 'center', gap: 6 }}>
               <span aria-hidden="true" style={{ width: 52, height: 40, background: cssVar('raised'), border: `1px solid ${cssVar('line-strong')}`, borderRadius: cssVar(`radius-${name}`) }} />
-              <Code size="caption">{name}</Code>
+              <Code size="11">{name}</Code>
             </div>
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'end', gap: 8 }}>
           {space.steps.map((step) => (
-            <span key={step} title={`${step}px`} style={{ width: step, height: step, background: cssVar('chart-muted'), borderRadius: cssVar('radius-mark') }} />
+            <span key={step} title={`${step}px`} style={{ width: step, height: step, background: cssVar('chart-muted'), borderRadius: cssVar('radius-xs') }} />
           ))}
         </div>
         <div style={{ display: 'flex', gap: 16 }}>
           {(Object.keys(elevation[scheme]) as (keyof (typeof elevation)[Scheme])[]).map((name) => (
-            <div key={name} style={{ padding: 16, background: cssVar('raised'), borderRadius: cssVar('radius-tile'), boxShadow: cssVar(`shadow-${name}`), fontSize: cssVar('text-body-sm') }}>
+            <div key={name} style={{ padding: 16, background: cssVar('raised'), borderRadius: cssVar('radius-lg'), boxShadow: cssVar(`shadow-${name}`), fontSize: cssVar('text-13') }}>
               {name}
             </div>
           ))}
@@ -163,9 +163,9 @@ const meta = {
     await expect(within(table).queryAllByText('Fail')).toHaveLength(0);
     await expect(within(table).getAllByText('Pass').length).toBeGreaterThan(20);
     await expect(canvasElement.querySelectorAll('[data-swatch]')).toHaveLength(COLOR_TOKENS.length);
-    // The variables really resolve: the accent swatch is painted, not transparent.
-    const accent = canvasElement.querySelector<HTMLElement>('[data-swatch="accent"] span');
-    await expect(getComputedStyle(accent!).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+    // The variables really resolve: the brand swatch is painted, not transparent.
+    const brand = canvasElement.querySelector<HTMLElement>('[data-swatch="brand"] span');
+    await expect(getComputedStyle(brand!).backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
   },
 } satisfies Meta<typeof TokensPage>;
 
