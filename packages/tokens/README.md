@@ -53,8 +53,8 @@ the variables `create-next-app` and the `geist` package use:
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' });
 ```
 
-Without them the tokens fall back to a locally installed Geist, then the system
-font.
+The variable class can sit on `<html>` or `<body>`. Without it the tokens fall
+back to a locally installed Geist, then the system font.
 
 ## Schemes and brands
 

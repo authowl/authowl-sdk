@@ -132,6 +132,10 @@ describe('CSS outputs', () => {
     }
   });
 
+  it('resolves the font stacks on body too, where next/font often puts its class', () => {
+    expect(tokens).toContain(':root,\nbody {\n  --ao-font-sans: var(--font-geist-sans, Geist)');
+  });
+
   it('turns motion off for people who ask for reduced motion', () => {
     expect(tokens).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s+:root \{\s+--ao-duration-fast: 0ms;/);
   });

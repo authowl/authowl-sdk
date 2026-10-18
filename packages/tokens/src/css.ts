@@ -96,7 +96,6 @@ const shadowDecls = (scheme: Scheme) =>
 
 function staticDecls(): string[] {
   return [
-    ...Object.entries(font).map(([name, stack]) => decl(`font-${name}`, stack)),
     ...Object.entries(type).flatMap(([name, step]) => [
       decl(`text-${name}`, `${step.size / 16}rem`),
       decl(`text-${name}-line-height`, `${step.lineHeight / 16}rem`),
@@ -117,6 +116,9 @@ function staticDecls(): string[] {
 export function tokensCss(): string {
   return file(HEADER, [
     block(':root', ['color-scheme: light;', ...colorDecls(palette(DEFAULT_BRAND, 'light')), ...shadowDecls('light'), ...staticDecls()]),
+    // A variable resolves where it is declared, so the font stacks are declared
+    // again on `body`: next/font's variable class lands on <html> or <body>.
+    block(':root,\nbody', Object.entries(font).map(([name, stack]) => decl(`font-${name}`, stack))),
     block('.dark', ['color-scheme: dark;', ...colorDecls(palette(DEFAULT_BRAND, 'dark')), ...shadowDecls('dark')]),
     ...BRANDS.filter((brand) => brand !== DEFAULT_BRAND).flatMap((brand) => [
       block(`[data-brand="${brand}"]`, colorDecls(brands[brand].light)),
