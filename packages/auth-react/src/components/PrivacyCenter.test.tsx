@@ -103,6 +103,27 @@ describe('PrivacyCenter', () => {
   });
 });
 
+describe('PrivacyCenter request dates', () => {
+  const hostZone = process.env.TZ;
+  afterEach(() => {
+    if (hostZone === undefined) delete process.env.TZ;
+    else process.env.TZ = hostZone;
+  });
+
+  it('dates history in the visitor zone, not a fixed Cairo zone', async () => {
+    // 22:30 UTC on Aug 27 is already Aug 28 in Cairo, still Aug 27 in New York.
+    process.env.TZ = 'America/New_York';
+    mocks.listRightsRequests.mockResolvedValueOnce({
+      data: { requests: [{ id: 'request-1', rightType: 'access', state: 'received', receivedAt: new Date('2026-08-27T22:30:00.000Z') }] },
+      error: null,
+    } as never);
+    render(<PrivacyCenter />);
+
+    expect(await screen.findByText('Aug 27, 2026')).toBeTruthy();
+    expect(screen.queryByText('Aug 28, 2026')).toBeNull();
+  });
+});
+
 describe('PrivacyCenter rights availability', () => {
   afterEach(() => {
     delete privacy.availableRightTypes;
