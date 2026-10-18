@@ -47,10 +47,14 @@ describe('UserProfile model', () => {
     })).toEqual(['profile', 'email', 'password', 'sessions']);
   });
 
-  it('formats session activity in Cairo time for both component locales', () => {
+  it('formats session activity in the visitor zone for both component locales', () => {
     const date = new Date('2026-07-14T12:00:00.000Z');
-    expect(formatSessionTime(date, 'en')).toContain('3:00');
-    expect(formatSessionTime(date, 'ar')).toContain('٣:٠٠');
+    expect(formatSessionTime(date, 'en', 'Africa/Cairo')).toContain('3:00');
+    expect(formatSessionTime(date, 'ar', 'Africa/Cairo')).toContain('٣:٠٠');
+    expect(formatSessionTime(date, 'en', 'America/New_York')).toContain('8:00');
+    // No zone means the browser's own, never a fixed one.
+    const visitorZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    expect(formatSessionTime(date, 'en')).toBe(formatSessionTime(date, 'en', visitorZone));
   });
 
   it('orders sessions most recently active first', () => {

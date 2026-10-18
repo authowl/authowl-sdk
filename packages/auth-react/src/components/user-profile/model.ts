@@ -74,10 +74,15 @@ export function sortSessionsByRecency<T extends { id: string; updatedAt: Date }>
   });
 }
 
-export function formatSessionTime(date: Date, locale: Locale): string {
+/**
+ * Session activity in the end user's own zone. Sessions load after mount, so
+ * this only runs in the browser, where the default zone is the visitor's.
+ * `timeZone` exists for deterministic tests.
+ */
+export function formatSessionTime(date: Date, locale: Locale, timeZone?: string): string {
   return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-EG', {
     dateStyle: 'medium',
     timeStyle: 'short',
-    timeZone: 'Africa/Cairo',
+    timeZone,
   }).format(date);
 }
