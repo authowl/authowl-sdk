@@ -15,9 +15,10 @@ export type ContrastPair = {
   min: 4.5 | 3;
 };
 
-const text = (fg: ColorToken, bgs: ColorToken[], over?: ColorToken): ContrastPair[] =>
-  bgs.map((bg) => ({ fg, bg, min: 4.5, ...(over ? { over } : {}) }));
-const graphic = (fg: ColorToken, bgs: ColorToken[]): ContrastPair[] => bgs.map((bg) => ({ fg, bg, min: 3 }));
+const pairs = (min: ContrastPair['min']) => (fg: ColorToken, bgs: ColorToken[], over?: ColorToken): ContrastPair[] =>
+  bgs.map((bg) => ({ fg, bg, over, min }));
+const text = pairs(4.5);
+const graphic = pairs(3);
 
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   ...text('fg', ['canvas', 'surface', 'raised', 'inset']),

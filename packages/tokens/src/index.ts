@@ -2,6 +2,7 @@ export {
   ACCENT_COLORS,
   BRANDS,
   brands,
+  COLOR_TOKENS,
   DEFAULT_BRAND,
   elevation,
   font,
@@ -21,4 +22,4 @@ export {
 } from './tokens';
 export { contrastRatio, inSrgbGamut, oklch, toCss, toHex, type Oklch } from './color';
 export { CONTRAST_PAIRS, measureContrast, type ContrastPair, type ContrastResult } from './contrast';
-export { cssVar, PREFIX, shadcnCss, themeCss, tokensCss } from './css';
+export { cssVar, PREFIX, shadcnCss, themeCss, tokensCss, type CssVarName } from './css';

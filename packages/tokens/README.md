@@ -39,9 +39,22 @@ setups.
 .card { background: var(--ao-surface); color: var(--ao-fg); border-radius: var(--ao-radius-card); }
 ```
 
-From TypeScript, `cssVar('surface')` returns `var(--ao-surface)`, and the raw
+From TypeScript, `cssVar('surface')` returns `var(--ao-surface)` (it accepts
+every variable `tokens.css` declares, such as `text-body` or `radius-card`), and the raw
 values are exported as data (`neutral`, `brands`, `type`, `radius`, `space`,
 `elevation`, `motion`).
+
+## Fonts
+
+The font tokens read Geist through `--font-geist-sans` and `--font-geist-mono`,
+the variables `create-next-app` and the `geist` package use:
+
+```ts
+const geist = Geist({ subsets: ['latin'], variable: '--font-geist-sans' });
+```
+
+Without them the tokens fall back to a locally installed Geist, then the system
+font.
 
 ## Schemes and brands
 
@@ -50,8 +63,10 @@ next-themes and shadcn convention. The package does not switch on
 `prefers-color-scheme`; that is the app's choice.
 
 AuthOwl gold is the default brand. Set `data-brand="billow"` or
-`data-brand="hitsend"` on `<html>` or on any container to switch the accent.
-Only the accent changes; the neutrals are shared.
+`data-brand="hitsend"` on `<html>`, next to the `.dark` class, to switch the
+accent. Only the accent changes; the neutrals are shared. Keep both on
+`<html>`: the shadcn aliases resolve there, popovers portal to `<body>`, and a
+`.dark` container nested inside a branded one falls back to the AuthOwl accent.
 
 | Token | Use |
 |---|---|
@@ -76,8 +91,10 @@ part of the design.
   3.6:1, and that value is outside sRGB, so screens clamp it. Text and lines use
   `#6F76FE`, the in-gamut colour it actually displays as. Billow's light primary
   is unchanged.
-- **Hitsend** has no accent yet, so it keeps its neutral shadcn palette until
-  one is chosen.
+- **Hitsend dark** keeps its `#8B5CF6` fill, but text and lines use `#9469FF`,
+  one step lighter at the same hue. `#8B5CF6` is 4.45:1 as text on `surface`
+  and 4.18:1 on `raised`, under AA. Hitsend's light violet `#7C3AED` is
+  unchanged.
 
 ## License
 
