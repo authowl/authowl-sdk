@@ -24,6 +24,7 @@ export const RELEASE_PACKAGES = Object.freeze([
   { directory: 'packages/auth-convex', name: '@authowl/convex' },
   { directory: 'packages/auth-react-native', name: '@authowl/react-native' },
   { directory: 'packages/auth-expo', name: '@authowl/expo' },
+  { directory: 'packages/tokens', name: '@authowl/tokens' },
   { directory: 'packages/cli', name: 'authowl' },
 ]);
 

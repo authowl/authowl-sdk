@@ -567,6 +567,7 @@ prepare_consumer_workspace() {
     "$immutable_repository/scripts/ci/admin-server-install-check.sh" \
     "$immutable_repository/scripts/ci/convex-install-check.sh" \
     "$immutable_repository/scripts/ci/packed-runtime-install-check.sh" \
+    "$immutable_repository/scripts/ci/tokens-install-check.sh" \
     "$consumer_workspace/scripts/ci/"
   docker run --rm \
     --init \
@@ -599,6 +600,8 @@ prepare_consumer_workspace() {
       (cd packages/auth-react-native &&
         pnpm pack --pack-destination /consumer/tgz >/dev/null)
       (cd packages/auth-expo &&
+        pnpm pack --pack-destination /consumer/tgz >/dev/null)
+      (cd packages/tokens &&
         pnpm pack --pack-destination /consumer/tgz >/dev/null)
     '
 }
@@ -776,6 +779,8 @@ run_step packed-convex docker_consumer_network \
   bash scripts/ci/convex-install-check.sh
 run_step packed-runtime docker_consumer_network \
   bash scripts/ci/packed-runtime-install-check.sh
+run_step packed-tokens docker_consumer_network \
+  bash scripts/ci/tokens-install-check.sh
 run_step source-snapshot-after-checks snapshot_source "$source_after_checks"
 run_step source-integrity-after-checks cmp "$source_before" "$source_after_checks"
 

@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@authowl/react": "workspace:*",
+    "@authowl/tokens": "workspace:*",
     "@changesets/cli": "^2.31.1",
     "@eslint/js": "9.39.5",
     "@simplewebauthn/browser": "13.3.0",
