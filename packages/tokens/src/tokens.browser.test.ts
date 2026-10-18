@@ -52,6 +52,19 @@ describe('brand and scheme scoping', () => {
     expect(read(element.parentElement!, '--primary')).toBe(toCss(brands.billow.light.brand));
   });
 
+  it('an explicit brand on a dark element beats a brand around it', () => {
+    const element = probe('<div data-brand="hitsend"><div data-brand="authowl" class="dark" id="probe"></div></div>');
+    expect(read(element, '--primary')).toBe(toCss(brands.authowl.dark.brand));
+  });
+
+  it('a dark area takes the nearest brand, in either order of nesting', () => {
+    for (const [outer, inner] of [['billow', 'authowl'], ['authowl', 'billow']] as const) {
+      const element = probe(`<div data-brand="${outer}"><div data-brand="${inner}"><div class="dark" id="probe"></div></div></div>`);
+      expect(read(element, '--primary'), `${inner} inside ${outer}`).toBe(toCss(brands[inner].dark.brand));
+      expect(read(element, '--ring'), `${inner} inside ${outer}`).toBe(toCss(brands[inner].dark.ring));
+    }
+  });
+
   it('the scheme and the brand on <html> together', () => {
     html.className = 'dark';
     html.dataset.brand = 'hitsend';

@@ -98,10 +98,9 @@ next-themes and shadcn convention. The package does not switch on
 AuthOwl gold is the default brand. `data-brand="billow"`, `data-brand="hitsend"`
 or `data-brand="authowl"` switches it. Only the brand colours change; the
 neutrals are shared. The scheme and the brand can each sit on `<html>` or on
-any container, in either nesting order. Popovers and dialogs portal to
-`<body>`, so a brand that must reach them goes on `<html>`. Avoid nesting one
-brand inside another and then a `.dark` area inside that: the inner area takes
-whichever brand comes later in the stylesheet.
+any container, nested in any order; an element takes the nearest brand and
+the nearest scheme around it. Popovers and dialogs portal to `<body>`, so a
+brand that must reach them goes on `<html>`.
 
 | Token | Use |
 |---|---|

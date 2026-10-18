@@ -180,11 +180,14 @@ describe('CSS outputs', () => {
   const tokens = tokensCss();
   const theme = themeCss();
 
-  it('gives every brand a light block and a dark block for either nesting order', () => {
+  it('gives every brand both schemes, picked by scheme wherever either changes', () => {
     for (const brand of BRANDS) {
-      expect(tokens).toContain(`[data-brand="${brand}"] {`);
-      expect(tokens).toContain(`.dark[data-brand="${brand}"],\n.dark [data-brand="${brand}"],\n[data-brand="${brand}"] .dark {`);
+      const body = tokens.split(`[data-brand="${brand}"] {`)[1]?.split('}')[0] ?? '';
+      expect(body).toContain(`--ao-light-brand: ${toCss(brands[brand].light.brand)};`);
+      expect(body).toContain(`--ao-dark-brand: ${toCss(brands[brand].dark.brand)};`);
     }
+    expect(tokens).toContain(':root,\n[data-brand] {\n  --ao-brand: var(--ao-light-brand);');
+    expect(tokens).toContain('.dark,\n.dark [data-brand] {\n  --ao-brand: var(--ao-dark-brand);');
   });
 
   it('resolves the font stacks on body too, where next/font often puts its class', () => {
@@ -206,11 +209,11 @@ describe('CSS outputs', () => {
     expect(shadcnCss()).toContain(':root,\n.dark,\n[data-brand] {\n  --background: var(--ao-canvas);');
   });
 
-  it('only references variables tokens.css declares, in theme.css and shadcn.css', () => {
+  it('only references variables tokens.css declares, in every output', () => {
     const declared = new Set([...tokens.matchAll(/(--ao-[\w-]+):/g)].map((match) => match[1]));
-    for (const layer of [theme, shadcnCss()]) {
+    for (const layer of [tokens, theme, shadcnCss()]) {
       const referenced = [...layer.matchAll(/var\((--ao-[\w-]+)\)/g)].map((match) => match[1]);
-      expect(referenced.length).toBeGreaterThan(30);
+      expect(referenced.length).toBeGreaterThan(10);
       expect(referenced.filter((name) => !declared.has(name))).toEqual([]);
     }
   });

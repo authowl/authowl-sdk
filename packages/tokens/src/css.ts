@@ -1,16 +1,19 @@
-import { toCss, type Oklch } from './color';
+import { toCss } from './color';
 import {
+  BRAND_COLORS,
   BRANDS,
   brands,
-  COLOR_TOKENS,
   DEFAULT_BRAND,
   elevation,
   font,
   motion,
-  palette,
+  neutral,
+  NEUTRAL_COLORS,
   radius,
+  SCHEMES,
   space,
   type,
+  type Brand,
   type ColorToken,
   type Scheme,
 } from './tokens';
@@ -21,7 +24,10 @@ export const PREFIX = '--ao-';
 type TypeStep = keyof typeof type;
 type TrackedStep = { [K in TypeStep]: (typeof type)[K] extends { tracking: number } ? K : never }[TypeStep];
 
-/** The name, without the prefix, of every variable `tokens.css` declares. */
+/**
+ * The name, without the prefix, of every variable `tokens.css` declares,
+ * apart from the per-scheme brand values it picks from (`--ao-dark-brand`).
+ */
 export type CssVarName =
   | ColorToken
   | `font-${keyof typeof font}`
@@ -114,8 +120,14 @@ const block = (selector: string, body: string[]) =>
 const file = (header: string, blocks: string[]) => [`${header}\n`, ...blocks].join('\n');
 const decl = (name: string, value: string | number) => `${PREFIX}${name}: ${value};`;
 
-const colorDecls = (colors: Partial<Record<ColorToken, Oklch>>) =>
-  COLOR_TOKENS.flatMap((token) => (colors[token] ? [decl(token, toCss(colors[token]))] : []));
+const neutralDecls = (scheme: Scheme) => NEUTRAL_COLORS.map((token) => decl(token, toCss(neutral[scheme][token])));
+
+/** A brand's colours for both schemes, under each scheme's name: `--ao-dark-brand`. */
+const brandDecls = (brand: Brand) =>
+  SCHEMES.flatMap((scheme) => BRAND_COLORS.map((token) => decl(`${scheme}-${token}`, toCss(brands[brand][scheme][token]))));
+
+/** The brand colours of one scheme, read from the per-scheme values in force. */
+const pickDecls = (scheme: Scheme) => BRAND_COLORS.map((token) => decl(token, ref(`${scheme}-${token}`)));
 
 const shadowDecls = (scheme: Scheme) =>
   Object.entries(elevation[scheme]).map(([name, shadow]) => decl(`shadow-${name}`, shadow));
@@ -136,27 +148,25 @@ function staticDecls(): string[] {
   ];
 }
 
-/** A brand's dark colours apply with `.dark` on the same element, above it, or below it. */
-const darkBrandSelector = (brand: string) =>
-  `.dark[data-brand="${brand}"],\n.dark [data-brand="${brand}"],\n[data-brand="${brand}"] .dark`;
-
 /**
  * `tokens.css`: the variables. Light on `:root`, dark under `.dark` (the
  * next-themes and shadcn convention every product already uses), and each
  * brand under `[data-brand]`. The scheme and the brand can each sit on
- * `<html>` or on any container, in either nesting order.
+ * `<html>` or on any container, nested in any order.
  */
 export function tokensCss(): string {
   return file(HEADER, [
-    block(':root', ['color-scheme: light;', ...colorDecls(palette(DEFAULT_BRAND, 'light')), ...shadowDecls('light'), ...staticDecls()]),
+    block(':root', ['color-scheme: light;', ...neutralDecls('light'), ...shadowDecls('light'), ...brandDecls(DEFAULT_BRAND), ...staticDecls()]),
     // A variable resolves where it is declared, so the font stacks are declared
     // again on `body`: next/font's variable class lands on <html> or <body>.
     block(':root,\nbody', Object.entries(font).map(([name, stack]) => decl(`font-${name}`, stack))),
-    block('.dark', ['color-scheme: dark;', ...colorDecls(palette(DEFAULT_BRAND, 'dark')), ...shadowDecls('dark')]),
-    ...BRANDS.flatMap((brand) => [
-      block(`[data-brand="${brand}"]`, colorDecls(brands[brand].light)),
-      block(darkBrandSelector(brand), colorDecls(brands[brand].dark)),
-    ]),
+    block('.dark', ['color-scheme: dark;', ...neutralDecls('dark'), ...shadowDecls('dark')]),
+    ...BRANDS.map((brand) => block(`[data-brand="${brand}"]`, brandDecls(brand))),
+    // Wherever the scheme or the brand changes, pick that scheme's brand
+    // colours. The per-scheme values are inherited from the nearest brand, so
+    // nesting resolves by the DOM, never by the order of these rules.
+    block(':root,\n[data-brand]', pickDecls('light')),
+    block('.dark,\n.dark [data-brand]', pickDecls('dark')),
     // People who ask for less motion get none: every duration collapses to 0.
     block('@media (prefers-reduced-motion: reduce)', [
       block(':root', Object.keys(motion.duration).map((name) => decl(`duration-${name}`, '0ms'))),
