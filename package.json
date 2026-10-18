@@ -66,7 +66,7 @@
   },
   "packageManager": "pnpm@10.34.5",
   "//pnpm.auditConfig": [
-    "Two advisories in the Expo toolchain, ignored deliberately and scoped to",
+    "Four advisories in the Expo toolchain, ignored deliberately and scoped to",
     "their exact GHSA ids. None of them is in anything we publish.",
     "",
     "@authowl/expo declares expo-secure-store as a PEER dependency and passes",
@@ -81,6 +81,13 @@
     "through metro at BUILD time, parsing an asset the developer added to their",
     "own project. Revisit when image-size ships any fixed release.",
     "",
+    "GHSA-86w9-cpqp-85rv (node-forge PKCS#1 v1.5 signature parsing) and",
+    "GHSA-vfj7-8cjw-p6xm (braces stack exhaustion) have no patched release either.",
+    "Both are reached only through @expo/cli, the Expo developer CLI that",
+    "expo-secure-store pulls in: node-forge for local dev-server certificates,",
+    "braces through metro's file map. Neither runs in an app built with",
+    "@authowl/expo. Revisit when either ships a fixed release.",
+    "",
     "Do not widen this list to whole packages or unpinned ranges. An advisory that",
     "reaches a published artifact is a release blocker, not an entry here."
   ],
@@ -89,20 +96,25 @@
       "@types/node": "22.20.0",
       "brace-expansion@>=1.0.0 <1.1.18": "1.1.18",
       "brace-expansion@>=2.0.0 <2.1.4": "2.1.4",
-      "brace-expansion@>=4.0.0 <5.0.9": "5.0.9",
+      "brace-expansion@>=4.0.0 <5.0.11": "5.0.11",
       "esbuild@>=0.27.3 <0.28.1": "0.28.1",
       "js-yaml@>=3.0.0 <3.15.1": "3.15.1",
       "browserslist": "4.28.8",
+      "compression@<1.8.2": "1.8.2",
       "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
       "nanoid@>=3.0.0 <3.3.18": "3.3.18",
       "postcss": "8.5.23",
       "prettier": "3.9.4",
+      "shell-quote@>=1.8.4 <1.11.0": "1.11.0",
+      "source-map-js@>=1.0.0 <1.2.2": "1.2.2",
       "uuid@7.0.3": "11.1.1"
     },
     "auditConfig": {
       "ignoreGhsas": [
         "GHSA-w3rx-r6r6-pgpr",
-        "GHSA-5p2g-fcmc-qvqq"
+        "GHSA-5p2g-fcmc-qvqq",
+        "GHSA-86w9-cpqp-85rv",
+        "GHSA-vfj7-8cjw-p6xm"
       ]
     }
   },
