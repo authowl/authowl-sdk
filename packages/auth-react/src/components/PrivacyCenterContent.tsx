@@ -193,7 +193,7 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
           <ol className="ba-privacy-request-list">
             {requests.map((request) => (
               <li key={request.id}>
-                <span><strong>{t(RIGHT_KEYS[request.rightType])}</strong><small>{formatCairo(request.receivedAt, locale)}</small></span>
+                <span><strong>{t(RIGHT_KEYS[request.rightType])}</strong><small>{formatRequestDate(request.receivedAt, locale)}</small></span>
                 <b data-state={request.state}>{t(STATE_KEYS[request.state])}</b>
               </li>
             ))}
@@ -233,11 +233,9 @@ async function loadPrivacy(client: ReturnType<typeof useAuthClient>) {
   };
 }
 
-function formatCairo(date: Date, locale: 'en' | 'ar'): string {
-  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-EG', {
-    dateStyle: 'medium',
-    timeZone: 'Africa/Cairo',
-  }).format(date);
+/** In the end user's own zone: requests load after mount, so this runs in the browser. */
+function formatRequestDate(date: Date, locale: 'en' | 'ar'): string {
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-EG' : 'en-EG', { dateStyle: 'medium' }).format(date);
 }
 
 function classes(...values: Array<string | undefined>): string {
