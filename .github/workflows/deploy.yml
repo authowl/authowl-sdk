@@ -3,7 +3,7 @@
 # One hand-triggered entry point that ships every AuthOwl SDK to the place its
 # ecosystem expects:
 #
-#   packages/*     -> npm         seven packages, through the exact-commit
+#   packages/*     -> npm         eight packages, through the exact-commit
 #                                 release contract (docs/releasing.md)
 #   sdks/python    -> PyPI
 #   sdks/rust      -> crates.io

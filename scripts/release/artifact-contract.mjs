@@ -17,6 +17,9 @@ import { digestFile, validatePackageArchive } from './package-archive.mjs';
 export const RELEASE_MANIFEST = 'release-manifest.json';
 export const DIRECT_PUBLISH_GUARD =
   'node ../../scripts/release/direct-publish-guard.mjs';
+// Publication order. @authowl/tokens is last: nothing here depends on it, and
+// until its first version exists on npm a trusted-publishing deploy cannot
+// create it (docs/releasing.md), so a failure there strands no other package.
 export const RELEASE_PACKAGES = Object.freeze([
   { directory: 'packages/auth-core', name: '@authowl/core' },
   { directory: 'packages/auth-react', name: '@authowl/react' },
@@ -24,8 +27,8 @@ export const RELEASE_PACKAGES = Object.freeze([
   { directory: 'packages/auth-convex', name: '@authowl/convex' },
   { directory: 'packages/auth-react-native', name: '@authowl/react-native' },
   { directory: 'packages/auth-expo', name: '@authowl/expo' },
-  { directory: 'packages/tokens', name: '@authowl/tokens' },
   { directory: 'packages/cli', name: 'authowl' },
+  { directory: 'packages/tokens', name: '@authowl/tokens' },
 ]);
 
 const MAX_JSON_BYTES = 1024 * 1024;
