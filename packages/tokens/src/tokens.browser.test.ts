@@ -6,6 +6,8 @@ import { brands, neutral } from './tokens';
 const html = document.documentElement;
 
 beforeAll(() => {
+  // The generators' output is what build-css.mjs writes to dist byte for
+  // byte; the packed dist itself goes through Tailwind in tokens-install-check.
   const style = document.createElement('style');
   // next/font's variable class, as Next.js generates it.
   style.textContent = `${tokensCss()}\n${shadcnCss()}\n.next-font { --font-geist-sans: 'NextFontGeist', 'NextFontGeist Fallback'; }`;
