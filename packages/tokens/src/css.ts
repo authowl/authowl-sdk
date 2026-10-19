@@ -21,8 +21,9 @@ import {
 /** Every token is a CSS variable under this prefix, so nothing collides with a product's own. */
 export const PREFIX = '--ao-';
 
-type TypeStep = keyof typeof type;
-type TrackedStep = { [K in TypeStep]: (typeof type)[K] extends { tracking: number } ? K : never }[TypeStep];
+type TypeScale = typeof type;
+type TypeStep = keyof TypeScale;
+type TrackedStep = { [K in TypeStep]: TypeScale[K] extends { tracking: number } ? K : never }[TypeStep];
 
 /**
  * The name, without the prefix, of every variable `tokens.css` declares,
