@@ -323,6 +323,32 @@ describe('SDK-ENGINE SESSION BRIDGE CONTRACT', () => {
     expect(engine.appBridgeResults.at(-1)?.setCookie).not.toContain('Expires=');
   });
 
+  it.each([true, false])('uses the new sign-in remember choice %s instead of a stale preference', async (remember) => {
+    const { client, engine, storageKey } = await signInThroughNext(true);
+    await vi.waitFor(() => expect(client.sessionStore.getSnapshot().data?.session.id).toBe('session_1'));
+    localStorage.setItem(`${storageKey}:session`, JSON.stringify({
+      sessionId: 'session_1', remember: !remember,
+    }));
+    engine.setSessionId('session_2');
+
+    await client.signIn.email({ email: USER.email, password: 'password', rememberMe: remember });
+
+    expect(codePosts(engine.appBridgePosts).at(-1)?.remember).toBe(remember);
+    expect(JSON.parse(localStorage.getItem(`${storageKey}:session`)!)).toEqual({
+      sessionId: 'session_2', remember,
+    });
+  });
+
+  it('does not carry a remember choice to a different session in the same client', async () => {
+    const { client, engine } = await signInThroughNext(true);
+    await vi.waitFor(() => expect(client.sessionStore.getSnapshot().data?.session.id).toBe('session_1'));
+    engine.setSessionId('session_2');
+    client.sessionStore.getSnapshot().refetch();
+
+    await vi.waitFor(() => expect(codePosts(engine.appBridgePosts)).toHaveLength(2));
+    expect(codePosts(engine.appBridgePosts).at(-1)?.remember).toBe(false);
+  });
+
   it('posts the bridge code after sender-bound bearer core transport signs in', async () => {
     const { engine } = await signInThroughNext(false);
     const signIn = engine.calls.find((call) => call.url.endsWith('/sign-in/email'))!;

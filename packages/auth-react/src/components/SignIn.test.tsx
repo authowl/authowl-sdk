@@ -152,6 +152,39 @@ describe('SignIn under required MFA', () => {
     }
   });
 
+  it('completes a handoff once with the latest inline callback and redirect after rerenders', async () => {
+    let redeem!: (value: boolean) => void;
+    mocks.client.handoff = new Promise<boolean>((resolve) => { redeem = resolve; });
+    const assign = vi.fn();
+    const originalWindow = window;
+    vi.stubGlobal('window', { ...originalWindow, document: originalWindow.document, location: { ...originalWindow.location, assign } });
+    const onCompleted = vi.fn();
+    function Page({ version }: { version: number }) {
+      return <SignIn redirectTo={`/dashboard/${version}`} onSignedIn={() => onCompleted(version)} />;
+    }
+    try {
+      const actual = await vi.importActual<{ finishSignIn: typeof finishSignIn }>('./finish-sign-in');
+      vi.mocked(finishSignIn).mockImplementation(actual.finishSignIn);
+      const view = render(<React.StrictMode><Page version={1} /></React.StrictMode>);
+      view.rerender(<React.StrictMode><Page version={2} /></React.StrictMode>);
+      view.rerender(<React.StrictMode><Page version={3} /></React.StrictMode>);
+      expect(onCompleted).not.toHaveBeenCalled();
+
+      redeem(true);
+      await waitFor(() => expect(assign).toHaveBeenCalledWith('/dashboard/3'));
+      expect(onCompleted).toHaveBeenCalledExactlyOnceWith(3);
+      expect(finishSignIn).toHaveBeenCalledOnce();
+
+      view.rerender(<React.StrictMode><Page version={4} /></React.StrictMode>);
+      await Promise.resolve();
+      expect(onCompleted).toHaveBeenCalledOnce();
+      expect(assign).toHaveBeenCalledOnce();
+    } finally {
+      mocks.client.handoff = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('refuses to invent a password form when public config is unavailable', () => {
     mocks.configError = true;
     render(<SignIn />);

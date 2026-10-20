@@ -11,6 +11,33 @@ import {
   APP_SESSION_BRIDGE_CODE_MAX_LENGTH,
   APP_SESSION_BRIDGE_HEADER,
 } from './bridge-contract';
+import { isRecord } from './is-record';
+
+function safeStorage(kind: 'sessionStorage' | 'localStorage') {
+  return {
+    get(key: string): string | null {
+      try {
+        return globalThis[kind]?.getItem(key) ?? null;
+      } catch {
+        return null;
+      }
+    },
+    set(key: string, value: string): void {
+      try {
+        globalThis[kind]?.setItem(key, value);
+      } catch {
+        // Storage failure must not interrupt authentication.
+      }
+    },
+    remove(key: string): void {
+      try {
+        globalThis[kind]?.removeItem(key);
+      } catch {
+        // Storage failure must not interrupt authentication.
+      }
+    },
+  };
+}
 
 export class AuthOwlNextSessionBridgeError extends Error {
   readonly status?: number;
@@ -84,44 +111,31 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
   let currentSessionId: string | null = null;
   // Restore persistence only for the exact session that originally requested it.
   let remember = false;
-  let sessionBeginning = false;
+  let pendingRemember: boolean | undefined;
   const preferenceKey = `${storageKey}:session`;
+  const projectionStorage = safeStorage('sessionStorage');
+  const preferenceStorage = safeStorage('localStorage');
   let bridgeUnavailable = false;
   let sessionEnding: Promise<void> | null = null;
 
-  const storedEnsured = (): boolean => {
-    try {
-      return globalThis.sessionStorage?.getItem(storageKey) === '1';
-    } catch {
-      return false;
-    }
-  };
-
-  const hasEnsuredProjection = (): boolean => memoryEnsured || storedEnsured();
+  const hasEnsuredProjection = (): boolean =>
+    memoryEnsured || projectionStorage.get(storageKey) === '1';
 
   const markEnsured = (): void => {
     memoryEnsured = true;
-    try {
-      globalThis.sessionStorage?.setItem(storageKey, '1');
-    } catch {
-      // Memory still deduplicates within this wrapper when storage is disabled.
-    }
+    projectionStorage.set(storageKey, '1');
   };
 
   const resetEnsured = (): void => {
     memoryEnsured = false;
-    try {
-      globalThis.sessionStorage?.removeItem(storageKey);
-    } catch {
-      // A denied storage write must not interfere with the auth request.
-    }
+    projectionStorage.remove(storageKey);
   };
 
   const storedPreference = (): { sessionId: string; remember: boolean } | null => {
     try {
-      const value = JSON.parse(globalThis.localStorage?.getItem(preferenceKey) ?? 'null');
-      return typeof value?.sessionId === 'string' && typeof value?.remember === 'boolean'
-        ? value : null;
+      const value: unknown = JSON.parse(preferenceStorage.get(preferenceKey) ?? 'null');
+      return isRecord(value) && typeof value.sessionId === 'string' && typeof value.remember === 'boolean'
+        ? { sessionId: value.sessionId, remember: value.remember } : null;
     } catch {
       return null;
     }
@@ -129,21 +143,9 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
 
   const savePreference = (): void => {
     if (!currentSessionId) return;
-    try {
-      globalThis.localStorage?.setItem(preferenceKey, JSON.stringify({
-        sessionId: currentSessionId, remember,
-      }));
-    } catch {
-      // Storage can be disabled. The current client still retains the choice.
-    }
-  };
-
-  const clearPreference = (): void => {
-    try {
-      globalThis.localStorage?.removeItem(preferenceKey);
-    } catch {
-      // Storage failure must not interrupt session cleanup.
-    }
+    preferenceStorage.set(preferenceKey, JSON.stringify({
+      sessionId: currentSessionId, remember,
+    }));
   };
 
   const selectSession = (sessionId: string): void => {
@@ -152,9 +154,9 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
     if (currentSessionId !== null || (stored && stored.sessionId !== sessionId)) {
       resetEnsured();
     }
-    if (!sessionBeginning) remember = stored?.sessionId === sessionId && stored.remember;
+    remember = pendingRemember ?? (stored?.sessionId === sessionId && stored.remember);
     currentSessionId = sessionId;
-    sessionBeginning = false;
+    pendingRemember = undefined;
   };
 
   const serialize = (work: () => Promise<void>): Promise<void> => {
@@ -201,9 +203,7 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
       const authenticatedFetch = connection?.authenticatedFetch;
       if (!authenticatedFetch) return;
 
-      // Sign-in actions project before the core store refreshes. Read through
-      // the ungated transport here: awaiting the store would deadlock a handoff
-      // whose first session read is waiting for this projection.
+      // Core's exchange result has no session id, and its session store awaits this projection.
       if (currentSessionId === null) {
         const sessionResponse = await authenticatedFetch(`${target.projectBaseURL}/get-session`, {
           headers: { 'x-publishable-key': target.publishableKey },
@@ -253,16 +253,15 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
 
   const onLifecycle = (event: SessionLifecycleEvent): void => {
     if (event.type === 'beginSession') {
-      remember = event.remember;
-      sessionBeginning = true;
+      pendingRemember = event.remember;
       currentSessionId = null;
       resetEnsured();
       return;
     }
     currentSessionId = null;
-    sessionBeginning = false;
+    pendingRemember = undefined;
     remember = false;
-    clearPreference();
+    preferenceStorage.remove(preferenceKey);
     resetEnsured();
     void beginClear();
   };
@@ -276,9 +275,9 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
     if (!sessionId) {
       const projected = currentSessionId !== null || hasEnsuredProjection();
       currentSessionId = null;
-      if (!sessionBeginning) {
+      if (pendingRemember === undefined) {
         remember = false;
-        clearPreference();
+        preferenceStorage.remove(preferenceKey);
       }
       if (projected) {
         resetEnsured();
