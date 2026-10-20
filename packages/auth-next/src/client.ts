@@ -82,10 +82,10 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
   let synchronization = Promise.resolve();
   let memoryEnsured = false;
   let currentSessionId: string | null = null;
-  // Safe default for a session discovered after reload. A session cookie may
-  // end earlier than requested, while persisting one beyond the user's intent
-  // would be a security and privacy regression.
+  // Restore persistence only for the exact session that originally requested it.
   let remember = false;
+  let sessionBeginning = false;
+  const preferenceKey = `${storageKey}:session`;
   let bridgeUnavailable = false;
   let sessionEnding: Promise<void> | null = null;
 
@@ -115,6 +115,46 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
     } catch {
       // A denied storage write must not interfere with the auth request.
     }
+  };
+
+  const storedPreference = (): { sessionId: string; remember: boolean } | null => {
+    try {
+      const value = JSON.parse(globalThis.localStorage?.getItem(preferenceKey) ?? 'null');
+      return typeof value?.sessionId === 'string' && typeof value?.remember === 'boolean'
+        ? value : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const savePreference = (): void => {
+    if (!currentSessionId) return;
+    try {
+      globalThis.localStorage?.setItem(preferenceKey, JSON.stringify({
+        sessionId: currentSessionId, remember,
+      }));
+    } catch {
+      // Storage can be disabled. The current client still retains the choice.
+    }
+  };
+
+  const clearPreference = (): void => {
+    try {
+      globalThis.localStorage?.removeItem(preferenceKey);
+    } catch {
+      // Storage failure must not interrupt session cleanup.
+    }
+  };
+
+  const selectSession = (sessionId: string): void => {
+    if (currentSessionId === sessionId) return;
+    const stored = storedPreference();
+    if (currentSessionId !== null || (stored && stored.sessionId !== sessionId)) {
+      resetEnsured();
+    }
+    if (!sessionBeginning) remember = stored?.sessionId === sessionId && stored.remember;
+    currentSessionId = sessionId;
+    sessionBeginning = false;
   };
 
   const serialize = (work: () => Promise<void>): Promise<void> => {
@@ -153,7 +193,7 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
     return task;
   };
 
-  const ensure = (remembered: boolean): Promise<void> =>
+  const ensure = (): Promise<void> =>
     serialize(async () => {
       // Re-check inside the serialized section: initial hydration and a
       // mutation refresh can announce the same session concurrently.
@@ -161,6 +201,20 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
       const authenticatedFetch = connection?.authenticatedFetch;
       if (!authenticatedFetch) return;
 
+      // Sign-in actions project before the core store refreshes. Read through
+      // the ungated transport here: awaiting the store would deadlock a handoff
+      // whose first session read is waiting for this projection.
+      if (currentSessionId === null) {
+        const sessionResponse = await authenticatedFetch(`${target.projectBaseURL}/get-session`, {
+          headers: { 'x-publishable-key': target.publishableKey },
+          credentials: 'include', cache: 'no-store', redirect: 'error',
+        });
+        if (!sessionResponse.ok) return;
+        const data = await sessionResponse.json() as { session?: { id?: unknown } } | null;
+        if (typeof data?.session?.id !== 'string') return;
+        selectSession(data.session.id);
+      }
+      const remembered = remember;
       const minted = await authenticatedFetch(mintUrl, {
         method: 'POST',
         headers: { 'x-publishable-key': target.publishableKey },
@@ -187,6 +241,7 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
       const bridged = await postToBridge({ code: payload.code, remember: remembered });
       if (bridged.ok) {
         markEnsured();
+        savePreference();
         return;
       }
       // A rejected deployment credential cannot repair itself within this page.
@@ -199,11 +254,15 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
   const onLifecycle = (event: SessionLifecycleEvent): void => {
     if (event.type === 'beginSession') {
       remember = event.remember;
+      sessionBeginning = true;
       currentSessionId = null;
       resetEnsured();
       return;
     }
     currentSessionId = null;
+    sessionBeginning = false;
+    remember = false;
+    clearPreference();
     resetEnsured();
     void beginClear();
   };
@@ -217,19 +276,18 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
     if (!sessionId) {
       const projected = currentSessionId !== null || hasEnsuredProjection();
       currentSessionId = null;
+      if (!sessionBeginning) {
+        remember = false;
+        clearPreference();
+      }
       if (projected) {
         resetEnsured();
         void clear();
       }
       return;
     }
-    if (currentSessionId !== null && currentSessionId !== sessionId) {
-      resetEnsured();
-    }
-    if (currentSessionId !== sessionId) {
-      currentSessionId = sessionId;
-    }
-    void ensure(remember);
+    selectSession(sessionId);
+    void ensure();
   };
 
   const integration: SessionTransportIntegration = {
@@ -242,7 +300,7 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
       synchronizeSession();
     },
     sessionEstablished() {
-      return ensure(remember);
+      return ensure();
     },
     sessionEnded() {
       return beginClear();

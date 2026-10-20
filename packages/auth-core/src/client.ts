@@ -722,6 +722,8 @@ export interface ActionFetchOptions {
 export interface AuthOwlClient {
   /** Framework-neutral session state. React consumers use `@authowl/react`'s `useSession()`. */
   sessionStore: SessionStore;
+  /** Present on a callback page. Resolves after redemption and framework session projection. */
+  handoff?: Promise<boolean>;
   /** Signed-in account profile, credential, session, provider, and deletion actions. */
   account: AccountClient;
   /** Signed-in organization, membership, role, and invitation actions. */

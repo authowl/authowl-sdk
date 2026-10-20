@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { useHandoffCompletion } from './use-handoff-completion';
 import { createIdempotencyKey, readInvitationClaim } from '@authowl/core';
 import { usePublicConfig, useSignUp } from '../hooks';
 import { useLocale, useT, useServerError } from '../i18n';
@@ -52,6 +53,7 @@ export function SignUp({
   onWaitlisted,
   showBranding = true,
 }: SignUpProps = {}) {
+  useHandoffCompletion(redirectTo, onSignedUp);
   const t = useT();
   const locale = useLocale();
   const toServerError = useServerError();
@@ -236,7 +238,7 @@ export function SignUp({
       {showBranding ? <AuthOwlBranding /> : null}
       <h2 className="ba-title">{t('signUp.title')}</h2>
       <InvitationBanner />
-      <SocialButtons providers={social} callbackURL={redirectTo} />
+      <SocialButtons providers={social} />
       {showPassword && social.length > 0 && (
         <div className="ba-divider">{t('common.orDivider')}</div>
       )}

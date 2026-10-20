@@ -230,7 +230,11 @@ export function createAuthOwlSessionBridge(input?: AuthOwlSessionBridgeOptions) 
 
     let body: { code?: unknown; token?: unknown; remember?: unknown };
     try {
-      body = JSON.parse(raw) as { code?: unknown; token?: unknown; remember?: unknown };
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return response(400, { error: 'invalid_request' });
+      }
+      body = parsed as typeof body;
     } catch {
       return response(400, { error: 'invalid_request' });
     }

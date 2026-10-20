@@ -4,6 +4,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  client: {
+    handoff: undefined as Promise<boolean> | undefined,
+    sessionStore: {
+      subscribe: () => () => {},
+      getSnapshot: () => ({ data: { user: { id: 'user_1' }, session: { id: 'session_1' } } }),
+    },
+  },
   config: {
     enabledMethods: ['email_otp', 'passkey'] as string[],
     socialProviders: [] as string[],
@@ -47,6 +54,7 @@ const mocks = vi.hoisted(() => ({
     data: { id: 'passkey-1', name: 'Device' },
     error: null,
   })),
+  signInSocial: vi.fn(async () => ({ data: { redirect: true }, error: null })),
   serverError: vi.fn((_error: unknown, fallback: string) => fallback),
   joinWaitlist: vi.fn(async () => ({ data: { accepted: true }, error: null })),
   sendVerificationCode: vi.fn(async () => ({ data: { success: true }, error: null })),
@@ -56,6 +64,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../hooks', () => ({
+  useAuthClient: () => mocks.client,
   usePublicConfig: () => ({
     config: mocks.config,
     isLoading: false,
@@ -65,6 +74,7 @@ vi.mock('../hooks', () => ({
   useSignUp: () => ({ signUp: mocks.signUp }),
   useWaitlist: () => ({ join: mocks.joinWaitlist }),
   useSignIn: () => ({
+    signInSocial: mocks.signInSocial,
     sendEmailOtp: mocks.sendEmailOtp,
     signInEmailOtp: mocks.signInEmailOtp,
   }),
@@ -89,6 +99,7 @@ import { SignUp } from './SignUp';
 describe('SignUp passwordless passkey flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.client.handoff = undefined;
     mocks.configError = false;
     mocks.signUp.mockResolvedValue({
       data: { sessionCreated: true },
@@ -110,6 +121,41 @@ describe('SignUp passwordless passkey flow', () => {
   });
 
   afterEach(cleanup);
+
+  it('returns social sign-in to the form before navigating to redirectTo', async () => {
+    mocks.config.socialProviders = ['google'];
+    render(<SignUp redirectTo="/dashboard" />);
+    fireEvent.click(screen.getByRole('button', { name: 'social.continueWith' }));
+    await waitFor(() => expect(mocks.signInSocial).toHaveBeenCalledWith({
+      provider: 'google', callbackURL: window.location.href, errorCallbackURL: window.location.href,
+    }));
+  });
+
+  it('navigates to redirectTo only after a redeemed handoff completes', async () => {
+    let redeem!: (value: boolean) => void;
+    mocks.client.handoff = new Promise<boolean>((resolve) => { redeem = resolve; });
+    const assign = vi.fn();
+    const originalWindow = window;
+    vi.stubGlobal('window', { ...originalWindow, document: originalWindow.document, location: { ...originalWindow.location, assign } });
+    const onCompleted = vi.fn();
+    try {
+      const view = render(<React.StrictMode><SignUp redirectTo="/dashboard" onSignedUp={onCompleted} /></React.StrictMode>);
+      expect(assign).not.toHaveBeenCalled();
+      expect(onCompleted).not.toHaveBeenCalled();
+      redeem(true);
+      await waitFor(() => expect(assign).toHaveBeenCalledWith('/dashboard'));
+      expect(onCompleted).toHaveBeenCalledOnce();
+      expect(assign).toHaveBeenCalledOnce();
+      view.unmount();
+      render(<SignUp redirectTo="/dashboard" onSignedUp={onCompleted} />);
+      await Promise.resolve();
+      expect(onCompleted).toHaveBeenCalledOnce();
+      expect(assign).toHaveBeenCalledOnce();
+    } finally {
+      mocks.client.handoff = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
 
   it('refuses to render a guessed sign-up flow when public config is unavailable', () => {
     mocks.configError = true;

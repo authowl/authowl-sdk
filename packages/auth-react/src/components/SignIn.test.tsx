@@ -4,6 +4,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  client: {
+    handoff: undefined as Promise<boolean> | undefined,
+    sessionStore: {
+      subscribe: () => () => {},
+      getSnapshot: () => ({ data: { user: { id: 'user_1' }, session: { id: 'session_1' } } }),
+    },
+  },
   config: {
     enabledMethods: ['sso'] as string[],
     socialProviders: [] as string[],
@@ -27,6 +34,7 @@ const mocks = vi.hoisted(() => ({
       error: { status: number } | null;
     }> => ({ data: { redirect: true, url: 'https://idp.test/auth' }, error: null }),
   ),
+  signInSocial: vi.fn(async () => ({ data: { redirect: true }, error: null })),
   serverError: vi.fn((_error: unknown, fallback: string) => fallback),
   configError: false,
   retryPublicConfig: vi.fn(),
@@ -43,7 +51,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../hooks', () => ({
   useAuthClient: () => ({
-    sessionStore: { subscribe: vi.fn(() => () => {}), getSnapshot: vi.fn() },
+    ...mocks.client,
     getSession: mocks.getSession,
   }),
   useSession: () => ({ refetch: vi.fn() }),
@@ -55,6 +63,7 @@ vi.mock('../hooks', () => ({
     retry: mocks.retryPublicConfig,
   }),
   useSignIn: () => ({
+    signInSocial: mocks.signInSocial,
     signIn: vi.fn(),
     signInUsername: mocks.signInUsername,
     signInMagicLink: vi.fn(),
@@ -83,10 +92,12 @@ vi.mock('./MFAEnrollment', () => ({
 }));
 
 import { SignIn } from './SignIn';
+import { finishSignIn } from './finish-sign-in';
 
 describe('SignIn under required MFA', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.client.handoff = undefined;
     mocks.configError = false;
     mocks.needsMfaEnrollment = false;
     mocks.getSession.mockResolvedValue({
@@ -103,6 +114,43 @@ describe('SignIn under required MFA', () => {
   });
 
   afterEach(cleanup);
+
+  it('returns social sign-in to the form before navigating to redirectTo', async () => {
+    mocks.config.socialProviders = ['google'];
+    render(<SignIn redirectTo="/dashboard" />);
+    fireEvent.click(screen.getByRole('button', { name: 'social.continueWith' }));
+    await waitFor(() => expect(mocks.signInSocial).toHaveBeenCalledWith({
+      provider: 'google', callbackURL: window.location.href, errorCallbackURL: window.location.href,
+    }));
+  });
+
+  it('navigates to redirectTo only after a redeemed handoff completes', async () => {
+    let redeem!: (value: boolean) => void;
+    mocks.client.handoff = new Promise<boolean>((resolve) => { redeem = resolve; });
+    const assign = vi.fn();
+    const originalWindow = window;
+    vi.stubGlobal('window', { ...originalWindow, document: originalWindow.document, location: { ...originalWindow.location, assign } });
+    const onCompleted = vi.fn();
+    try {
+      const actual = await vi.importActual<{ finishSignIn: typeof finishSignIn }>('./finish-sign-in');
+      vi.mocked(finishSignIn).mockImplementation(actual.finishSignIn);
+      const view = render(<React.StrictMode><SignIn redirectTo="/dashboard" onSignedIn={onCompleted} /></React.StrictMode>);
+      expect(assign).not.toHaveBeenCalled();
+      expect(onCompleted).not.toHaveBeenCalled();
+      redeem(true);
+      await waitFor(() => expect(assign).toHaveBeenCalledWith('/dashboard'));
+      expect(onCompleted).toHaveBeenCalledOnce();
+      expect(assign).toHaveBeenCalledOnce();
+      view.unmount();
+      render(<SignIn redirectTo="/dashboard" onSignedIn={onCompleted} />);
+      await Promise.resolve();
+      expect(onCompleted).toHaveBeenCalledOnce();
+      expect(assign).toHaveBeenCalledOnce();
+    } finally {
+      mocks.client.handoff = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
 
   it('refuses to invent a password form when public config is unavailable', () => {
     mocks.configError = true;
@@ -198,8 +246,8 @@ describe('SignIn "Continue with SSO"', () => {
 
   afterEach(cleanup);
 
-  it('folds SSO into the shared email form and posts /sign-in/sso with a required callbackURL', async () => {
-    render(<SignIn />);
+  it('returns SSO to the form before navigating to redirectTo', async () => {
+    render(<SignIn redirectTo="/dashboard" />);
 
     fireEvent.change(screen.getByLabelText('common.emailLabel'), {
       target: { value: 'user@acme.test' },

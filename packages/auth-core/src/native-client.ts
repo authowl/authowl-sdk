@@ -87,7 +87,10 @@ function redeemHandoffOnce(
     if (!code) return undefined;
     handoff = import('./session-handoff').then(
       (module) => module.completeCrossSiteSignIn(http, binding, code),
-    );
+    ).then(async (redeemed) => {
+      if (redeemed) await binding.integration?.sessionEstablished();
+      return redeemed;
+    });
     documentHandoffs.set(projectId, handoff);
   }
   return handoff;
@@ -293,6 +296,7 @@ export function createAuthActionClient(
 
   return {
     sessionStore: session.store,
+    handoff,
     getSession: session.getSession,
     account: createAccountClient(http, notifyMutation),
     applicationInvitations: createApplicationInvitationClient(http),
