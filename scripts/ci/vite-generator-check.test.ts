@@ -108,7 +108,7 @@ it("builds a fresh Vite React consumer from packed AuthOwl SDKs", async () => {
   const detection: ProjectDetection = {
     root: application,
     framework: "vite-react",
-    frameworkVersion: "7.3.6",
+    frameworkVersion: "7.3.7",
     packageManager: "npm",
     packageManagerRoot: application,
     packageManagerEvidence: ["packageManager:npm"],
