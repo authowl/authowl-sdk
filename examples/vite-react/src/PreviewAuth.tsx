@@ -99,6 +99,7 @@ function createPreviewFetch(
   passkeyRelyingPartyId: string | undefined,
   signInMethod: PreviewSignInMethod | undefined,
   mfaEnrollment: boolean,
+  wrongPassword: boolean,
 ): typeof fetch {
   return async (input: RequestInfo | URL): Promise<Response> => {
     const url = new URL(String(input));
@@ -200,9 +201,14 @@ function createPreviewFetch(
       });
     }
     if (path.endsWith('/phone-otp/challenge')) {
-      return Response.json({ kind: 'akedly_widget_v2', connectionId: 'preview-phone', passkeys: false });
+      return Response.json({ kind: 'akedly_shield_v1_2', connectionId: 'preview-phone', challenge: 'a'.repeat(64), difficulty: 0, challengeToken: 'preview-challenge-token', challengeRequired: false, turnstile: { required: false, siteKey: null } });
     }
-    if (path.endsWith('/phone-otp/start')) return Response.json({ status: 'pending' });
+    if (path.endsWith('/phone-otp/start')) {
+      return Response.json({ status: 'pending' });
+    }
+    if (path.endsWith('/sign-in/email') && wrongPassword) {
+      return Response.json({ code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }, { status: 401 });
+    }
     if (path.endsWith('/get-session')) {
       return Response.json(signedIn ? { user: { ...user, twoFactorEnabled: !mfaEnrollment }, session } : null);
     }
@@ -234,13 +240,13 @@ function createPreviewFetch(
   };
 }
 
-export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, signInMethod, mfaEnrollment = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; signInMethod?: PreviewSignInMethod; mfaEnrollment?: boolean; children: React.ReactNode }) {
+export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, signInMethod, mfaEnrollment = false, wrongPassword = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; signInMethod?: PreviewSignInMethod; mfaEnrollment?: boolean; wrongPassword?: boolean; children: React.ReactNode }) {
   const previewFetch = React.useMemo(
     () => createPreviewFetch(
       signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled,
-      passkeyRelyingPartyId, signInMethod, mfaEnrollment,
+      passkeyRelyingPartyId, signInMethod, mfaEnrollment, wrongPassword,
     ),
-    [configUnavailable, consentRequired, passkeyRelyingPartyId, primaryColor, privacyEnabled, signedIn, signInMethod, mfaEnrollment],
+    [configUnavailable, consentRequired, passkeyRelyingPartyId, primaryColor, privacyEnabled, signedIn, signInMethod, mfaEnrollment, wrongPassword],
   );
   return (
     <AuthOwlProvider

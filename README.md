@@ -186,6 +186,8 @@ through `scripts/ci/local-gate.sh`. Plain `pnpm test:storybook` skips screenshot
 comparison locally because system fonts differ; comparison is enabled only with
 `AUTHOWL_SCREENSHOTS=1` (use the Docker gate for canonical results).
 
+Run the gate with `AUTHOWL_SCREENSHOT_THRESHOLD=0` to list every changed story when a slice must prove which colours moved (default: `0.06`, valid range: `[0,1]`).
+
 ## Security model
 
 - **Publishable keys** (`pk_test_…` in development, `pk_live_…` in production)

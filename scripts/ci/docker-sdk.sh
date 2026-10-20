@@ -11,9 +11,10 @@ gate_cpus() {
   if [ "$want" -le "$have" ]; then echo "$want"; else echo "$have"; fi
 }
 
+# Baselines and the gate must render in CI's architecture, including on arm64 hosts.
 build_ci_image() {
   cp "$immutable_repository/docker/ci.Dockerfile" "$image_context/Dockerfile"
-  docker build \
+  docker build --platform linux/amd64 \
     --pull \
     --label "${AUTHOWL_SDK_CI_RUN_LABEL}=${run_id}" \
     --build-arg "NODE_BASE_IMAGE=${NODE_BASE_IMAGE}" \
@@ -41,7 +42,7 @@ sdk_ci_run() {
     )
     shift
   fi
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --init \
     --network "$network" \
     --read-only \

@@ -1,6 +1,12 @@
 import { page } from 'vitest/browser';
 import { expect } from 'vitest';
 
+const configuredThreshold = import.meta.env.AUTHOWL_SCREENSHOT_THRESHOLD ?? '0.06';
+const threshold = Number(configuredThreshold);
+if (configuredThreshold.trim() === '' || !Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
+  throw new Error('AUTHOWL_SCREENSHOT_THRESHOLD must be a number in [0,1].');
+}
+
 /** Storybook invokes preview.afterEach after play, before tearing down the story. */
 export async function captureStory(storyId: string) {
   const style = document.createElement('style');
@@ -21,7 +27,7 @@ export async function captureStory(storyId: string) {
       // Two baseline runs in the same pinned image differ by at most 13/255 per
       // channel on shadow and corner edges (rasterization noise). 0.06 ignores
       // grey deltas up to about 15 and still counts any real edge or colour change.
-      comparatorOptions: { allowedMismatchedPixels: 0, threshold: 0.06, includeAA: true },
+      comparatorOptions: { allowedMismatchedPixels: 0, threshold, includeAA: true },
       screenshotOptions: { animations: 'disabled', caret: 'hide' },
     });
   } finally {

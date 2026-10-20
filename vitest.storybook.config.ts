@@ -19,6 +19,7 @@ function storybookProject(locale: 'en' | 'ar', theme: 'light' | 'dark') {
     extends: true as const,
     cacheDir: path.join(dirname, 'node_modules', '.vite', projectName),
     define: {
+      'import.meta.env.AUTHOWL_SCREENSHOT_THRESHOLD': JSON.stringify(process.env.AUTHOWL_SCREENSHOT_THRESHOLD ?? '0.06'),
       'import.meta.env.AUTHOWL_SCREENSHOTS': JSON.stringify(process.env.AUTHOWL_SCREENSHOTS ?? '0'),
       'import.meta.env.AUTHOWL_STORY_LOCALE': JSON.stringify(locale),
       'import.meta.env.AUTHOWL_STORY_THEME': JSON.stringify(theme),

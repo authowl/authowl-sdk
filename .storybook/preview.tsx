@@ -65,6 +65,7 @@ const preview: Preview = {
           passkeyRelyingPartyId={passkeyRelyingPartyId}
           primaryColor={primaryColor}
           signInMethod={context.parameters.authowl?.signInMethod}
+          wrongPassword={context.parameters.authowl?.wrongPassword === true}
           mfaEnrollment={context.parameters.authowl?.mfaEnrollment === true}
         >
           <main

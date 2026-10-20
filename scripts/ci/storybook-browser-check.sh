@@ -48,7 +48,7 @@ for project in \
   storybook-ar-light \
   storybook-ar-dark; do
   printf 'storybook-browser-check: %s\n' "$project"
-  for story in stories/*.stories.tsx; do
+  while IFS= read -r story; do
     run_story "$project" "$story" "$@"
-  done
+  done < <(find stories -type f \( -name '*.stories.ts' -o -name '*.stories.tsx' \) | LC_ALL=C sort)
 done
