@@ -1,3 +1,4 @@
+import './screenshot-environment';
 import type { Preview } from '@storybook/react-vite';
 import React from 'react';
 import '@authowl/react/styles.css';

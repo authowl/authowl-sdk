@@ -45,7 +45,12 @@ mkdir -p "$workspace" "$image_context" "$npm_cache"
 touch "$completed_file"
 # Copy authored working-tree files, including new stories, without host modules
 # or ignored build output. All installation/build mutations stay in this copy.
+# Tracked files deleted from the working tree (baselines removed to regenerate
+# them) are skipped.
 git ls-files --cached --others --exclude-standard -z |
+  while IFS= read -r -d '' path; do
+    [[ -e "$path" ]] && printf '%s\0' "$path"
+  done |
   tar --null -T - -cf - | tar -xf - -C "$workspace"
 build_ci_image
 dependency_store_volume=$(
