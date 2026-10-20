@@ -7,6 +7,7 @@ cd "$root"
 run_story() {
   local project="$1"
   local story="$2"
+  shift 2
   local attempt=1
   local max_attempts=2
   local run_log
@@ -19,7 +20,7 @@ run_story() {
       --browser.fileParallelism=false \
       --config vitest.storybook.config.ts \
       --project="$project" \
-      "$story" 2>&1 | tee "$run_log"
+      "$story" "$@" 2>&1 | tee "$run_log"
     status="${PIPESTATUS[0]}"
     set -e
 
@@ -48,6 +49,6 @@ for project in \
   storybook-ar-dark; do
   printf 'storybook-browser-check: %s\n' "$project"
   for story in stories/*.stories.tsx; do
-    run_story "$project" "$story"
+    run_story "$project" "$story" "$@"
   done
 done

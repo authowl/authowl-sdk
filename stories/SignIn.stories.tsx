@@ -4,6 +4,7 @@ import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { SignIn } from '@authowl/react';
 import { expectStoryMatrix } from './matrix';
 import { card } from './surface';
+import type { PreviewSignInMethod } from '../examples/vite-react/src/PreviewAuth';
 
 // The preview fixture enables password + magic-link + passkey and Google/GitHub
 // social, so the default surface exercises every sign-in affordance at once.
@@ -59,5 +60,73 @@ export const ForgotPassword: Story = {
     await waitFor(() => {
       expect(canvasElement.querySelector('[data-testid="signin-forgot"]')).not.toBeNull();
     });
+  },
+};
+
+function methodStory(signInMethod: PreviewSignInMethod): Story {
+  return {
+    parameters: { authowl: { signedIn: false, signInMethod, passkeyReachable: signInMethod === 'passkey' } },
+    play: async ({ canvasElement }) => {
+      await expectStoryMatrix(canvasElement);
+      const form = await within(canvasElement).findByTestId('signin-form');
+      expect(form.querySelector('.ba-social-grid')).toBeNull();
+      expect(Boolean(form.querySelector('input[type="password"]'))).toBe(signInMethod === 'password');
+      expect(Boolean(form.querySelector('input[type="email"]'))).toBe(!['passkey', 'phone_otp'].includes(signInMethod));
+    },
+  };
+}
+
+export const PasswordOnly = methodStory('password');
+export const EmailCodeOnly = methodStory('email_otp');
+export const EmailLinkOnly = methodStory('magic_link');
+export const PasskeyOnly: Story = {
+  ...methodStory('passkey'),
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    await within(canvasElement).findByTestId('passkey-button');
+  },
+};
+export const PhoneOnly = methodStory('phone_otp');
+export const SsoOnly = methodStory('sso');
+
+function emailSentStory(method: 'email_otp' | 'magic_link', testId: string): Story {
+  return {
+    ...methodStory(method),
+    play: async ({ canvasElement }) => {
+      await expectStoryMatrix(canvasElement);
+      const canvas = within(canvasElement);
+      const form = await canvas.findByTestId('signin-form');
+      await userEvent.type(form.querySelector('input[type="email"]')!, 'mona@example.test');
+      await userEvent.click(form.querySelector('button[type="submit"]')!);
+      await canvas.findByTestId(testId);
+    },
+  };
+}
+
+export const EmailCodeSent = emailSentStory('email_otp', 'signin-otp-code');
+export const MagicLinkSent = emailSentStory('magic_link', 'signin-magic-sent');
+
+async function enterPhone(canvasElement: HTMLElement) {
+  await expectStoryMatrix(canvasElement);
+  const canvas = within(canvasElement);
+  const form = await canvas.findByTestId('signin-form');
+  await userEvent.click(within(form).getByRole('button'));
+  const phone = await canvas.findByTestId('phoneotp-phone');
+  await waitFor(() => expect(phone.querySelector('button[type="submit"]')).toBeEnabled());
+  return phone;
+}
+
+export const PhoneEntry: Story = {
+  ...methodStory('phone_otp'),
+  play: async ({ canvasElement }) => { await enterPhone(canvasElement); },
+};
+
+export const PhoneCode: Story = {
+  ...methodStory('phone_otp'),
+  play: async ({ canvasElement }) => {
+    const phone = await enterPhone(canvasElement);
+    await userEvent.type(phone.querySelector('input[type="tel"]')!, '01000000000');
+    await userEvent.click(phone.querySelector('button[type="submit"]')!);
+    await within(canvasElement).findByTestId('phoneotp-code');
   },
 };

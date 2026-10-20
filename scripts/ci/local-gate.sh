@@ -6,15 +6,6 @@
 #
 set -euo pipefail
 
-# Docker refuses `--cpus` above the host's core count ("range of CPUs is from
-# 0.01 to 2.00, as there are only 2 CPUs available"), which killed the whole
-# release gate on a 2-core GitHub runner before it built anything. Ask for the
-# budget we want, take what the host actually has.
-gate_cpus() {
-  local want="$1" have
-  have=$(getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || echo 1)
-  if [ "$want" -le "$have" ]; then echo "$want"; else echo "$have"; fi
-}
 umask 077
 
 root=$(cd "$(dirname "$0")/../.." && pwd -P)
@@ -88,6 +79,12 @@ source /dev/stdin <<<"$ownership_helper"
 # shellcheck disable=SC1091
 source /dev/stdin <<<"$toolchain_helper"
 sdk_ci_load_toolchain /dev/stdin <<<"$toolchain_contract"
+image_helper=$(
+  GIT_NO_REPLACE_OBJECTS=1 git show "$commit:scripts/ci/docker-sdk.sh"
+)
+# shellcheck source=/dev/stdin
+# shellcheck disable=SC1091
+source /dev/stdin <<<"$image_helper"
 
 if [[ "$(GIT_NO_REPLACE_OBJECTS=1 git show "$commit:.nvmrc")" != "${NODE_VERSION#v}" ]]; then
   echo 'SDK local-gate: .nvmrc must match the pinned Linux runtime' >&2
@@ -320,22 +317,6 @@ validate_archive_attributes() {
   )
 }
 
-build_ci_image() {
-  cp "$immutable_repository/docker/ci.Dockerfile" "$image_context/Dockerfile"
-  docker build \
-    --pull \
-    --label "${AUTHOWL_SDK_CI_RUN_LABEL}=${run_id}" \
-    --build-arg "NODE_BASE_IMAGE=${NODE_BASE_IMAGE}" \
-    --build-arg "PLAYWRIGHT_BASE_IMAGE=${PLAYWRIGHT_BASE_IMAGE}" \
-    --build-arg "NODE_VERSION=${NODE_VERSION}" \
-    --build-arg "PNPM_VERSION=${PNPM_VERSION}" \
-    --build-arg "PNPM_INTEGRITY=${PNPM_INTEGRITY}" \
-    --tag "$ci_image_tag" \
-    "$image_context"
-  ci_image_id=$(docker image inspect --format '{{.Id}}' "$ci_image_tag")
-  printf 'tool.ci_image=%s\n' "$ci_image_id" >>"$completed_file"
-}
-
 prepare_dependency_store() {
   dependency_store_volume=$(
     docker volume create \
@@ -520,45 +501,7 @@ docker_dependency_network() {
 }
 
 docker_sdk_offline() {
-  local -a additional_mounts=()
-  local -a additional_environment=()
-  if [[ "${1:-}" == '--consumer-exec-tmp' ]]; then
-    additional_mounts=(
-      --tmpfs '/consumer-tmp:rw,exec,nosuid,nodev,size=2g'
-    )
-    additional_environment=(
-      --env AUTHOWL_CONSUMER_TMPDIR=/consumer-tmp
-    )
-    shift
-  fi
-  docker run --rm \
-    --init \
-    --network none \
-    --read-only \
-    --user "$(id -u):$(id -g)" \
-    --cap-drop ALL \
-    --security-opt no-new-privileges:true \
-    --memory 8g \
-    --cpus "$(gate_cpus 4)" \
-    --pids-limit 2048 \
-    --shm-size 2g \
-    --tmpfs /tmp:rw,nosuid,nodev,size=2g \
-    "${additional_mounts[@]+"${additional_mounts[@]}"}" \
-    --mount "type=bind,src=$workspace,dst=/workspace" \
-    --mount "type=volume,src=$dependency_store_volume,dst=/pnpm-store" \
-    --mount "type=bind,src=$npm_cache,dst=/npm-cache" \
-    --workdir /workspace \
-    --env HOME=/tmp \
-    --env CI=true \
-    --env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
-    --env npm_config_cache=/npm-cache \
-    --env npm_config_offline=true \
-    --env npm_config_audit=false \
-    --env npm_config_fund=false \
-    --env npm_config_logs_dir=/tmp/npm-logs \
-    --env npm_config_update_notifier=false \
-    "${additional_environment[@]+"${additional_environment[@]}"}" \
-    "$ci_image_tag" "$@"
+  sdk_ci_run none "$@"
 }
 
 prepare_consumer_workspace() {
@@ -762,7 +705,7 @@ run_step lint docker_sdk_offline pnpm run lint
 run_step typecheck docker_sdk_offline pnpm run typecheck
 run_step tests docker_sdk_offline pnpm run test
 run_step storybook-build docker_sdk_offline pnpm run build:storybook
-run_step storybook-browser docker_sdk_offline pnpm run test:storybook
+run_step storybook-browser docker_sdk_offline env AUTHOWL_SCREENSHOTS=1 pnpm run test:storybook
 run_step tokens-browser docker_sdk_offline \
   pnpm --filter @authowl/tokens run test:browser
 run_step next-generator docker_sdk_offline --consumer-exec-tmp \
