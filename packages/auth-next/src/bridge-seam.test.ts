@@ -72,6 +72,7 @@ function fakeEngine(
   const appBridgeResults: AppBridgeResult[] = [];
   const mintedCodes = new Set<string>();
   let cookieSession = false;
+  let sessionId = 'session_1';
   let mintCount = 0;
   let browserSessionResult: 'healthy' | 'network' | 'malformed' | 'empty' | 429 | 503 = 'healthy';
 
@@ -132,7 +133,7 @@ function fakeEngine(
     const bearerSession = declared
       && headers.get('authorization') === `Bearer ${SESSION_TOKEN}`
       && headers.has('x-authowl-session-proof');
-    if (url.pathname.endsWith('/sign-in/email')) {
+    if (url.pathname.endsWith('/sign-in/email') || url.pathname.endsWith('/session/exchange')) {
       if (cookieSupported) cookieSession = true;
       return Response.json(
         { redirect: false, user: USER },
@@ -180,7 +181,7 @@ function fakeEngine(
       return Response.json({
         user: USER,
         session: {
-          id: 'session_1',
+          id: sessionId,
           userId: USER.id,
           expiresAt: SESSION_EXPIRES_AT,
           pendingMfaEnrollment: false,
@@ -205,6 +206,7 @@ function fakeEngine(
 
   return {
     fetch: engineFetch, calls, appBridgePosts, appBridgeResults,
+    setSessionId(id: string) { sessionId = id; },
     setBrowserSessionResult(result: typeof browserSessionResult) { browserSessionResult = result; },
   };
 }
@@ -267,6 +269,149 @@ describe('SDK-ENGINE SESSION BRIDGE CONTRACT', () => {
     expect(validation.headers.get('x-authowl-secret-key')).toBe(SECRET_KEY);
     expect(engine.appBridgeResults[0]).toMatchObject({ status: 204, error: null });
     expect(engine.appBridgeResults[0]!.setCookie).toContain(`Expires=${new Date(SESSION_EXPIRES_AT).toUTCString()}`);
+  });
+
+  it('projects a redeemed handoff before completion on cookie and bearer transports', async () => {
+    for (const cookieSupported of [true, false]) {
+      const projectId = freshProject();
+      const publishableKey = `pk_test_${projectId}_abcdefghijklmnopqrstuvwxyz012345`;
+      const engine = fakeEngine(projectId, cookieSupported, SECRET_KEY);
+      document.cookie = 'authowl_handoff_verifier=verifier-value; Path=/';
+      window.history.replaceState(null, '', '/sign-in#authowl_code=handoff-code');
+      const client = createAuthOwlClient(resolveConfig({
+        publishableKey,
+        apiUrl: API_URL,
+        fetch: createAuthOwlNextFetch({ publishableKey, apiUrl: API_URL, fetch: engine.fetch }),
+      }));
+      await expect(client.handoff).resolves.toBe(true);
+      expect(engine.appBridgeResults).toHaveLength(1);
+      expect(engine.appBridgeResults[0]?.status).toBe(204);
+      expect(engine.appBridgeResults[0]?.setCookie).toContain('Expires=');
+      expect((await client.getSession()).data?.session.id).toBe('session_1');
+    }
+  });
+
+  it.each([
+    ['/get-session', 'fetch'], ['/session/bridge-code', 'fetch'], ['/api/authowl/session', 'fetch'],
+    ['/get-session', 'body'], ['/session/bridge-code', 'body'], ['/api/authowl/session', 'body'],
+  ])(
+    'bounds a never-resolving %s %s and releases handoff, account, and sign-out',
+    async (stalledPath, stalledPart) => {
+      const projectId = freshProject();
+      const publishableKey = `pk_test_${projectId}_abcdefghijklmnopqrstuvwxyz012345`;
+      const engine = fakeEngine(projectId, true, SECRET_KEY);
+      let stalledSignal: AbortSignal | null | undefined;
+      const fetcher = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).endsWith(stalledPath) && !stalledSignal) {
+          stalledSignal = init?.signal;
+          if (stalledPart === 'fetch') return new Promise<Response>(() => {});
+          const response = Response.json({}, { status: stalledPath === '/api/authowl/session' ? 503 : 200 });
+          response.json = () => new Promise<unknown>(() => {});
+          return Promise.resolve(response);
+        }
+        return engine.fetch(input, init);
+      });
+      document.cookie = 'authowl_handoff_verifier=verifier-value; Path=/';
+      window.history.replaceState(null, '', '/sign-in#authowl_code=stalled-bridge');
+      vi.useFakeTimers();
+      try {
+        const client = createAuthOwlClient(resolveConfig({
+          publishableKey, apiUrl: API_URL,
+          fetch: createAuthOwlNextFetch({ publishableKey, apiUrl: API_URL, fetch: fetcher }),
+        }));
+        await vi.waitFor(() => expect(stalledSignal).toBeDefined());
+        await vi.advanceTimersByTimeAsync(10_000);
+        await expect(client.handoff).resolves.toBe(false);
+        expect(stalledSignal?.aborted).toBe(true);
+        await client.account.listSessions();
+        expect(engine.calls.some((call) => call.url.endsWith('/list-sessions'))).toBe(true);
+        expect((await client.signOut()).error).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each(['non-2xx', 'throw'] as const)('reports a %s projection failure and allows retry', async (failure) => {
+    const projectId = freshProject();
+    const publishableKey = `pk_test_${projectId}_abcdefghijklmnopqrstuvwxyz012345`;
+    const engine = fakeEngine(projectId, true, SECRET_KEY);
+    let fail = true;
+    const fetcher = (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/authowl/session' && fail) {
+        if (failure === 'throw') return Promise.reject(new Error('bridge failed'));
+        return Promise.resolve(Response.json({ error: 'unavailable' }, { status: 503 }));
+      }
+      return engine.fetch(input, init);
+    };
+    document.cookie = 'authowl_handoff_verifier=verifier-value; Path=/';
+    window.history.replaceState(null, '', '/sign-in#authowl_code=failed-bridge');
+    const client = createAuthOwlClient(resolveConfig({
+      publishableKey, apiUrl: API_URL,
+      fetch: createAuthOwlNextFetch({ publishableKey, apiUrl: API_URL, fetch: fetcher }),
+    }));
+    await expect(client.handoff).resolves.toBe(false);
+    fail = false;
+    await signIn(client);
+    expect(engine.appBridgeResults.at(-1)?.status).toBe(204);
+  });
+
+  it('restores remember choices in a fresh tab for the same session', async () => {
+    for (const remember of [true, false]) {
+      const { client, createClient, engine, storageKey } = await signInThroughNext(true);
+      if (!remember) {
+        await client.signIn.email({ email: USER.email, password: 'password', rememberMe: false });
+      }
+      const before = codePosts(engine.appBridgePosts).length;
+      // A new tab has its own sessionStorage and shares localStorage.
+      sessionStorage.clear();
+      const fresh = createClient();
+      await vi.waitFor(() => expect(fresh.sessionStore.getSnapshot().data?.session.id).toBe('session_1'));
+      await vi.waitFor(() => expect(codePosts(engine.appBridgePosts)).toHaveLength(before + 1));
+      expect(codePosts(engine.appBridgePosts).at(-1)?.remember).toBe(remember);
+      await vi.waitFor(() => expect(sessionStorage.getItem(storageKey)).toBe('1'));
+      const cookie = engine.appBridgeResults.at(-1)?.setCookie;
+      if (remember) expect(cookie).toContain('Expires=');
+      else expect(cookie).not.toContain('Expires=');
+    }
+  });
+
+  it('does not restore a stale remember choice for a different session in a fresh client', async () => {
+    const { createClient, engine } = await signInThroughNext(true);
+    // Keep this tab's old projection marker as well as the persistent preference.
+    engine.setSessionId('session_2');
+    const fresh = createClient();
+    await vi.waitFor(() => expect(fresh.sessionStore.getSnapshot().data?.session.id).toBe('session_2'));
+    await vi.waitFor(() => expect(codePosts(engine.appBridgePosts)).toHaveLength(2));
+    expect(codePosts(engine.appBridgePosts).at(-1)?.remember).toBe(false);
+    await vi.waitFor(() => expect(engine.appBridgeResults).toHaveLength(2));
+    expect(engine.appBridgeResults.at(-1)?.setCookie).not.toContain('Expires=');
+  });
+
+  it.each([true, false])('uses the new sign-in remember choice %s instead of a stale preference', async (remember) => {
+    const { client, engine, storageKey } = await signInThroughNext(true);
+    await vi.waitFor(() => expect(client.sessionStore.getSnapshot().data?.session.id).toBe('session_1'));
+    localStorage.setItem(`${storageKey}:session`, JSON.stringify({
+      sessionId: 'session_1', remember: !remember,
+    }));
+    engine.setSessionId('session_2');
+
+    await client.signIn.email({ email: USER.email, password: 'password', rememberMe: remember });
+
+    expect(codePosts(engine.appBridgePosts).at(-1)?.remember).toBe(remember);
+    expect(JSON.parse(localStorage.getItem(`${storageKey}:session`)!)).toEqual({
+      sessionId: 'session_2', remember,
+    });
+  });
+
+  it('does not carry a remember choice to a different session in the same client', async () => {
+    const { client, engine } = await signInThroughNext(true);
+    await vi.waitFor(() => expect(client.sessionStore.getSnapshot().data?.session.id).toBe('session_1'));
+    engine.setSessionId('session_2');
+    client.sessionStore.getSnapshot().refetch();
+
+    await vi.waitFor(() => expect(codePosts(engine.appBridgePosts)).toHaveLength(2));
+    expect(codePosts(engine.appBridgePosts).at(-1)?.remember).toBe(false);
   });
 
   it('posts the bridge code after sender-bound bearer core transport signs in', async () => {

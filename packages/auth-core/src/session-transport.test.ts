@@ -44,6 +44,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveConfig } from './config';
+import { withSessionTransportIntegration } from './session-integration';
 import { createAuthOwlClient } from './client';
 import type { AuthOwlClient } from './client';
 import { createAuthActionClient } from './native-client';
@@ -820,6 +821,7 @@ describe('a Safari session survives, end to end', () => {
     window.history.replaceState(null, '', '/#authowl_code=handoff-code');
 
     const client = clientFor(projectId, engine);
+    await expect(client.handoff).resolves.toBe(true);
     const session = await client.getSession();
 
     const exchange = callTo(engine, '/session/exchange');
@@ -830,6 +832,72 @@ describe('a Safari session survives, end to end', () => {
     expect(exchange && declares(exchange)).toBe(true);
     expect(session.data?.user.id).toBe('user');
   });
+
+  it('keeps handoff redemption and session reads pending until app projection completes', async () => {
+    const projectId = freshProject();
+    const engine = safariEngine(projectId);
+    document.cookie = 'authowl_handoff_verifier=verifier-value; Path=/';
+    window.history.replaceState(null, '', '/#authowl_code=projection-handoff');
+    let release!: () => void;
+    const projection = new Promise<void>((resolve) => { release = resolve; });
+    const sessionEstablished = vi.fn(() => projection);
+    const config = resolveConfig({
+      publishableKey: `pk_test_${projectId}_abcdefghijklmnopqrstuvwxyz012345`,
+      apiUrl: API,
+      fetch: withSessionTransportIntegration(engine.fetch, {
+        connect: vi.fn(), sessionEstablished, sessionEnded: vi.fn(async () => undefined),
+      }),
+    });
+    const client = createAuthOwlClient(config);
+    // StrictMode can create two clients for the same document callback.
+    const second = createAuthOwlClient(config);
+    let redeemed = false;
+    let sessionRead = false;
+    void client.handoff?.then(() => { redeemed = true; });
+    const read = second.getSession().then((result) => { sessionRead = true; return result; });
+    try {
+      await vi.waitFor(() => expect(sessionEstablished).toHaveBeenCalledOnce());
+      expect(redeemed).toBe(false);
+      expect(sessionRead).toBe(false);
+    } finally {
+      release();
+    }
+    await expect(client.handoff).resolves.toBe(true);
+    expect((await read).data?.user.id).toBe('user');
+    expect(sessionEstablished).toHaveBeenCalledOnce();
+  });
+
+  it.each(['failure', 'rejection', 'timeout'] as const)(
+    'settles a handoff after integration %s and releases account requests',
+    async (outcome) => {
+      const projectId = freshProject();
+      const engine = safariEngine(projectId);
+      document.cookie = 'authowl_handoff_verifier=verifier-value; Path=/';
+      window.history.replaceState(null, '', '/#authowl_code=projection-failure');
+      const sessionEstablished = vi.fn(async () => {
+        if (outcome === 'rejection') throw new Error('projection failed');
+        if (outcome === 'timeout') return new Promise<boolean>(() => {});
+        return false;
+      });
+      vi.useFakeTimers();
+      try {
+        const client = createAuthOwlClient(resolveConfig({
+          publishableKey: `pk_test_${projectId}_abcdefghijklmnopqrstuvwxyz012345`,
+          apiUrl: API,
+          fetch: withSessionTransportIntegration(engine.fetch, {
+            connect: vi.fn(), sessionEstablished, sessionEnded: vi.fn(async () => undefined),
+          }),
+        }));
+        await vi.waitFor(() => expect(sessionEstablished).toHaveBeenCalledOnce());
+        await vi.advanceTimersByTimeAsync(10_000);
+        await expect(client.handoff).resolves.toBe(false);
+        await client.account.listSessions();
+        expect(callTo(engine, '/list-sessions')).toBeDefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it('does not let a callback-free client own a later redirect return', async () => {
     const projectId = freshProject();

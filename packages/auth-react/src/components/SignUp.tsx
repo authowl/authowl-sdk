@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { useHandoffCompletion } from './use-handoff-completion';
 import { createIdempotencyKey, readInvitationClaim } from '@authowl/core';
 import { usePublicConfig, useSignUp } from '../hooks';
 import { useLocale, useT, useServerError } from '../i18n';
@@ -18,6 +19,7 @@ import { AuthOwlBranding } from './AuthOwlBranding';
 import { InvitationBanner } from './InvitationBanner';
 import { PublicConfigError } from './PublicConfigError';
 import { PrivacySignUpEvidence } from './PrivacySignUpEvidence';
+import { MfaEnrollmentStep, useConfirmedMfaPending } from './mfa-enrollment-step';
 
 export type SignUpProps = {
   /** Mailbox proof supplied by AcceptApplicationInvitation. */
@@ -65,6 +67,8 @@ export function SignUp({
   const [lastName, setLastName] = React.useState('');
   const [username, setUsername] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  useHandoffCompletion(redirectTo, onSignedUp, () => setError(t('signUp.error.failed')));
+  const mfaEnrollment = useConfirmedMfaPending('clear');
   const [submitting, setSubmitting] = React.useState(false);
   // Legal consent: when the project requires it, the account can't be created
   // until this is ticked. It gates BOTH the password submit and the social
@@ -172,6 +176,16 @@ export function SignUp({
     return <PublicConfigError showBadge={showBadge} showBranding={showBranding} />;
   }
 
+  if (mfaEnrollment !== 'clear') {
+    return (
+      <div className="ba-form" data-testid="signup-mfa-enrolment" aria-busy={mfaEnrollment === 'confirming'}>
+        {showBranding ? <AuthOwlBranding /> : null}
+        {mfaEnrollment === 'pending' ? <MfaEnrollmentStep /> : <div className="ba-skeleton" />}
+        <AuthOwlBadge force={showBadge} />
+      </div>
+    );
+  }
+
   if (config?.signUp?.mode === 'waitlist') {
     return <Waitlist onJoined={onWaitlisted} showBadge={showBadge} showBranding={showBranding} />;
   }
@@ -236,7 +250,7 @@ export function SignUp({
       {showBranding ? <AuthOwlBranding /> : null}
       <h2 className="ba-title">{t('signUp.title')}</h2>
       <InvitationBanner />
-      <SocialButtons providers={social} callbackURL={redirectTo} />
+      <SocialButtons providers={social} />
       {showPassword && social.length > 0 && (
         <div className="ba-divider">{t('common.orDivider')}</div>
       )}

@@ -2,6 +2,7 @@
 
 import {
   resolveAuthTarget,
+  withSessionRequestDeadline,
   withSessionTransportIntegration,
   type SessionLifecycleEvent,
   type SessionTransportConnection,
@@ -11,6 +12,33 @@ import {
   APP_SESSION_BRIDGE_CODE_MAX_LENGTH,
   APP_SESSION_BRIDGE_HEADER,
 } from './bridge-contract';
+import { isRecord } from './is-record';
+
+function safeStorage(kind: 'sessionStorage' | 'localStorage') {
+  return {
+    get(key: string): string | null {
+      try {
+        return globalThis[kind]?.getItem(key) ?? null;
+      } catch {
+        return null;
+      }
+    },
+    set(key: string, value: string): void {
+      try {
+        globalThis[kind]?.setItem(key, value);
+      } catch {
+        // Storage failure must not interrupt authentication.
+      }
+    },
+    remove(key: string): void {
+      try {
+        globalThis[kind]?.removeItem(key);
+      } catch {
+        // Storage failure must not interrupt authentication.
+      }
+    },
+  };
+}
 
 export class AuthOwlNextSessionBridgeError extends Error {
   readonly status?: number;
@@ -82,67 +110,82 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
   let synchronization = Promise.resolve();
   let memoryEnsured = false;
   let currentSessionId: string | null = null;
-  // Safe default for a session discovered after reload. A session cookie may
-  // end earlier than requested, while persisting one beyond the user's intent
-  // would be a security and privacy regression.
+  // Restore persistence only for the exact session that originally requested it.
   let remember = false;
+  let pendingRemember: boolean | undefined;
+  const preferenceKey = `${storageKey}:session`;
+  const projectionStorage = safeStorage('sessionStorage');
+  const preferenceStorage = safeStorage('localStorage');
   let bridgeUnavailable = false;
   let sessionEnding: Promise<void> | null = null;
 
-  const storedEnsured = (): boolean => {
-    try {
-      return globalThis.sessionStorage?.getItem(storageKey) === '1';
-    } catch {
-      return false;
-    }
-  };
-
-  const hasEnsuredProjection = (): boolean => memoryEnsured || storedEnsured();
+  const hasEnsuredProjection = (): boolean =>
+    memoryEnsured || projectionStorage.get(storageKey) === '1';
 
   const markEnsured = (): void => {
     memoryEnsured = true;
-    try {
-      globalThis.sessionStorage?.setItem(storageKey, '1');
-    } catch {
-      // Memory still deduplicates within this wrapper when storage is disabled.
-    }
+    projectionStorage.set(storageKey, '1');
   };
 
   const resetEnsured = (): void => {
     memoryEnsured = false;
+    projectionStorage.remove(storageKey);
+  };
+
+  const storedPreference = (): { sessionId: string; remember: boolean } | null => {
     try {
-      globalThis.sessionStorage?.removeItem(storageKey);
+      const value: unknown = JSON.parse(preferenceStorage.get(preferenceKey) ?? 'null');
+      return isRecord(value) && typeof value.sessionId === 'string' && typeof value.remember === 'boolean'
+        ? { sessionId: value.sessionId, remember: value.remember } : null;
     } catch {
-      // A denied storage write must not interfere with the auth request.
+      return null;
     }
   };
 
-  const serialize = (work: () => Promise<void>): Promise<void> => {
-    synchronization = synchronization
-      .catch(() => undefined)
-      .then(work)
-      // Bridge projection is recovery machinery. Its failures must never turn
-      // a successful AuthOwl request into a rejected action at the caller.
-      .catch(() => undefined);
-    return synchronization;
+  const savePreference = (): void => {
+    if (!currentSessionId) return;
+    preferenceStorage.set(preferenceKey, JSON.stringify({
+      sessionId: currentSessionId, remember,
+    }));
   };
 
-  const postToBridge = (body: { token: null } | { code: string; remember: boolean }) =>
-    baseFetch(bridgePath, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        [APP_SESSION_BRIDGE_HEADER]: '1',
-      },
-      credentials: 'same-origin',
-      cache: 'no-store',
-      redirect: 'error',
-      body: JSON.stringify(body),
-    });
+  const selectSession = (sessionId: string): void => {
+    if (currentSessionId === sessionId) return;
+    const stored = storedPreference();
+    if (currentSessionId !== null || (stored && stored.sessionId !== sessionId)) {
+      resetEnsured();
+    }
+    remember = pendingRemember ?? (stored?.sessionId === sessionId && stored.remember);
+    currentSessionId = sessionId;
+    pendingRemember = undefined;
+  };
 
-  const clear = (): Promise<void> => serialize(async () => {
-    await postToBridge({ token: null });
+  const serialize = <T,>(work: () => Promise<T>, failure: T): Promise<T> => {
+    const task = synchronization.then(work).catch(() => failure);
+    synchronization = task.then(() => undefined);
+    return task;
+  };
+
+  const postToBridge = (
+    body: { token: null } | { code: string; remember: boolean },
+    signal: AbortSignal,
+  ) => baseFetch(bridgePath, {
+    signal,
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      [APP_SESSION_BRIDGE_HEADER]: '1',
+    },
+    credentials: 'same-origin',
+    cache: 'no-store',
+    redirect: 'error',
+    body: JSON.stringify(body),
   });
+
+  const clear = (): Promise<void> => serialize(() =>
+    withSessionRequestDeadline(async (signal) => {
+      await postToBridge({ token: null }, signal);
+    }), undefined);
 
   const beginClear = (): Promise<void> => {
     if (sessionEnding) return sessionEnding;
@@ -153,57 +196,84 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
     return task;
   };
 
-  const ensure = (remembered: boolean): Promise<void> =>
-    serialize(async () => {
+  const ensure = (): Promise<boolean> =>
+    serialize(() => withSessionRequestDeadline(async (signal) => {
       // Re-check inside the serialized section: initial hydration and a
       // mutation refresh can announce the same session concurrently.
-      if (bridgeUnavailable || hasEnsuredProjection()) return;
+      if (hasEnsuredProjection()) return true;
+      if (bridgeUnavailable) return false;
       const authenticatedFetch = connection?.authenticatedFetch;
-      if (!authenticatedFetch) return;
+      if (!authenticatedFetch) return false;
 
+      // Any session-establishing action can run before the store knows its id.
+      // Read it directly through the connected transport to avoid awaiting the store's handoff gate.
+      if (currentSessionId === null) {
+        const sessionResponse = await authenticatedFetch(`${target.projectBaseURL}/get-session`, {
+          signal,
+          headers: { 'x-publishable-key': target.publishableKey },
+          credentials: 'include', cache: 'no-store', redirect: 'error',
+        });
+        if (!sessionResponse.ok) return false;
+        const data = await sessionResponse.json() as { session?: { id?: unknown } } | null;
+        signal.throwIfAborted();
+        if (typeof data?.session?.id !== 'string') return false;
+        selectSession(data.session.id);
+      }
+      const remembered = remember;
       const minted = await authenticatedFetch(mintUrl, {
+        signal,
         method: 'POST',
         headers: { 'x-publishable-key': target.publishableKey },
         credentials: 'include',
         cache: 'no-store',
         redirect: 'error',
       });
+      signal.throwIfAborted();
       if (minted.status === 404) {
         // Server-first rollout compatibility. Do not hammer an older engine on
         // every session-store notification in this page.
         bridgeUnavailable = true;
-        return;
+        return false;
       }
-      if (!minted.ok) return;
+      if (!minted.ok) return false;
 
       const payload = await minted.json() as { code?: unknown };
+      signal.throwIfAborted();
       if (
         typeof payload.code !== 'string'
         || payload.code.length > APP_SESSION_BRIDGE_CODE_MAX_LENGTH
       ) {
-        return;
+        return false;
       }
 
-      const bridged = await postToBridge({ code: payload.code, remember: remembered });
+      const bridged = await postToBridge({ code: payload.code, remember: remembered }, signal);
+      signal.throwIfAborted();
       if (bridged.ok) {
         markEnsured();
-        return;
+        savePreference();
+        return true;
       }
       // A rejected deployment credential cannot repair itself within this page.
       // Auth-service outages remain retryable because they are transient.
-      if (await bridgeError(bridged) === 'bridge_misconfigured') {
+      const error = await bridgeError(bridged);
+      signal.throwIfAborted();
+      if (error === 'bridge_misconfigured') {
         bridgeUnavailable = true;
       }
-    });
+      return false;
+    }), false);
 
   const onLifecycle = (event: SessionLifecycleEvent): void => {
     if (event.type === 'beginSession') {
-      remember = event.remember;
+      pendingRemember = event.remember;
       currentSessionId = null;
       resetEnsured();
       return;
     }
     currentSessionId = null;
+    pendingRemember = undefined;
+    remember = false;
+    preferenceStorage.remove(preferenceKey);
     resetEnsured();
     void beginClear();
   };
@@ -217,19 +287,18 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
     if (!sessionId) {
       const projected = currentSessionId !== null || hasEnsuredProjection();
       currentSessionId = null;
+      if (pendingRemember === undefined) {
+        remember = false;
+        preferenceStorage.remove(preferenceKey);
+      }
       if (projected) {
         resetEnsured();
         void clear();
       }
       return;
     }
-    if (currentSessionId !== null && currentSessionId !== sessionId) {
-      resetEnsured();
-    }
-    if (currentSessionId !== sessionId) {
-      currentSessionId = sessionId;
-    }
-    void ensure(remember);
+    selectSession(sessionId);
+    void ensure();
   };
 
   const integration: SessionTransportIntegration = {
@@ -242,7 +311,7 @@ export function createAuthOwlNextFetch(options: AuthOwlNextFetchOptions): typeof
       synchronizeSession();
     },
     sessionEstablished() {
-      return ensure(remember);
+      return ensure();
     },
     sessionEnded() {
       return beginClear();

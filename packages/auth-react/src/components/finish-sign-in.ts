@@ -62,16 +62,33 @@ function waitForUsableSession(store: SessionStore): Promise<SessionOutcome> {
  *
  * So a held session returns WITHOUT notifying or redirecting, leaving the
  * calling surface mounted to finish enrolment. Every other outcome - usable, or
- * the settle timeout - keeps the previous behaviour exactly.
+ * the settle timeout - keeps the previous behaviour exactly. Callback handoffs
+ * can instead wait through enrollment so completion survives the form unmount.
  */
 export async function finishSignIn(opts: {
   sessionStore: SessionStore;
   redirectTo?: string;
   onSignedIn?: () => void;
+  /** Keep callback completion alive while the form handles required enrollment. */
+  waitForMfaEnrollment?: boolean;
+  onCompleted?: () => void;
 }): Promise<void> {
-  if ((await waitForUsableSession(opts.sessionStore)) === 'held') return;
+  if ((await waitForUsableSession(opts.sessionStore)) === 'held') {
+    if (!opts.waitForMfaEnrollment) return;
+    await new Promise<void>((resolve) => {
+      const check = () => {
+        if (!hasUsableSession(opts.sessionStore)) return;
+        unsubscribe();
+        resolve();
+      };
+      const unsubscribe = opts.sessionStore.subscribe(check);
+      check();
+    });
+  }
   opts.onSignedIn?.();
-  if (safeRedirect(opts.redirectTo)) {
+  const navigated = safeRedirect(opts.redirectTo);
+  if (opts.onSignedIn || navigated) opts.onCompleted?.();
+  if (navigated) {
     // Navigation owns the terminal state. Keep the submit promise unresolved so
     // its loading state cannot flash idle before the browser unloads the page.
     await new Promise<void>(() => {});

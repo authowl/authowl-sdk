@@ -17,8 +17,8 @@ export type SessionTransportConnection = Readonly<{
 
 export type SessionTransportIntegration = Readonly<{
   connect(connection: SessionTransportConnection): void;
-  /** Project a newly established AuthOwl session before its action resolves. */
-  sessionEstablished(): Promise<void>;
+  /** Project before the action resolves. False reports failure; void remains success. */
+  sessionEstablished(): Promise<boolean | void>;
   /** Remove the framework-owned projection before sign-out resolves. */
   sessionEnded(): Promise<void>;
 }>;

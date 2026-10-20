@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { useHandoffCompletion } from './use-handoff-completion';
 import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
 import { useT } from '../i18n';
 import { resolveSignInMethods, emailAutocomplete } from '../signin-methods';
@@ -62,6 +63,7 @@ export function SignIn({
   } = useSignIn();
   const { config, isLoading, isError } = usePublicConfig();
   const { pending, error, setError, run } = useSubmitAction();
+  useHandoffCompletion(redirectTo, onSignedIn, () => setError(t('signIn.error.failed')));
   const authChallenge = useAuthChallenge();
   const [email, setEmail] = React.useState('');
   const [username, setUsername] = React.useState('');
@@ -299,13 +301,13 @@ export function SignIn({
     );
   // SSO is a redirect out to the tenant's IdP (like a social button): no
   // Turnstile, no session mint here. `callbackURL` is REQUIRED by the server,
-  // so default to the current page when no `redirectTo` is given (mirrors
+  // so return to the current page to redeem before the final redirect (mirrors
   // SocialButtons). A bare 404 means "no SSO connection for this domain" - map
   // it client-side (Decision 1); other failures use the standard code mapping.
   const doSso = () =>
     start('sso', () =>
       void run(
-        () => signInSso({ email, callbackURL: redirectTo ?? window.location.href }),
+        () => signInSso({ email, callbackURL: window.location.href }),
         {
           failure: t('sso.error.startFailed'),
           mapError: (error) => (error.status === 404 ? t('sso.error.notFound') : null),
@@ -340,7 +342,7 @@ export function SignIn({
       {branding}
       <h2 className="ba-title">{t('signIn.title')}</h2>
       <InvitationBanner />
-      <SocialButtons providers={plan.social} callbackURL={redirectTo} />
+      <SocialButtons providers={plan.social} />
       {showDivider && <div className="ba-divider">{t('common.orDivider')}</div>}
       {hasCredentialForm && (
         <form

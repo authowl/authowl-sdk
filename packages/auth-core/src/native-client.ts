@@ -37,6 +37,7 @@ import {
 import { createSessionController } from './session-store';
 import type { SessionBinding } from './session-transport';
 import { isBrowserRuntime } from './browser-runtime';
+import { AUTH_REQUEST_TIMEOUT_MS } from './session-request';
 
 /**
  * Hold every request until the handoff exchange settles.
@@ -87,7 +88,20 @@ function redeemHandoffOnce(
     if (!code) return undefined;
     handoff = import('./session-handoff').then(
       (module) => module.completeCrossSiteSignIn(http, binding, code),
-    );
+    ).then(async (redeemed) => {
+      if (!redeemed || !binding.integration) return redeemed;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([
+          binding.integration.sessionEstablished().then((result) => result !== false),
+          new Promise<boolean>((resolve) => {
+            timer = setTimeout(() => resolve(false), AUTH_REQUEST_TIMEOUT_MS);
+          }),
+        ]);
+      } finally {
+        clearTimeout(timer);
+      }
+    }).catch(() => false);
     documentHandoffs.set(projectId, handoff);
   }
   return handoff;
@@ -293,6 +307,7 @@ export function createAuthActionClient(
 
   return {
     sessionStore: session.store,
+    handoff,
     getSession: session.getSession,
     account: createAccountClient(http, notifyMutation),
     applicationInvitations: createApplicationInvitationClient(http),

@@ -80,6 +80,18 @@ describe('createAuthOwlSessionBridge', () => {
       isRedeem(input) ? redeemedResponse() : sessionResponse());
   });
 
+  it('rejects array, string and null JSON bodies with the invalid-request shape', async () => {
+    const handler = createAuthOwlSessionBridge({
+      publishableKey: PUBLISHABLE_KEY, secretKey: SECRET_KEY, apiUrl: API_URL, fetch: remoteFetch,
+    });
+    for (const body of [[], 'invalid', null]) {
+      const result = await handler(request(body));
+      expect(result.status).toBe(400);
+      await expect(result.json()).resolves.toEqual({ error: 'invalid_request' });
+    }
+    expect(remoteFetch).not.toHaveBeenCalled();
+  });
+
   it('redeems and validates a code before setting a host-only HttpOnly cookie', async () => {
     const handler = createAuthOwlSessionBridge({
       publishableKey: PUBLISHABLE_KEY,

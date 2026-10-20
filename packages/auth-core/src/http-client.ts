@@ -20,7 +20,7 @@ export const AUTH_CHALLENGE_HEADER = 'x-authowl-turnstile-token';
  * falls back to the project default for anything it has no catalogue for.
  */
 export const AUTH_LOCALE_HEADER = 'x-authowl-locale';
-const AUTH_REQUEST_TIMEOUT_MS = 10_000;
+import { AUTH_REQUEST_TIMEOUT_MS } from './session-request';
 const MAX_RESPONSE_DEPTH = 32;
 const MAX_RESPONSE_NODES = 20_000;
 

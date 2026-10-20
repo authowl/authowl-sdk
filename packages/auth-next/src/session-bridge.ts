@@ -12,6 +12,7 @@ import {
   type ConfiguredBridgeConfig,
   type ServerAuthConfig,
 } from './server-config';
+import { isRecord } from './is-record';
 const MAX_BODY_BYTES = 16_384;
 const AUTH_FETCH_TIMEOUT_MS = 10_000;
 
@@ -230,7 +231,11 @@ export function createAuthOwlSessionBridge(input?: AuthOwlSessionBridgeOptions) 
 
     let body: { code?: unknown; token?: unknown; remember?: unknown };
     try {
-      body = JSON.parse(raw) as { code?: unknown; token?: unknown; remember?: unknown };
+      const parsed: unknown = JSON.parse(raw);
+      if (!isRecord(parsed)) {
+        return response(400, { error: 'invalid_request' });
+      }
+      body = parsed;
     } catch {
       return response(400, { error: 'invalid_request' });
     }
