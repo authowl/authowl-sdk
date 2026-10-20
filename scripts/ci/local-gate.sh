@@ -141,7 +141,7 @@ mkdir -p \
   "$npm_vite_consumer_input" \
   "$npm_cache" \
   "$consumer_workspace/tgz" \
-  "$consumer_workspace/scripts/ci"
+  "$consumer_workspace/scripts/ci/fixtures"
 touch "$step_file" "$completed_file"
 ci_image_id=''
 dependency_store_volume=''
@@ -567,7 +567,11 @@ prepare_consumer_workspace() {
     "$immutable_repository/scripts/ci/admin-server-install-check.sh" \
     "$immutable_repository/scripts/ci/convex-install-check.sh" \
     "$immutable_repository/scripts/ci/packed-runtime-install-check.sh" \
+    "$immutable_repository/scripts/ci/tokens-install-check.sh" \
     "$consumer_workspace/scripts/ci/"
+  cp \
+    "$immutable_repository/scripts/ci/fixtures/shadcn-globals.css" \
+    "$consumer_workspace/scripts/ci/fixtures/"
   docker run --rm \
     --init \
     --network none \
@@ -599,6 +603,8 @@ prepare_consumer_workspace() {
       (cd packages/auth-react-native &&
         pnpm pack --pack-destination /consumer/tgz >/dev/null)
       (cd packages/auth-expo &&
+        pnpm pack --pack-destination /consumer/tgz >/dev/null)
+      (cd packages/tokens &&
         pnpm pack --pack-destination /consumer/tgz >/dev/null)
     '
 }
@@ -757,6 +763,8 @@ run_step typecheck docker_sdk_offline pnpm run typecheck
 run_step tests docker_sdk_offline pnpm run test
 run_step storybook-build docker_sdk_offline pnpm run build:storybook
 run_step storybook-browser docker_sdk_offline pnpm run test:storybook
+run_step tokens-browser docker_sdk_offline \
+  pnpm --filter @authowl/tokens run test:browser
 run_step next-generator docker_sdk_offline --consumer-exec-tmp \
   pnpm run cli:verify-next
 run_step vite-generator docker_sdk_offline --consumer-exec-tmp \
@@ -776,6 +784,8 @@ run_step packed-convex docker_consumer_network \
   bash scripts/ci/convex-install-check.sh
 run_step packed-runtime docker_consumer_network \
   bash scripts/ci/packed-runtime-install-check.sh
+run_step packed-tokens docker_consumer_network \
+  bash scripts/ci/tokens-install-check.sh
 run_step source-snapshot-after-checks snapshot_source "$source_after_checks"
 run_step source-integrity-after-checks cmp "$source_before" "$source_after_checks"
 

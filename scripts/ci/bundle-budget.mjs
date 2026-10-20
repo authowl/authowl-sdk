@@ -254,6 +254,13 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // 79.53kb because shared authentication code still loads and separate chunks lose
 // compression; the extra loading boundaries were rejected. These ceilings keep
 // about 0.7kb of explicit headroom, with the same measurement and enforcement.
+// @authowl/tokens (2026-10-19) gets its own row at 4.25kb. The whole entry
+// measures 3.67kb: the colour maths, the contrast matrix, the CSS generators and
+// the token data. A consumer that imports only `cssVar` still carries the token
+// data (about 1.3kb), because bundlers keep the function calls that build it.
+// Deriving each tint and shadow from its base colour was chosen over plain
+// literals, so a colour change can never split from its tint; this row caps
+// that cost instead of leaving it unmeasured. CSS-only consumers ship no JS.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
@@ -264,6 +271,11 @@ const BUDGETS = [
     entry: 'packages/auth-core/dist/index.js',
     maxGzipKb: 26,
     label: '@authowl/core (framework-neutral fetch/state client)',
+  },
+  {
+    entry: 'packages/tokens/dist/index.js',
+    maxGzipKb: 4.25,
+    label: '@authowl/tokens (token data, colour maths, CSS generators)',
   },
 ];
 

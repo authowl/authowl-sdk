@@ -1,6 +1,6 @@
 // Release inventory for every AuthOwl SDK, in one place.
 //
-// This repository ships seven npm packages plus five non-JavaScript SDKs, and
+// This repository ships eight npm packages plus five non-JavaScript SDKs, and
 // every ecosystem publishes somewhere different. `.github/workflows/deploy.yml`
 // reads this file so the workflow never parses `pyproject.toml`, `Cargo.toml`,
 // or `pubspec.yaml` with shell tools, and so "which version are we releasing,

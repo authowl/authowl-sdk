@@ -1,0 +1,64 @@
+{
+  "name": "@authowl/tokens",
+  "version": "0.0.0",
+  "description": "Design tokens shared by AuthOwl, Billow and Hitsend: semantic OKLCH colors for light and dark, type, space, radius, elevation and motion, as CSS variables, a Tailwind 4 theme and a typed export.",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/authowl/authowl-sdk.git",
+    "directory": "packages/tokens"
+  },
+  "homepage": "https://authowl.dev",
+  "keywords": [
+    "authowl",
+    "design-tokens",
+    "oklch",
+    "tailwind",
+    "shadcn"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./tokens.css": "./dist/tokens.css",
+    "./theme.css": "./dist/theme.css",
+    "./shadcn.css": "./dist/shadcn.css",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean && node scripts/build-css.mjs && node ../../scripts/gen-notices.mjs src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs",
+    "test:browser": "vitest run --config vitest.browser.config.ts"
+  },
+  "devDependencies": {
+    "@vitest/browser-playwright": "4.1.10",
+    "playwright": "1.62.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
+  }
+}
