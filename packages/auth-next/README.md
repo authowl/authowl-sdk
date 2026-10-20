@@ -133,7 +133,7 @@ honor project branding or an explicit `appearance.primaryColor` override.
 
 **Optional UX middleware** (`@authowl/next/middleware`,
 `createAuthRedirectMiddleware`) redirects unauthenticated users by cookie
-presence , it is a UX helper, **not** an authorization boundary. Always authorize
+presence. It is a UX helper, **not** an authorization boundary. Always authorize
 on the server with `auth()`, which re-validates against the auth service.
 
 For bearer-token route handlers, `@authowl/next/server` also re-exports

@@ -821,6 +821,7 @@ describe('a Safari session survives, end to end', () => {
     window.history.replaceState(null, '', '/#authowl_code=handoff-code');
 
     const client = clientFor(projectId, engine);
+    await expect(client.handoff).resolves.toBe(true);
     const session = await client.getSession();
 
     const exchange = callTo(engine, '/session/exchange');
@@ -865,6 +866,38 @@ describe('a Safari session survives, end to end', () => {
     expect((await read).data?.user.id).toBe('user');
     expect(sessionEstablished).toHaveBeenCalledOnce();
   });
+
+  it.each(['failure', 'rejection', 'timeout'] as const)(
+    'settles a handoff after integration %s and releases account requests',
+    async (outcome) => {
+      const projectId = freshProject();
+      const engine = safariEngine(projectId);
+      document.cookie = 'authowl_handoff_verifier=verifier-value; Path=/';
+      window.history.replaceState(null, '', '/#authowl_code=projection-failure');
+      const sessionEstablished = vi.fn(async () => {
+        if (outcome === 'rejection') throw new Error('projection failed');
+        if (outcome === 'timeout') return new Promise<boolean>(() => {});
+        return false;
+      });
+      vi.useFakeTimers();
+      try {
+        const client = createAuthOwlClient(resolveConfig({
+          publishableKey: `pk_test_${projectId}_abcdefghijklmnopqrstuvwxyz012345`,
+          apiUrl: API,
+          fetch: withSessionTransportIntegration(engine.fetch, {
+            connect: vi.fn(), sessionEstablished, sessionEnded: vi.fn(async () => undefined),
+          }),
+        }));
+        await vi.waitFor(() => expect(sessionEstablished).toHaveBeenCalledOnce());
+        await vi.advanceTimersByTimeAsync(10_000);
+        await expect(client.handoff).resolves.toBe(false);
+        await client.account.listSessions();
+        expect(callTo(engine, '/list-sessions')).toBeDefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it('does not let a callback-free client own a later redirect return', async () => {
     const projectId = freshProject();

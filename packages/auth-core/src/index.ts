@@ -237,3 +237,5 @@ export { activeLocale, setActiveLocale } from './active-locale';
 export { AUTH_LOCALE_HEADER } from './http-client';
 
 export { captureApplicationInvitationProof, clearApplicationInvitationProof, type ApplicationInvitationDetails } from './application-invitations';
+
+export { withSessionRequestDeadline } from './session-request';

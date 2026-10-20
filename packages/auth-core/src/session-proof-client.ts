@@ -1,3 +1,4 @@
+import { boundedSessionFetch } from './session-request';
 import type { SessionStart, SessionTokenStore } from './session-token';
 
 const PROOF_TYP = 'pop+jwt';
@@ -35,29 +36,6 @@ type StoredProofKey = {
 
 const memoryKeys = new Map<string, Promise<SessionProofKey>>();
 
-export async function boundedSessionFetch(
-  fetcher: typeof fetch,
-  input: RequestInfo | URL,
-  init: RequestInit,
-  timeoutMs: number,
-): Promise<Response> {
-  const controller = new AbortController();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<Response>((_resolve, reject) => {
-    timer = setTimeout(() => {
-      controller.abort();
-      reject(new Error('AuthOwl session transport request timed out.'));
-    }, timeoutMs);
-  });
-  try {
-    return await Promise.race([
-      fetcher(input, { ...init, signal: controller.signal }),
-      timeout,
-    ]);
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 export async function cookieCapability(
   fetcher: typeof fetch,

@@ -51,7 +51,6 @@ export function SignIn({
   showBadge,
   showBranding = true,
 }: SignInProps = {}) {
-  useHandoffCompletion(redirectTo, onSignedIn);
   const t = useT();
   const { sessionStore } = useAuthClient();
   const {
@@ -64,6 +63,7 @@ export function SignIn({
   } = useSignIn();
   const { config, isLoading, isError } = usePublicConfig();
   const { pending, error, setError, run } = useSubmitAction();
+  useHandoffCompletion(redirectTo, onSignedIn, () => setError(t('signIn.error.failed')));
   const authChallenge = useAuthChallenge();
   const [email, setEmail] = React.useState('');
   const [username, setUsername] = React.useState('');

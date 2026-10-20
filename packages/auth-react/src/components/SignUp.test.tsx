@@ -4,11 +4,22 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  pendingMfaEnrollment: false,
+  needsMfaEnrollment: false,
+  sessionListeners: new Set<() => void>(),
+  refetch: vi.fn(() => {
+    mocks.pendingMfaEnrollment = false;
+    mocks.needsMfaEnrollment = false;
+    for (const listener of mocks.sessionListeners) listener();
+  }),
   client: {
     handoff: undefined as Promise<boolean> | undefined,
     sessionStore: {
-      subscribe: () => () => {},
-      getSnapshot: () => ({ data: { user: { id: 'user_1' }, session: { id: 'session_1' } } }),
+      subscribe: (listener: () => void) => {
+        mocks.sessionListeners.add(listener);
+        return () => { mocks.sessionListeners.delete(listener); };
+      },
+      getSnapshot: () => ({ data: { user: { id: 'user_1' }, session: { id: 'session_1', pendingMfaEnrollment: mocks.pendingMfaEnrollment } } }),
     },
   },
   config: {
@@ -64,7 +75,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../hooks', () => ({
-  useAuthClient: () => mocks.client,
+  useAuthClient: () => ({
+    ...mocks.client,
+    getSession: async () => ({ data: { session: { pendingMfaEnrollment: mocks.pendingMfaEnrollment } }, error: null }),
+  }),
+  useSession: () => ({ refetch: mocks.refetch }),
+  useUser: () => ({ needsMfaEnrollment: mocks.needsMfaEnrollment }),
   usePublicConfig: () => ({
     config: mocks.config,
     isLoading: false,
@@ -94,12 +110,19 @@ vi.mock('../i18n', () => ({
   useT: () => (key: string) => key,
 }));
 
+vi.mock('./MFAEnrollment', () => ({
+  MFAEnrollment: ({ onEnrolled }: { onEnrolled: () => void }) => <button data-testid="mfa-enrollment" onClick={onEnrolled}>Enroll</button>,
+}));
+
 import { SignUp } from './SignUp';
 
 describe('SignUp passwordless passkey flow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.client.handoff = undefined;
+    mocks.pendingMfaEnrollment = false;
+    mocks.needsMfaEnrollment = false;
+    mocks.sessionListeners.clear();
     mocks.configError = false;
     mocks.signUp.mockResolvedValue({
       data: { sessionCreated: true },
@@ -153,6 +176,42 @@ describe('SignUp passwordless passkey flow', () => {
       expect(assign).toHaveBeenCalledOnce();
     } finally {
       mocks.client.handoff = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps the form usable with an error when handoff projection fails', async () => {
+    mocks.config.enabledMethods = ['password'];
+    mocks.client.handoff = Promise.resolve(false);
+    const completed = vi.fn();
+    render(<SignUp redirectTo="/dashboard" onSignedUp={completed} />);
+    await waitFor(() => expect(screen.getByText('signUp.error.failed')).toBeTruthy());
+    expect(screen.getByLabelText('common.passwordLabel')).toBeTruthy();
+    expect(completed).not.toHaveBeenCalled();
+  });
+
+  it('finishes a redeemed handoff after required MFA enrollment, once', async () => {
+    mocks.pendingMfaEnrollment = true;
+    mocks.needsMfaEnrollment = true;
+    mocks.client.handoff = Promise.resolve(true);
+    const assign = vi.fn();
+    const originalWindow = window;
+    vi.stubGlobal('window', { ...originalWindow, document: originalWindow.document, location: { ...originalWindow.location, assign } });
+    const completed = vi.fn();
+    try {
+      const view = render(<React.StrictMode><SignUp redirectTo="/dashboard" onSignedUp={completed} /></React.StrictMode>);
+      await waitFor(() => expect(screen.getByTestId('mfa-enrollment')).toBeTruthy());
+      expect(assign).not.toHaveBeenCalled();
+      expect(completed).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByTestId('mfa-enrollment'));
+      view.unmount();
+      await waitFor(() => expect(assign).toHaveBeenCalledWith('/dashboard'));
+      expect(completed).toHaveBeenCalledOnce();
+      render(<SignUp redirectTo="/dashboard" onSignedUp={completed} />);
+      await Promise.resolve();
+      expect(completed).toHaveBeenCalledOnce();
+      expect(assign).toHaveBeenCalledOnce();
+    } finally {
       vi.unstubAllGlobals();
     }
   });

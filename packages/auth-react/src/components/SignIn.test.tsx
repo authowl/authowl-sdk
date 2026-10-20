@@ -4,11 +4,22 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  pendingMfaEnrollment: false,
+  needsMfaEnrollment: false,
+  sessionListeners: new Set<() => void>(),
+  refetch: vi.fn(() => {
+    mocks.pendingMfaEnrollment = false;
+    mocks.needsMfaEnrollment = false;
+    for (const listener of mocks.sessionListeners) listener();
+  }),
   client: {
     handoff: undefined as Promise<boolean> | undefined,
     sessionStore: {
-      subscribe: () => () => {},
-      getSnapshot: () => ({ data: { user: { id: 'user_1' }, session: { id: 'session_1' } } }),
+      subscribe: (listener: () => void) => {
+        mocks.sessionListeners.add(listener);
+        return () => { mocks.sessionListeners.delete(listener); };
+      },
+      getSnapshot: () => ({ data: { user: { id: 'user_1' }, session: { id: 'session_1', pendingMfaEnrollment: mocks.pendingMfaEnrollment } } }),
     },
   },
   config: {
@@ -38,7 +49,6 @@ const mocks = vi.hoisted(() => ({
   serverError: vi.fn((_error: unknown, fallback: string) => fallback),
   configError: false,
   retryPublicConfig: vi.fn(),
-  needsMfaEnrollment: false,
   // What the uncached confirmation read returns. `pendingMfaEnrollment: true`
   // is the genuine required-MFA hold; false is the stale-cookie case.
   getSession: vi.fn(
@@ -54,7 +64,7 @@ vi.mock('../hooks', () => ({
     ...mocks.client,
     getSession: mocks.getSession,
   }),
-  useSession: () => ({ refetch: vi.fn() }),
+  useSession: () => ({ refetch: mocks.refetch }),
   useUser: () => ({ needsMfaEnrollment: mocks.needsMfaEnrollment }),
   usePublicConfig: () => ({
     config: mocks.config,
@@ -88,7 +98,7 @@ vi.mock('./passkey-autofill', () => ({ usePasskeyAutofill: () => undefined }));
 vi.mock('./finish-sign-in', () => ({ finishSignIn: vi.fn() }));
 vi.mock('./AuthOwlBadge', () => ({ AuthOwlBadge: () => null }));
 vi.mock('./MFAEnrollment', () => ({
-  MFAEnrollment: () => <div data-testid="mfa-enrollment" />,
+  MFAEnrollment: ({ onEnrolled }: { onEnrolled: () => void }) => <button data-testid="mfa-enrollment" onClick={onEnrolled}>Enroll</button>,
 }));
 
 import { SignIn } from './SignIn';
@@ -98,6 +108,9 @@ describe('SignIn under required MFA', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.client.handoff = undefined;
+    mocks.pendingMfaEnrollment = false;
+    mocks.needsMfaEnrollment = false;
+    mocks.sessionListeners.clear();
     mocks.configError = false;
     mocks.needsMfaEnrollment = false;
     mocks.getSession.mockResolvedValue({
@@ -181,6 +194,43 @@ describe('SignIn under required MFA', () => {
       expect(assign).toHaveBeenCalledOnce();
     } finally {
       mocks.client.handoff = undefined;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps the form usable with an error when handoff projection fails', async () => {
+    mocks.client.handoff = Promise.resolve(false);
+    const completed = vi.fn();
+    render(<SignIn redirectTo="/dashboard" onSignedIn={completed} />);
+    await waitFor(() => expect(screen.getByText('signIn.error.failed')).toBeTruthy());
+    expect(screen.getByLabelText('common.passwordLabel')).toBeTruthy();
+    expect(completed).not.toHaveBeenCalled();
+  });
+
+  it('finishes a redeemed handoff after required MFA enrollment, once', async () => {
+    mocks.pendingMfaEnrollment = true;
+    mocks.needsMfaEnrollment = true;
+    mocks.client.handoff = Promise.resolve(true);
+    const assign = vi.fn();
+    const originalWindow = window;
+    vi.stubGlobal('window', { ...originalWindow, document: originalWindow.document, location: { ...originalWindow.location, assign } });
+    const completed = vi.fn();
+    try {
+      const actual = await vi.importActual<{ finishSignIn: typeof finishSignIn }>('./finish-sign-in');
+      vi.mocked(finishSignIn).mockImplementation(actual.finishSignIn);
+      const view = render(<React.StrictMode><SignIn redirectTo="/dashboard" onSignedIn={completed} /></React.StrictMode>);
+      await waitFor(() => expect(screen.getByTestId('mfa-enrollment')).toBeTruthy());
+      expect(assign).not.toHaveBeenCalled();
+      expect(completed).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByTestId('mfa-enrollment'));
+      view.unmount();
+      await waitFor(() => expect(assign).toHaveBeenCalledWith('/dashboard'));
+      expect(completed).toHaveBeenCalledOnce();
+      render(<SignIn redirectTo="/dashboard" onSignedIn={completed} />);
+      await Promise.resolve();
+      expect(completed).toHaveBeenCalledOnce();
+      expect(assign).toHaveBeenCalledOnce();
+    } finally {
       vi.unstubAllGlobals();
     }
   });

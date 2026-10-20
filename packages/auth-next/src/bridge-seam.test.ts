@@ -291,6 +291,71 @@ describe('SDK-ENGINE SESSION BRIDGE CONTRACT', () => {
     }
   });
 
+  it.each([
+    ['/get-session', 'fetch'], ['/session/bridge-code', 'fetch'], ['/api/authowl/session', 'fetch'],
+    ['/get-session', 'body'], ['/session/bridge-code', 'body'], ['/api/authowl/session', 'body'],
+  ])(
+    'bounds a never-resolving %s %s and releases handoff, account, and sign-out',
+    async (stalledPath, stalledPart) => {
+      const projectId = freshProject();
+      const publishableKey = `pk_test_${projectId}_abcdefghijklmnopqrstuvwxyz012345`;
+      const engine = fakeEngine(projectId, true, SECRET_KEY);
+      let stalledSignal: AbortSignal | null | undefined;
+      const fetcher = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).endsWith(stalledPath) && !stalledSignal) {
+          stalledSignal = init?.signal;
+          if (stalledPart === 'fetch') return new Promise<Response>(() => {});
+          const response = Response.json({}, { status: stalledPath === '/api/authowl/session' ? 503 : 200 });
+          response.json = () => new Promise<unknown>(() => {});
+          return Promise.resolve(response);
+        }
+        return engine.fetch(input, init);
+      });
+      document.cookie = 'authowl_handoff_verifier=verifier-value; Path=/';
+      window.history.replaceState(null, '', '/sign-in#authowl_code=stalled-bridge');
+      vi.useFakeTimers();
+      try {
+        const client = createAuthOwlClient(resolveConfig({
+          publishableKey, apiUrl: API_URL,
+          fetch: createAuthOwlNextFetch({ publishableKey, apiUrl: API_URL, fetch: fetcher }),
+        }));
+        await vi.waitFor(() => expect(stalledSignal).toBeDefined());
+        await vi.advanceTimersByTimeAsync(10_000);
+        await expect(client.handoff).resolves.toBe(false);
+        expect(stalledSignal?.aborted).toBe(true);
+        await client.account.listSessions();
+        expect(engine.calls.some((call) => call.url.endsWith('/list-sessions'))).toBe(true);
+        expect((await client.signOut()).error).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each(['non-2xx', 'throw'] as const)('reports a %s projection failure and allows retry', async (failure) => {
+    const projectId = freshProject();
+    const publishableKey = `pk_test_${projectId}_abcdefghijklmnopqrstuvwxyz012345`;
+    const engine = fakeEngine(projectId, true, SECRET_KEY);
+    let fail = true;
+    const fetcher = (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/authowl/session' && fail) {
+        if (failure === 'throw') return Promise.reject(new Error('bridge failed'));
+        return Promise.resolve(Response.json({ error: 'unavailable' }, { status: 503 }));
+      }
+      return engine.fetch(input, init);
+    };
+    document.cookie = 'authowl_handoff_verifier=verifier-value; Path=/';
+    window.history.replaceState(null, '', '/sign-in#authowl_code=failed-bridge');
+    const client = createAuthOwlClient(resolveConfig({
+      publishableKey, apiUrl: API_URL,
+      fetch: createAuthOwlNextFetch({ publishableKey, apiUrl: API_URL, fetch: fetcher }),
+    }));
+    await expect(client.handoff).resolves.toBe(false);
+    fail = false;
+    await signIn(client);
+    expect(engine.appBridgeResults.at(-1)?.status).toBe(204);
+  });
+
   it('restores remember choices in a fresh tab for the same session', async () => {
     for (const remember of [true, false]) {
       const { client, createClient, engine, storageKey } = await signInThroughNext(true);
