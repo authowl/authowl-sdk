@@ -373,6 +373,9 @@
 /* AO-58 authentication surfaces. Hosts can replace the shell through elements. */
 :where(.authowl-root) .ao-auth-card { box-sizing: border-box; width: 400px; max-width: 100%; padding: 28px; gap: 20px; border: 1px solid var(--ao-border); border-radius: var(--ao-border-radius, var(--ao-radius-xl)); background: var(--ao-surface); box-shadow: var(--ao-shadow-card); }
 :where(.authowl-root .ao-auth-card) .ao-title { font-size: 18px; line-height: 24px; margin: 0; letter-spacing: -.01em; }
+/* A step heading takes focus only so screen readers announce the step; it is
+   not interactive, so it draws no focus ring. */
+:where(.authowl-root) .ao-title:where([tabindex="-1"]:focus) { outline: none; }
 :where(.authowl-root .ao-auth-card) .ao-subtitle { font-size: 13px; line-height: 1.5; margin: -10px 0 0; color: var(--ao-muted); }
 :where(.authowl-root .ao-auth-card) .ao-branding { margin: 0; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
 :where(.authowl-root .ao-auth-card) .ao-fields { gap: 14px; }
