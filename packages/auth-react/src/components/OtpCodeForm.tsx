@@ -1,4 +1,5 @@
 'use client';
+import { CodeInput, CodeSuccess } from './CodeInput';
 import { AuthCardLock } from './AuthCardLock';
 import { useSlot } from '../elements';
 import * as React from 'react';
@@ -18,6 +19,7 @@ export type OtpCodeFormProps = {
   onChangeEmail: () => void;
   pending: boolean;
   error: string | null;
+  success?: boolean;
 };
 
 /**
@@ -34,37 +36,40 @@ export function OtpCodeForm({
   onChangeEmail,
   pending,
   error,
+  success = false,
 }: OtpCodeFormProps) {
   const lock = React.useContext(AuthCardLock);
   const locked = pending || Boolean(lock?.locked);
   const slot = useSlot();
   const t = useT();
   const messageId = React.useId();
+  const formRef = React.useRef<HTMLFormElement>(null);
   return (
     <form
+      ref={formRef}
       method="post"
       className={slot('ba-fields')}
       data-testid="emailotp-code"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!locked) onSubmit();
+        if (!locked && !success) onSubmit();
       }}
     >
       <p id={messageId} role="status" className={slot('ba-muted')}>
         {richMessage(t('emailOtp.codeLabel'), { email: <Bidi>{email}</Bidi> })}
       </p>
-      <input
+      <CodeInput
         aria-labelledby={messageId}
-        className={slot('ba-input')}
-        inputMode="numeric"
-        autoComplete="one-time-code"
         value={code}
-        onChange={(e) => onCodeChange(e.target.value)}
+        onChange={onCodeChange}
+        onComplete={() => formRef.current?.requestSubmit()}
+        state={success ? 'success' : error ? 'error' : 'idle'}
+        disabled={locked || success}
         autoFocus
-        required
       />
+      {success && <CodeSuccess />}
       <FormError>{error}</FormError>
-      <button className={slot('ba-button')} type="submit" disabled={locked} aria-busy={pending || undefined}>
+      <button className={slot('ba-button')} type="submit" disabled={locked || success} aria-busy={pending || undefined}>
         <Busy busy={pending} label={t('common.verifying')}>{t('emailOtp.verifySubmit')}</Busy>
       </button>
       <button type="button" className={slot('ba-link-button')} onClick={onChangeEmail}>

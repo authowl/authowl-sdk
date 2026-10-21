@@ -295,7 +295,6 @@ describe('SignUp passwordless passkey flow', () => {
     fireEvent.change(codeStep.querySelector('input')!, {
       target: { value: '123456' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'emailOtp.verifySubmit' }));
     await waitFor(() =>
       expect(mocks.signInEmailOtp).toHaveBeenCalledWith({
         email: 'mona@example.test',
@@ -449,7 +448,6 @@ describe('SignUp passwordless passkey flow', () => {
     fireEvent.change(codeStep.querySelector('input')!, {
       target: { value: '654321' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'emailOtp.verifySubmit' }));
     await screen.findByTestId('signup-passkey-step');
 
     fireEvent.click(screen.getByRole('button', { name: 'signUp.passkeySkip' }));

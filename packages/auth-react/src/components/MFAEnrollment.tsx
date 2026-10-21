@@ -1,4 +1,5 @@
 'use client';
+import { flushSync } from 'react-dom';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import type { TwoFactorEnableData } from '@authowl/core';
@@ -8,6 +9,8 @@ import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
 import { shouldDiscardSetup } from './mfa-enrollment';
 import { QrCode } from './QrCode';
+import { CodeInput, CodeSuccess } from './CodeInput';
+import { useAuthCardPending } from './AuthCardLock';
 import { FormError } from './FormError';
 
 export type MFAEnrollmentProps = {
@@ -37,10 +40,13 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
   const t = useT();
   const { enable, verifyTotp } = useMFA();
   const { user, isLoaded } = useUser();
-  const { pending, error, run } = useSubmitAction();
+  const { pending, error, setError, run } = useSubmitAction();
+  const locked = useAuthCardPending(pending);
+  const formRef = React.useRef<HTMLFormElement>(null);
   const [password, setPassword] = React.useState('');
   const [setup, setSetup] = React.useState<TwoFactorEnableData | null>(null);
   const [code, setCode] = React.useState('');
+  const [success, setSuccess] = React.useState(false);
   const [done, setDone] = React.useState(false);
   // The account that started the current setup. If the signed-in identity changes
   // (sign-out / account switch) while this stays mounted, drop the in-flight TOTP
@@ -74,6 +80,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
   if (done) {
     return (
       <div className={slot('ba-fields')} data-testid="mfa-enroll-done">
+        <CodeSuccess />
         <h2 className={slot('ba-title')}>{t('mfa.enroll.doneTitle')}</h2>
         <p className={slot('ba-muted')}>{t('mfa.enroll.doneBody')}</p>
       </div>
@@ -109,6 +116,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
         data-testid="mfa-enroll-password"
         onSubmit={(e) => {
           e.preventDefault();
+          if (locked) return;
           void run(() => enable({ password }), {
             failure: t('mfa.enroll.error.startFailed'),
             onSuccess: (res) => {
@@ -132,7 +140,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
           />
         </label>
         <FormError>{error}</FormError>
-        <button className={slot('ba-button')} type="submit" disabled={pending || !password} aria-busy={pending || undefined}>
+        <button className={slot('ba-button')} type="submit" disabled={locked || !password} aria-busy={pending || undefined}>
           <Busy busy={pending} label={t('mfa.enroll.startPending')}>{t('common.continue')}</Busy>
         </button>
       </form>
@@ -173,18 +181,23 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
       </div>
 
       <form
+        ref={formRef}
         method="post"
         className={slot('ba-fields')}
         onSubmit={(e) => {
           e.preventDefault();
+          if (locked) return;
           void run(() => verifyTotp({ code }), {
             failure: t('mfa.enroll.error.invalidCode'),
             onSuccess: () => {
+              flushSync(() => setSuccess(true));
               // Reach a terminal state: drop the secrets from memory/screen, then
               // hand off. Works whether or not `onEnrolled` navigates away.
-              setSetup(null);
-              setCode('');
-              setDone(true);
+              flushSync(() => {
+                setSetup(null);
+                setCode('');
+                setDone(true);
+              });
               onEnrolled?.();
             },
           });
@@ -192,17 +205,12 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
       >
         <label className={slot('ba-label')}>
           {t('mfa.enroll.codeLabel')}
-          <input
-            className={slot('ba-input')}
-            value={code}
-            onChange={(e) => setCode(e.target.value.trim())}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-          />
+          <CodeInput value={code} onChange={(value) => { setCode(value); setError(null); }}
+            onComplete={() => formRef.current?.requestSubmit()} state={success ? 'success' : error ? 'error' : 'idle'} disabled={locked || success} />
         </label>
+        {success && <CodeSuccess />}
         <FormError>{error}</FormError>
-        <button className={slot('ba-button')} type="submit" disabled={pending || !code} aria-busy={pending || undefined}>
+        <button className={slot('ba-button')} type="submit" disabled={locked || !code} aria-busy={pending || undefined}>
           <Busy busy={pending} label={t('common.verifying')}>{t('mfa.enroll.activateSubmit')}</Busy>
         </button>
       </form>

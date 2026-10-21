@@ -55,13 +55,18 @@ export type UseSubmitActionResult = {
 };
 
 export function useSubmitAction(): UseSubmitActionResult {
+  // Completion and Enter/click can arrive before React paints pending.
+  const inFlight = React.useRef(false);
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const toMessage = useServerError();
 
   React.useEffect(() => {
     const restore = (event: PageTransitionEvent) => {
-      if (event.persisted) setPending(false);
+      if (event.persisted) {
+        inFlight.current = false;
+        setPending(false);
+      }
     };
     window.addEventListener('pageshow', restore);
     return () => window.removeEventListener('pageshow', restore);
@@ -69,6 +74,8 @@ export function useSubmitAction(): UseSubmitActionResult {
 
   const run = React.useCallback<UseSubmitActionResult['run']>(
     async (action, { failure, onSuccess, mapError, intercept, keepPendingOnSuccess }) => {
+      if (inFlight.current) return;
+      inFlight.current = true;
       setError(null);
       setPending(true);
       try {
@@ -92,6 +99,8 @@ export function useSubmitAction(): UseSubmitActionResult {
         // can retry (keepPendingOnSuccess never suppresses a failure reset).
         setError(failure);
         setPending(false);
+      } finally {
+        inFlight.current = false;
       }
     },
     [toMessage],

@@ -1,4 +1,5 @@
 'use client';
+import { flushSync } from 'react-dom';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useEmailVerification } from '../hooks';
@@ -6,6 +7,8 @@ import { useT, richMessage, Bidi } from '../i18n';
 import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
 import { AUTH_CHALLENGE_ACTIONS, useAuthChallenge } from './AuthChallenge';
+import { CodeInput, CodeSuccess } from './CodeInput';
+import { useAuthCardPending } from './AuthCardLock';
 import { FormError } from './FormError';
 
 export type VerificationPendingProps = {
@@ -33,16 +36,19 @@ export function VerificationPending({
     sendVerificationCode,
     verifyEmailCode,
   } = useEmailVerification();
-  const { pending, error, run } = useSubmitAction();
+  const { pending, error, setError, run } = useSubmitAction();
+  const locked = useAuthCardPending(pending);
+  const formRef = React.useRef<HTMLFormElement>(null);
   const authChallenge = useAuthChallenge();
   const [resent, setResent] = React.useState(false);
   const [code, setCode] = React.useState('');
+  const [success, setSuccess] = React.useState(false);
   const [verified, setVerified] = React.useState(false);
 
   if (verified) {
     return (
       <p className={slot('ba-success')} role="status" data-testid="verify-code-success">
-        {t('verifyEmail.success')}
+        <CodeSuccess /> {t('verifyEmail.success')}
       </p>
     );
   }
@@ -50,16 +56,18 @@ export function VerificationPending({
   if (method === 'code') {
     return (
       <form
+        ref={formRef}
         method="post"
         className={slot('ba-fields')}
         data-testid="verify-code-pending"
         onSubmit={(event) => {
           event.preventDefault();
+          if (locked) return;
           void run(
             () => verifyEmailCode({ email, otp: code }),
             {
               failure: t('verifyPending.codeError'),
-              onSuccess: () => setVerified(true),
+              onSuccess: () => { flushSync(() => setSuccess(true)); setVerified(true); },
             },
           );
         }}
@@ -75,22 +83,17 @@ export function VerificationPending({
         </p>
         <label className={slot('ba-label')}>
           {t('verifyPending.codeLabel')}
-          <input
-            className={slot('ba-input')}
-            value={code}
-            onChange={(event) => setCode(event.target.value.trim())}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-          />
+          <CodeInput value={code} onChange={(value) => { setCode(value); setError(null); }}
+            onComplete={() => formRef.current?.requestSubmit()} state={success ? 'success' : error ? 'error' : 'idle'} disabled={locked || success} />
         </label>
         {resent && <p role="status" className={slot('ba-muted')}>{t('verifyPending.resent')}</p>}
         {authChallenge.control}
+        {success && <CodeSuccess />}
         <FormError>{error}</FormError>
         <button
           className={slot('ba-button')}
           type="submit"
-          disabled={pending || !code}
+          disabled={locked || !code}
           aria-busy={pending || undefined}
         >
           <Busy busy={pending} label={t('common.verifying')}>
@@ -100,7 +103,7 @@ export function VerificationPending({
         <button
           type="button"
           className={slot('ba-link-button')}
-          disabled={pending || authChallenge.configPending}
+          disabled={locked || authChallenge.configPending}
           onClick={() =>
             void run(
               () => authChallenge.run(
@@ -140,7 +143,7 @@ export function VerificationPending({
       <button
         type="button"
         className={slot('ba-link-button')}
-        disabled={pending || authChallenge.configPending}
+        disabled={locked || authChallenge.configPending}
         aria-busy={pending || undefined}
         onClick={() =>
           void run(() => authChallenge.run(AUTH_CHALLENGE_ACTIONS.verifyEmail, (options) => sendVerificationEmail({ email, callbackURL }, options)), {

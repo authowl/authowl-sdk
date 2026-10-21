@@ -1,4 +1,5 @@
 'use client';
+import { flushSync } from 'react-dom';
 import { AuthField } from './AuthField';
 import { useSlot } from '../elements';
 import * as React from 'react';
@@ -76,6 +77,7 @@ export function SignIn({
   const [credentialMode, setCredentialMode] = React.useState<'email' | 'username'>('email');
   const usingUsername = credentialMode === 'username';
   const [otp, setOtp] = React.useState('');
+  const [codeVerified, setCodeVerified] = React.useState(false);
   const [view, setView] = React.useState<'sign-in' | 'forgot' | 'otp-code' | 'magic-sent' | 'phone'>(
     'sign-in',
   );
@@ -235,7 +237,7 @@ export function SignIn({
     // the session, so finish exactly as a direct sign-in would.
     if (challenge) {
       return (
-        <MFAChallenge onVerified={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })} />
+        <MFAChallenge email={email || undefined} onVerified={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })} />
       );
     }
 
@@ -262,10 +264,12 @@ export function SignIn({
             }}
             pending={locked}
             error={error}
+            success={codeVerified}
             onSubmit={() =>
               void run(() => signInEmailOtp({ email, otp }), {
                 failure: t('emailOtp.error.invalidCode'),
                 onSuccess: () => {
+                  flushSync(() => setCodeVerified(true));
                   recordSignInMethod('email-otp');
                   finishSignIn({ sessionStore, redirectTo, onSignedIn });
                 },
@@ -273,6 +277,7 @@ export function SignIn({
             }
             onChangeEmail={() => {
               setOtp('');
+              setCodeVerified(false);
               setError(null);
               back();
             }}

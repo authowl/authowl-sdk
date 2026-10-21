@@ -60,3 +60,17 @@ describe('useSubmitAction keepPendingOnSuccess', () => {
     expect(result.current.error).toBe('failed');
   });
 });
+
+it('coalesces a completion and manual submit in the same pending window', async () => {
+  const { result } = renderHook(() => useSubmitAction());
+  let resolve!: (value: { data: null; error: null }) => void;
+  const action = vi.fn(() => new Promise<{ data: null; error: null }>((settle) => { resolve = settle; }));
+  await act(async () => {
+    const first = result.current.run(action, { failure: 'failed' });
+    await result.current.run(action, { failure: 'failed' });
+    expect(action).toHaveBeenCalledTimes(1);
+    resolve({ data: null, error: null });
+    await first;
+  });
+  expect(result.current.pending).toBe(false);
+});

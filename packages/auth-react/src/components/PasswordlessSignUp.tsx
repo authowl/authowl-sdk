@@ -1,4 +1,5 @@
 'use client';
+import { flushSync } from 'react-dom';
 import { useAuthCardPending } from './AuthCardLock';
 import { useStepFocus } from './use-step-focus';
 import { AuthField } from './AuthField';
@@ -25,6 +26,7 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
   const authChallenge = useAuthChallenge();
   const [email, setEmail] = React.useState('');
   const [code, setCode] = React.useState('');
+  const [codeVerified, setCodeVerified] = React.useState(false);
   const [codeSent, setCodeSent] = React.useState(false);
 
   const locked = useAuthCardPending(pending);
@@ -40,14 +42,16 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
           onCodeChange={setCode}
           pending={locked}
           error={error}
+          success={codeVerified}
           onSubmit={() =>
             void run(() => signInEmailOtp({ email, otp: code }), {
               failure: t('emailOtp.error.invalidCode'),
-              onSuccess: onAuthenticated,
+              onSuccess: () => { flushSync(() => setCodeVerified(true)); onAuthenticated(); },
             })
           }
           onChangeEmail={() => {
             setCode('');
+            setCodeVerified(false);
             setError(null);
             restoreFocus();
             setCodeSent(false);

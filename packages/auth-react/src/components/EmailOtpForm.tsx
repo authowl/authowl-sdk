@@ -1,4 +1,5 @@
 'use client';
+import { flushSync } from 'react-dom';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useAuthClient, useSignIn } from '../hooks';
@@ -33,6 +34,7 @@ export function EmailOtpForm({ redirectTo, onSignedIn, webauthnAutofill }: Email
   const authChallenge = useAuthChallenge();
   const [email, setEmail] = React.useState('');
   const [otp, setOtp] = React.useState('');
+  const [codeVerified, setCodeVerified] = React.useState(false);
   const [stage, setStage] = React.useState<'email' | 'code'>('email');
 
   if (stage === 'code') {
@@ -46,15 +48,17 @@ export function EmailOtpForm({ redirectTo, onSignedIn, webauthnAutofill }: Email
         }}
         pending={pending}
         error={error}
+        success={codeVerified}
         onSubmit={() =>
           void run(() => signInEmailOtp({ email, otp }), {
             failure: t('emailOtp.error.invalidCode'),
-            onSuccess: () => finishSignIn({ sessionStore, redirectTo, onSignedIn }),
+            onSuccess: () => { flushSync(() => setCodeVerified(true)); finishSignIn({ sessionStore, redirectTo, onSignedIn }); },
           })
         }
         onChangeEmail={() => {
           setStage('email');
           setOtp('');
+          setCodeVerified(false);
           setError(null);
         }}
       />

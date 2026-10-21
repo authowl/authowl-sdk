@@ -1,4 +1,5 @@
 'use client';
+import { flushSync } from 'react-dom';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import {
@@ -14,6 +15,8 @@ import { LegalConsentCheckbox } from './LegalConsentCheckbox';
 import { Turnstile } from './Turnstile';
 import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
+import { CodeInput, CodeSuccess } from './CodeInput';
+import { useAuthCardPending } from './AuthCardLock';
 import { FormError } from './FormError';
 
 export type PhoneOTPProps = {
@@ -51,6 +54,9 @@ export function PhoneOTP({
   const { config, isLoading } = usePublicConfig();
   const { preparePhoneOtp, startPhoneOtp, verifyPhoneOtp } = useSignIn();
   const { pending, error, setError, run } = useSubmitAction();
+  const locked = useAuthCardPending(pending);
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const [success, setSuccess] = React.useState(false);
   const [stage, setStage] = React.useState<'phone' | 'code' | 'hosted'>('phone');
   const [phoneNumber, setPhoneNumber] = React.useState('');
   const [code, setCode] = React.useState('');
@@ -111,6 +117,7 @@ export function PhoneOTP({
   const changePhone = React.useCallback(() => {
     setStage('phone');
     setCode('');
+    setSuccess(false);
     setHostedAttempt(null);
     setError(null);
     attempt.current = null;
@@ -128,11 +135,13 @@ export function PhoneOTP({
   if (stage === 'code') {
     return (
       <form
+        ref={formRef}
         method="post"
         className={slot('ba-fields')}
         data-testid="phoneotp-code"
         onSubmit={(event) => {
           event.preventDefault();
+          if (locked || success) return;
           void run(
             () =>
               verifyPhoneOtp({
@@ -148,7 +157,7 @@ export function PhoneOTP({
                 }
                 return null;
               },
-              onSuccess: () => finishSignIn({ sessionStore, redirectTo, onSignedIn }),
+              onSuccess: () => { flushSync(() => setSuccess(true)); finishSignIn({ sessionStore, redirectTo, onSignedIn }); },
             },
           );
         }}
@@ -156,26 +165,16 @@ export function PhoneOTP({
         <h2 className={slot('ba-title')}>{t('phoneOtp.title')}</h2>
         <label className={slot('ba-label')}>
           {t('phoneOtp.codeLabel')} <Bidi>{phoneNumber}</Bidi>
-          <input
-            className={slot('ba-input')}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            value={code}
-            onChange={(event) => {
-              setCode(event.target.value.replace(/\D/g, '').slice(0, 6));
-              setError(null);
-            }}
-            minLength={6}
-            maxLength={6}
-            autoFocus
-            required
-          />
+          <CodeInput value={code} onChange={(value) => { setCode(value); setError(null); }}
+            onComplete={() => formRef.current?.requestSubmit()}
+            state={success ? 'success' : error ? 'error' : 'idle'} disabled={locked || success} autoFocus />
         </label>
+        {success && <CodeSuccess />}
         <FormError>{error}</FormError>
         <button
           className={slot('ba-button')}
           type="submit"
-          disabled={pending || code.length !== 6}
+          disabled={locked || success || code.length !== 6}
           aria-busy={pending || undefined}
         >
           <Busy busy={pending} label={t('common.verifying')}>{t('phoneOtp.verifySubmit')}</Busy>

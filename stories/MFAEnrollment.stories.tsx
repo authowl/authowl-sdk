@@ -41,7 +41,14 @@ export const Enrolled: Story = {
   play: async ({ canvasElement }) => {
     const setup = await startEnrollment(canvasElement);
     await userEvent.type(setup.querySelector('input')!, '123456');
-    await userEvent.click(within(setup).getByRole('button'));
     await within(canvasElement).findByTestId('mfa-enroll-done');
+  },
+};
+
+
+export const VerificationCode: Story = {
+  play: async ({ canvasElement }) => {
+    const setup = await startEnrollment(canvasElement);
+    await userEvent.type(setup.querySelector('input')!, '123');
   },
 };

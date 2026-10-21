@@ -100,6 +100,8 @@ function createPreviewFetch(
   signInMethod: PreviewSignInMethod | undefined,
   mfaEnrollment: boolean,
   wrongPassword: boolean,
+  invalidCode: boolean,
+  codePending: boolean,
 ): typeof fetch {
   return async (input: RequestInfo | URL): Promise<Response> => {
     const url = new URL(String(input));
@@ -209,6 +211,10 @@ function createPreviewFetch(
     if (path.endsWith('/sign-in/email') && wrongPassword) {
       return Response.json({ code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }, { status: 401 });
     }
+    if (/\/(?:verify-totp|verify-otp|sign-in\/email-otp|phone-otp\/verify)$/.test(path)) {
+      if (codePending) return new Promise<Response>(() => {});
+      if (invalidCode) return Response.json({ code: 'INVALID_CODE' }, { status: 400 });
+    }
     if (path.endsWith('/get-session')) {
       return Response.json(signedIn ? { user: { ...user, twoFactorEnabled: !mfaEnrollment }, session } : null);
     }
@@ -240,13 +246,13 @@ function createPreviewFetch(
   };
 }
 
-export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, signInMethod, mfaEnrollment = false, wrongPassword = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; signInMethod?: PreviewSignInMethod; mfaEnrollment?: boolean; wrongPassword?: boolean; children: React.ReactNode }) {
+export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, signInMethod, mfaEnrollment = false, wrongPassword = false, invalidCode = false, codePending = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; signInMethod?: PreviewSignInMethod; mfaEnrollment?: boolean; wrongPassword?: boolean; invalidCode?: boolean; codePending?: boolean; children: React.ReactNode }) {
   const previewFetch = React.useMemo(
     () => createPreviewFetch(
       signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled,
-      passkeyRelyingPartyId, signInMethod, mfaEnrollment, wrongPassword,
+      passkeyRelyingPartyId, signInMethod, mfaEnrollment, wrongPassword, invalidCode, codePending,
     ),
-    [configUnavailable, consentRequired, passkeyRelyingPartyId, primaryColor, privacyEnabled, signedIn, signInMethod, mfaEnrollment, wrongPassword],
+    [configUnavailable, consentRequired, passkeyRelyingPartyId, primaryColor, privacyEnabled, signedIn, signInMethod, mfaEnrollment, wrongPassword, invalidCode, codePending],
   );
   return (
     <AuthOwlProvider

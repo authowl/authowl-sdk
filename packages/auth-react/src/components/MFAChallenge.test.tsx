@@ -1,25 +1,27 @@
 // @vitest-environment jsdom
 import * as React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PublicConfig } from '@authowl/core';
 
 const mocks = vi.hoisted(() => ({
   config: null as PublicConfig | null,
+  verifyTotp: vi.fn(),
+  verifyBackupCode: vi.fn(),
+  sendOtp: vi.fn(),
+  verifyOtp: vi.fn(),
 }));
 
 vi.mock('../hooks', () => ({
   usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
-  useMFA: () => ({
-    verifyTotp: vi.fn(),
-    verifyBackupCode: vi.fn(),
-    sendOtp: vi.fn(),
-    verifyOtp: vi.fn(),
-  }),
+  useUser: () => ({ user: null }),
+  useMFA: () => mocks,
 }));
 
 vi.mock('../i18n', () => ({
   useT: () => (key: string) => key,
+  richMessage: (key: string, slots: Record<string, React.ReactNode>) => <>{key}{slots.email}</>,
+  Bidi: ({ children }: { children: React.ReactNode }) => children,
   useServerError: () => (_error: unknown, fallback: string) => fallback,
 }));
 
@@ -57,8 +59,8 @@ describe('MFAChallenge trust-device control', () => {
     const { container } = render(<MFAChallenge />);
 
     expect(container.querySelector('input[type="checkbox"]')).toBeNull();
-    expect(screen.queryByText('mfa.challenge.useEmailOtp')).toBeNull();
-    expect(screen.getByText('mfa.challenge.useBackup')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'mfa.challenge.useEmailOtp' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'mfa.challenge.useBackup' })).toBeTruthy();
   });
 
   it('preserves both controls for a rolling-upgrade server without capability flags', () => {
@@ -69,7 +71,7 @@ describe('MFAChallenge trust-device control', () => {
     const { container } = render(<MFAChallenge />);
 
     expect(container.querySelector('input[type="checkbox"]')).not.toBeNull();
-    expect(screen.getByText('mfa.challenge.useEmailOtp')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'mfa.challenge.useEmailOtp' })).toBeTruthy();
   });
 });
 
@@ -100,8 +102,8 @@ describe('MFAChallenge step-up variant', () => {
   it('keeps every recovery factor the posture still permits', () => {
     render(<MFAChallenge variant="step-up" />);
 
-    expect(screen.getByText('mfa.challenge.useBackup')).toBeTruthy();
-    expect(screen.getByText('mfa.challenge.useEmailOtp')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'mfa.challenge.useBackup' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'mfa.challenge.useEmailOtp' })).toBeTruthy();
   });
 
   it('offers a way out only when the caller can take one', () => {
@@ -113,5 +115,52 @@ describe('MFAChallenge step-up variant', () => {
     fireEvent.click(screen.getByText('common.cancel'));
 
     expect(onCancel).toHaveBeenCalledOnce();
+  });
+});
+
+
+describe('MFAChallenge code completion', () => {
+  afterEach(() => { vi.clearAllMocks(); });
+
+  it('auto-submits once, remains locked during verification and shows success while finishing', async () => {
+    mocks.verifyTotp.mockResolvedValue({ data: {}, error: null });
+    const onVerified = vi.fn(() => new Promise<void>(() => {}));
+    render(<MFAChallenge onVerified={onVerified} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
+    fireEvent.submit(screen.getByTestId('mfa-challenge'));
+    await waitFor(() => expect(onVerified).toHaveBeenCalledTimes(1));
+    expect(mocks.verifyTotp).toHaveBeenCalledExactlyOnceWith({ code: '123456', trustDevice: false });
+    expect(screen.getByRole('textbox').parentElement?.getAttribute('data-state')).toBe('success');
+    expect((screen.getByRole('textbox') as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('does not auto-retry a failed value and keeps backup codes as unsanitized text with manual submit', async () => {
+    mocks.verifyTotp.mockResolvedValue({ data: null, error: { code: 'INVALID' } });
+    mocks.verifyBackupCode.mockResolvedValue({ data: {}, error: null });
+    render(<MFAChallenge />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
+    await screen.findByRole('alert');
+    expect(mocks.verifyTotp).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.useBackup' }));
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: ' backup-Ab12-3456 ' } });
+    expect(input.value).toBe('backup-Ab12-3456');
+    expect(input.maxLength).toBe(-1);
+    expect(input.closest('.ao-code-input')).toBeNull();
+    expect(mocks.verifyBackupCode).not.toHaveBeenCalled();
+    fireEvent.submit(screen.getByTestId('mfa-challenge'));
+    await waitFor(() => expect(mocks.verifyBackupCode).toHaveBeenCalledExactlyOnceWith({ code: 'backup-Ab12-3456' }));
+  });
+
+  it('emails a fallback code and auto-submits it exactly once', async () => {
+    mocks.sendOtp.mockResolvedValue({ data: {}, error: null });
+    mocks.verifyOtp.mockResolvedValue({ data: {}, error: null });
+    render(<MFAChallenge email="mona@example.test" />);
+    fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.useEmailOtp' }));
+    const input = await screen.findByRole('textbox', { name: 'mfa.challenge.otpLabel' });
+    expect(screen.getByText('mona@example.test').closest('strong')).not.toBeNull();
+    fireEvent.change(input, { target: { value: '654321' } });
+    await waitFor(() => expect(mocks.verifyOtp).toHaveBeenCalledExactlyOnceWith({ code: '654321', trustDevice: false }));
+    expect(screen.getByRole('button', { name: 'mfa.challenge.resendOtp' })).toBeTruthy();
   });
 });

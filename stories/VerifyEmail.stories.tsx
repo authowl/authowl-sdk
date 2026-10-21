@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import React from 'react';
 import { expect, within } from 'storybook/test';
-import { VerifyEmail } from '@authowl/react';
+import { VerifyEmail, VerificationPending } from '@authowl/react';
 import { expectStoryMatrix } from './matrix';
 import { card } from './surface';
+import { slot } from '../packages/auth-react/src/elements';
 
 const meta = {
   title: 'Conversion/VerifyEmail',
@@ -27,5 +28,16 @@ export const Success: Story = {
     await expectStoryMatrix(canvasElement);
     const canvas = within(canvasElement);
     await expect(canvas.findByTestId('verify-success')).resolves.toBeTruthy();
+  },
+};
+
+
+export const OwnershipCode: Story = {
+  render: () => <div className={`${slot('card')} ${slot('auth-card')}`}>
+    <VerificationPending email="mona@example.test" method="code" />
+  </div>,
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    await within(canvasElement).findByTestId('verify-code-pending');
   },
 };

@@ -67,6 +67,8 @@ const preview: Preview = {
           primaryColor={primaryColor}
           signInMethod={context.parameters.authowl?.signInMethod}
           wrongPassword={context.parameters.authowl?.wrongPassword === true}
+          invalidCode={context.parameters.authowl?.invalidCode === true}
+          codePending={context.parameters.authowl?.codePending === true}
           mfaEnrollment={context.parameters.authowl?.mfaEnrollment === true}
         >
           <main

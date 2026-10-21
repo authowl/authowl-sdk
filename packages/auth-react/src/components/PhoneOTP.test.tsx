@@ -197,9 +197,9 @@ describe('PhoneOTP challenge gating', () => {
     fireEvent.click(sendButton());
     await waitFor(() => expect(screen.getByTestId('phoneotp-code')).toBeTruthy());
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '424242' } });
-    fireEvent.click(screen.getByRole('button', { name: 'phoneOtp.verifySubmit' }));
 
     await waitFor(() => expect(onMfaPasswordRequired).toHaveBeenCalledTimes(1));
+    expect(verifyPhoneOtp).toHaveBeenCalledTimes(1);
   });
 
   it.each([
