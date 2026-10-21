@@ -1,7 +1,7 @@
 import { safeCssValue } from './css-values';
 import type { PublicConfig } from '@authowl/core';
 import type { Elements } from './elements';
-import { brandRampVars, deriveBrandRamp, parseColor } from './brand';
+import { brandRampVars, deriveBrandRamp, parseColor, readableForeground } from './brand';
 
 const VARIABLE_TOKENS = {
   colorBackground: 'surface', colorText: 'fg', colorTextSecondary: 'fg-muted',
@@ -48,6 +48,10 @@ export function resolveAppearance(appearance: Appearance | undefined, config: Pu
       style[`--ba-rt-solid-hover-${suffix}`] = ramp[scheme].accentSolidHover;
       style[`--ba-rt-solid-active-${suffix}`] = ramp[scheme].accentSolidActive;
       style[`--ba-rt-accent-${suffix}`] = ramp[scheme].accent;
+      // Contrast follows the emitted state fill, after gamut mapping and
+      // quantization. A label that passes on the resting fill may fail on hover.
+      style[`--ao-${scheme}-on-brand-hover`] = readableForeground(ramp[scheme].accentSolidHover);
+      style[`--ao-${scheme}-on-brand-active`] = readableForeground(ramp[scheme].accentSolidActive);
     }
     style['--ba-rt-accent-fg'] = ramp.light.accentFg;
   }

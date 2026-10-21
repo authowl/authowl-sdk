@@ -84,6 +84,8 @@ it('keeps default input geometry with and without a host border-box reset', asyn
 it('derives legacy primary-only hover, active, accent and focus before brand fallback', async () => {
   for (const theme of ['light', 'dark'] as const) {
     await mount({ theme }, '.authowl-root { --ba-primary: #0000ff; }');
+    // The previous iteration leaves the pointer over the button; rest it away first.
+    await page.mouse.move(0, 0);
     const button = page.locator('.ao-button');
     expect(await color('.ao-button', 'background-color')).toBe('rgb(0, 0, 255)');
     await button.hover();

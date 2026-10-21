@@ -24,6 +24,8 @@ function palette(scheme) {
     'accent-solid-hover': `var(--ba-rt-solid-hover-${scheme === 'light' ? 'l' : 'd'}, var(--ao-legacy-hover, var(--ao-brand-hover)))`,
     'accent-solid-active': `var(--ba-rt-solid-active-${scheme === 'light' ? 'l' : 'd'}, var(--ao-legacy-active, var(--ao-brand-active)))`,
     'accent-fg': 'var(--ba-rt-accent-fg, var(--ao-on-brand))',
+    'accent-fg-hover': `var(--ao-${scheme}-on-brand-hover, var(--ao-accent-fg))`,
+    'accent-fg-active': `var(--ao-${scheme}-on-brand-active, var(--ao-accent-fg))`,
     accent: `var(--ba-rt-accent-${scheme === 'light' ? 'l' : 'd'}, var(--ao-legacy-accent, var(--ao-brand-text)))`,
     ring: `var(--ba-rt-accent-${scheme === 'light' ? 'l' : 'd'}, var(--ao-legacy-accent, var(--ao-brand-text)))`,
     'danger-solid': toCss(neutral.light.danger),

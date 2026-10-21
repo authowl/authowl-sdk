@@ -61,3 +61,11 @@ runs in the local gate. It checks applied FormError danger colours, theme
 resolution, both host reset geometries, legacy primary-only states and supported
 non-hex ramps with the token stylesheet loaded after the SDK stylesheet. Local
 execution is blocked by the same Chromium sandbox restriction described above.
+
+Primary-label contrast is now solved separately against the emitted resting,
+hover and active fills in both schemes. A label may switch between light and
+dark during interaction to retain AA contrast; this affects explicit primary
+ramps as well as non-hex primaries. Fill derivation and geometry are unchanged.
+The legacy blue assertion can read the dark hover mix when Chromium retains
+the pointer over a remounted button; the resting declaration still uses the
+host primary verbatim.

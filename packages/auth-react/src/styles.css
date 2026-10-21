@@ -15,8 +15,8 @@
 /* Hover/active darken (light) or lighten (dark) perceptually, staying on-brand.
    Scoped away from the outlined secondary/danger variants so their own fills win
    in every state (they don't define :active, which would otherwise leak here). */
-:where(.authowl-root) .ao-button:not(.ao-button-secondary):not(.ao-danger-button):hover:not(:disabled) { background: var(--ba-accent-solid-hover, var(--ao-accent-solid-hover)); }
-:where(.authowl-root) .ao-button:not(.ao-button-secondary):not(.ao-danger-button):active:not(:disabled) { background: var(--ba-accent-solid-active, var(--ao-accent-solid-active)); }
+:where(.authowl-root) .ao-button:not(.ao-button-secondary):not(.ao-danger-button):hover:not(:disabled) { background: var(--ba-accent-solid-hover, var(--ao-accent-solid-hover)); color: var(--ba-accent-fg, var(--ao-accent-fg-hover)); }
+:where(.authowl-root) .ao-button:not(.ao-button-secondary):not(.ao-danger-button):active:not(:disabled) { background: var(--ba-accent-solid-active, var(--ao-accent-solid-active)); color: var(--ba-accent-fg, var(--ao-accent-fg-active)); }
 :where(.authowl-root) .ao-button:disabled { opacity: 0.5; cursor: not-allowed; }
 /* Secondary action (e.g. the passwordless alternates under a password form):
    outlined so a single filled button stays the clear primary. */
