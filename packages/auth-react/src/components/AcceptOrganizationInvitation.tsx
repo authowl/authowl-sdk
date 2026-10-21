@@ -5,6 +5,7 @@ import { useInvitationRecipientHint, useOrganizationInvitation, useSignOut, useU
 import { useServerError, useT } from '../i18n';
 import { SignIn } from './SignIn';
 import { SignUp } from './SignUp';
+import { EmbeddedAuthFormContext } from './EmbeddedAuthFormContext';
 import { FormError } from './FormError';
 import { VerificationPending } from './VerificationPending';
 import { MFARequiredGate } from './MFARequiredGate';
@@ -43,8 +44,10 @@ function InvitationJourney({ onJoined, verifyEmailUrl, resetPasswordUrl }: Accep
   if (joined) return <p role="status" className={slot('ba-muted')}>{t('organization.invitationPage.joined')}</p>;
   if (!user.isSignedIn || signupInProgress) {
     return <div className={slot('ba-fields')}>
-      {signingUp ? <SignUp onSignedUp={() => setSignupInProgress(false)} verifyEmailUrl={verifyEmailUrl} showBranding={false} />
-        : <SignIn resetPasswordUrl={resetPasswordUrl} showBranding={false} />}
+      <EmbeddedAuthFormContext.Provider value={true}>
+        {signingUp ? <SignUp onSignedUp={() => setSignupInProgress(false)} verifyEmailUrl={verifyEmailUrl} showBranding={false} />
+          : <SignIn resetPasswordUrl={resetPasswordUrl} showBranding={false} />}
+      </EmbeddedAuthFormContext.Provider>
       <button type="button" className={slot('ba-link-button')} onClick={() => { setSignupInProgress(false); setMode(signingUp ? 'signin' : 'signup'); }}>
         {t(signingUp ? 'organization.invitationPage.signin' : 'organization.invitationPage.signup')}
       </button>

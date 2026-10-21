@@ -6,6 +6,7 @@ import { useAuthClient, usePublicConfig, useUser, useSignOut } from '../hooks';
 import { useT, useServerError, richMessage, Bidi } from '../i18n';
 import { SignUp } from './SignUp';
 import { SignIn } from './SignIn';
+import { EmbeddedAuthFormContext } from './EmbeddedAuthFormContext';
 import { MFARequiredGate } from './MFARequiredGate';
 import { FormError } from './FormError';
 import { VerificationPending } from './VerificationPending';
@@ -59,9 +60,11 @@ function ApplicationInvitationJourney({ onJoined, verifyEmailUrl, resetPasswordU
   if (!user.isSignedIn) return <div className={slot('ba-fields')}>
     <h1 className={slot('ba-title')}>{t('applicationInvitation.title')}</h1>
     <p className={slot('ba-subtitle')} style={{ overflowWrap: 'anywhere' }}>{richMessage(t('applicationInvitation.recipient'), { email: <Bidi>{details.email}</Bidi> })}</p>
-    {mode === 'signup' && details.status === 'pending'
-      ? <SignUp applicationInvitationProof={proof} initialEmail={details.email} verifyEmailUrl={verifyEmailUrl} showBranding={false} />
-      : <SignIn resetPasswordUrl={resetPasswordUrl} showBranding={false} />}
+    <EmbeddedAuthFormContext.Provider value={true}>
+      {mode === 'signup' && details.status === 'pending'
+        ? <SignUp applicationInvitationProof={proof} initialEmail={details.email} verifyEmailUrl={verifyEmailUrl} showBranding={false} />
+        : <SignIn resetPasswordUrl={resetPasswordUrl} showBranding={false} />}
+    </EmbeddedAuthFormContext.Provider>
     {details.status === 'pending' && <button type="button" className={slot('ba-link-button')} onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}>{t(mode === 'signup' ? 'organization.invitationPage.signin' : 'organization.invitationPage.signup')}</button>}
   </div>;
   const wrongAccount = user.user?.email?.toLowerCase() !== details.email.toLowerCase();

@@ -10,6 +10,7 @@ import type { Appearance } from './appearance';
 import { SignIn } from './components/SignIn';
 import { SignUp } from './components/SignUp';
 import { StepCard } from './components/StepCard';
+import { EmbeddedAuthFormContext } from './components/EmbeddedAuthFormContext';
 
 const PK = 'pk_live_11111111-1111-1111-1111-111111111111_abcdefghij0123456789';
 const API_URL = 'https://auth.example.com';
@@ -50,6 +51,22 @@ it.each([{ name: 'SignIn', Component: SignIn }, { name: 'SignUp', Component: Sig
     expect(markup({ layout: {} })).toBe(baseline);
     expect(markup({ layout: { mobileSheet: false } })).toBe(baseline);
     expect(markup({ layout: { mobileSheet: true } })).toContain('class="ao-auth-sheet-handle ba-auth-sheet-handle" aria-hidden="true"');
+  },
+);
+
+it.each([{ name: 'SignIn', Component: SignIn }, { name: 'SignUp', Component: SignUp }])(
+  'keeps embedded $name inline during SSR even when phone sheets are enabled', ({ Component }) => {
+    const html = renderToString(
+      <AuthOwlProvider publishableKey={PK} apiUrl={API_URL} fetch={fetchNever}
+        appearance={{ layout: { mobileSheet: true } }}>
+        <EmbeddedAuthFormContext.Provider value={true}>
+          <Component showBranding={false} showBadge={false} />
+        </EmbeddedAuthFormContext.Provider>
+      </AuthOwlProvider>,
+    );
+    expect(html).toContain('data-authowl-layout="sheet"');
+    expect(html).not.toContain('ao-auth-sheet');
+    expect(html).not.toContain('ba-auth-sheet');
   },
 );
 

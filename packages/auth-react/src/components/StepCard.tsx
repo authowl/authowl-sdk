@@ -3,7 +3,8 @@ import * as React from 'react';
 import { useSlot } from '../elements';
 import { useT } from '../i18n';
 import { usePublicConfig } from '../hooks';
-import { AuthOwlContext } from '../provider';
+import { useAuthOwlContext } from '../provider';
+import { EmbeddedAuthFormContext } from './EmbeddedAuthFormContext';
 import { AuthCardLock } from './AuthCardLock';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { AuthOwlBadge } from './AuthOwlBadge';
@@ -23,7 +24,9 @@ export function StepCard({ lock, step, kind, stepRef, showBranding, showBadge, c
   const slot = useSlot();
   const t = useT();
   const { config } = usePublicConfig();
-  const mobileSheet = React.useContext(AuthOwlContext)?.appearance?.layout?.mobileSheet === true;
+  const { mobileSheet: providerMobileSheet } = useAuthOwlContext();
+  const embedded = React.useContext(EmbeddedAuthFormContext);
+  const mobileSheet = providerMobileSheet && !embedded;
   // The design names the app in the heading ("Sign in to Acme"); the header
   // then shows only the mark, so the name is never printed twice.
   const app = showBranding && config?.branding?.showAppName !== false ? config?.branding?.appName?.trim() : '';

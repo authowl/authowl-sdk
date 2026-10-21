@@ -69,6 +69,8 @@ export type ConfigState = 'loading' | 'ready' | 'error';
 type Ctx = {
   client: AuthOwlClient;
   appearance: Appearance | undefined;
+  /** Resolved opt-in layout, shared by the root attribute and auth cards. */
+  mobileSheet: boolean;
   /** Project public config (methods, social providers, branding). */
   config: PublicConfig | null;
   configState: ConfigState;
@@ -77,7 +79,7 @@ type Ctx = {
   locale: Locale;
 };
 
-export const AuthOwlContext = React.createContext<Ctx | null>(null);
+const AuthOwlContext = React.createContext<Ctx | null>(null);
 
 export type AuthOwlProviderProps = AuthConfig & {
   appearance?: Appearance;
@@ -212,9 +214,10 @@ export function AuthOwlProvider({
     captureInvitationClaim();
   }, []);
 
+  const mobileSheet = appearance?.layout?.mobileSheet === true;
   const ctxValue = React.useMemo<Ctx>(
-    () => ({ client, appearance, config, configState, retryPublicConfig, locale }),
-    [client, appearance, config, configState, retryPublicConfig, locale],
+    () => ({ client, appearance, mobileSheet, config, configState, retryPublicConfig, locale }),
+    [client, appearance, mobileSheet, config, configState, retryPublicConfig, locale],
   );
 
   return (
@@ -230,7 +233,7 @@ export function AuthOwlProvider({
         className="authowl-root"
         data-authowl-theme={merged.theme}
         data-authowl-brand={merged.brand}
-        data-authowl-layout={appearance?.layout?.mobileSheet === true ? 'sheet' : undefined}
+        data-authowl-layout={mobileSheet ? 'sheet' : undefined}
         data-authowl-control-height={merged.style['--ao-control-height'] ? '' : undefined}
         // Not read by our CSS (RTL keys off [dir]) - a deliberate hook for
         // HOST stylesheets to target per-locale, like data-authowl-theme.

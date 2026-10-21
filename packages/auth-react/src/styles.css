@@ -400,7 +400,8 @@
   :where(.authowl-root .ao-auth-card) :is(.ao-input, .ao-button, .ao-social-button) { height: var(--ao-control-height, 48px); min-height: 48px; }
   :where(.authowl-root .ao-auth-card) .ao-input { font-size: 16px; }
   /* The sheet shell also covers bare configuration-error and waitlist steps. */
-  :where(.authowl-root[data-authowl-layout=sheet]) .ao-auth-sheet { box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; position: fixed; inset-inline: 0; bottom: 0; width: 100%; max-width: none; max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--ao-border); border-start-start-radius: var(--ao-radius-xl); border-start-end-radius: var(--ao-radius-xl); border-end-start-radius: 0; border-end-end-radius: 0; border-bottom: 0; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--ao-surface); box-shadow: var(--ao-shadow-card); }
+  :where(.authowl-root[data-authowl-layout=sheet]) .ao-auth-sheet { box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; position: fixed; inset-inline: 0; bottom: 0; width: 100%; max-width: none; max-height: 92vh; max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain; border: 0; border-top: 1px solid var(--ao-border); border-start-start-radius: var(--ao-border-radius, var(--ao-radius-xl)); border-start-end-radius: var(--ao-border-radius, var(--ao-radius-xl)); border-end-start-radius: 0; border-end-end-radius: 0; padding: 20px 20px 32px; padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); background: var(--ao-surface); box-shadow: 0 -8px 32px var(--ao-shadow-dialog-ink); }
+  :where(.authowl-root .ao-auth-sheet) > .ao-form { max-width: none; }
   :where(.authowl-root .ao-auth-sheet) :is(.ao-input, .ao-button, .ao-social-button) { box-sizing: border-box; height: var(--ao-control-height, 48px); min-height: 48px; }
   :where(.authowl-root .ao-auth-sheet) .ao-input { font-size: 16px; }
   :where(.authowl-root[data-authowl-layout=sheet]) .ao-auth-sheet-handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; border-radius: var(--ao-radius-xl); background: var(--ao-line-strong); }
@@ -501,7 +502,7 @@
 }
 @media (max-width: 480px) {
   :where(.authowl-root) .ao-profile-overlay { align-items: end; padding: 0; }
-  :where(.authowl-root) .ao-profile-modal { overscroll-behavior: contain; border-bottom: 0; width: 100%; box-sizing: border-box; max-height: 92dvh; overflow-y: auto; border-start-start-radius: var(--ao-radius-xl); border-start-end-radius: var(--ao-radius-xl); border-end-start-radius: 0; border-end-end-radius: 0; padding-block-end: env(safe-area-inset-bottom, 0px); padding-inline-start: env(safe-area-inset-left, 0px); padding-inline-end: env(safe-area-inset-right, 0px); }
+  :where(.authowl-root) .ao-profile-modal { overscroll-behavior: contain; border-bottom: 0; width: 100%; box-sizing: border-box; max-height: 92vh; max-height: 92dvh; overflow-y: auto; border-start-start-radius: var(--ao-radius-xl); border-start-end-radius: var(--ao-radius-xl); border-end-start-radius: 0; border-end-end-radius: 0; padding-block-end: env(safe-area-inset-bottom, 0px); padding-inline-start: env(safe-area-inset-left, 0px); padding-inline-end: env(safe-area-inset-right, 0px); }
   :where(.authowl-root) .ao-profile-modal-header { padding: 20px; }
   :where(.authowl-root) .ao-profile-sheet-handle { display: block; width: 36px; height: 4px; margin: 12px auto 0; border-radius: var(--ao-radius-xl); background: var(--ao-line-strong); }
 }

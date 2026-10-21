@@ -121,7 +121,10 @@ MIT
 ## Appearance and Tailwind
 
 See the [appearance migration guide](../../docs/react-appearance-migration.md) for
-the theme, brand, variables and typed elements API. The default theme is now
+the theme, brand, variables, typed elements and `appearance.layout` API.
+Set `appearance={{ layout: { mobileSheet: true } }}` to dock standalone SignIn
+and SignUp cards to the bottom on phones. Embedded invitation forms stay inline.
+The default theme is now
 `inherit`. Tailwind hosts should import the stylesheet in a layer:
 
 ```css

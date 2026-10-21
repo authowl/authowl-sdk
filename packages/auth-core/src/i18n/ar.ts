@@ -315,24 +315,24 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.signedOut': 'سجّل الدخول لإدارة حسابك.',
   'userProfile.save': 'حفظ التغييرات',
   'userProfile.retry': 'حاول مرة أخرى',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.cancel': 'إلغاء',
   'userProfile.nav.aria': 'إعدادات الحساب',
   'userProfile.nav.profile': 'الملف الشخصي',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.nav.email': 'البريد الإلكتروني',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.nav.password': 'كلمة المرور',
   'userProfile.nav.social': 'الحسابات المرتبطة',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.nav.sessions': 'الجلسات',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.nav.passkeys': 'مفاتيح المرور',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.nav.mfa': 'المصادقة الثنائية',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.nav.recovery': 'الاسترداد',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.nav.danger': 'حذف الحساب',
   'userProfile.profile.title': 'الملف الشخصي',
   'userProfile.profile.description': 'اختر طريقة ظهور اسمك وصورتك.',
@@ -355,7 +355,7 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.password.saved': 'تم تغيير كلمة المرور.',
   'userProfile.password.error': 'تعذر تغيير كلمة المرور.',
   'userProfile.social.title': 'الحسابات المرتبطة',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.social.description': 'أدر الحسابات الاجتماعية التي يمكنك استخدامها لتسجيل الدخول.',
   'userProfile.social.connected': 'مرتبط',
   'userProfile.social.disconnect': 'إلغاء الربط',
@@ -368,7 +368,7 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.social.linkError': 'تعذر ربط هذا الحساب.',
   'userProfile.social.unlinkError': 'تعذر إلغاء ربط هذا الحساب.',
   'userProfile.sessions.title': 'الأجهزة التي سجلت الدخول منها',
-  // Unused; kept for override compatibility until the 1.0 major.
+  // Unused; kept for override compatibility until the next major of @authowl/core.
   'userProfile.sessions.description': 'راجع الأجهزة المسجّل دخولها إلى حسابك.',
   'userProfile.sessions.current': 'هذا الجهاز',
   'userProfile.sessions.unknownDevice': 'جهاز غير معروف',
