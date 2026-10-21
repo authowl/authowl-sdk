@@ -246,6 +246,7 @@ func TestConformancePublishableKey(t *testing.T) {
 				Prefix    string `json:"prefix"`
 				Env       string `json:"env"`
 				ProjectID string `json:"projectId"`
+				Region    string `json:"region"`
 				Reason    string `json:"reason"`
 			} `json:"expect"`
 		} `json:"cases"`
@@ -281,7 +282,7 @@ func TestConformancePublishableKey(t *testing.T) {
 			}
 			if decoded.Prefix != testCase.Expect.Prefix ||
 				string(decoded.Env) != testCase.Expect.Env ||
-				decoded.ProjectID != testCase.Expect.ProjectID {
+				decoded.ProjectID != testCase.Expect.ProjectID || decoded.Region != testCase.Expect.Region {
 				t.Fatalf("want %s/%s/%s, got %s/%s/%s",
 					testCase.Expect.Prefix, testCase.Expect.Env, testCase.Expect.ProjectID,
 					decoded.Prefix, decoded.Env, decoded.ProjectID)

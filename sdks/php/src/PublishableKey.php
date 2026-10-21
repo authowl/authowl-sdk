@@ -11,12 +11,13 @@ use AuthOwl\Exception\SecretKeySuppliedException;
 /** The decoded form of a `pk_live_…` / `pk_test_…` key. */
 final class PublishableKey
 {
-    private const PATTERN = '/^(pk_(live|test))_([0-9a-fA-F-]{36})_([A-Za-z0-9]{20,})$/';
+    private const PATTERN = '/^(pk_(live|test))_(?:([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)_)?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})_([A-Za-z0-9]{20,})$/D';
 
     public function __construct(
         public readonly string $prefix,
         public readonly string $env,
         public readonly string $projectId,
+        public readonly ?string $region = null,
     ) {
     }
 
@@ -38,9 +39,9 @@ final class PublishableKey
                 . 'Never embed secret keys in client code.'
             );
         }
-        if (preg_match(self::PATTERN, $key, $match) !== 1) {
+        if (preg_match(self::PATTERN, $key, $match) !== 1 || strlen($match[3]) > 24) {
             throw new MalformedPublishableKeyException(
-                'publishableKey is malformed; expected pk_(live|test)_<uuid>_<base62>'
+                'publishableKey is malformed; expected pk_(live|test)_[<region>_]<uuid>_<base62>'
             );
         }
 
@@ -49,6 +50,6 @@ final class PublishableKey
         // and returning it verbatim yields an id that never equals the lowercase
         // Postgres `uuid` the server puts in a JWT `aud` or names its cookie
         // after.
-        return new self(strtolower($match[1]), strtolower($match[2]), strtolower($match[3]));
+        return new self(strtolower($match[1]), strtolower($match[2]), strtolower($match[4]), $match[3] === '' ? null : strtolower($match[3]));
     }
 }

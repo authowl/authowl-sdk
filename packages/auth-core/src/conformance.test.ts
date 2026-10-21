@@ -177,7 +177,7 @@ describe('conformance: publishable key decoding', () => {
       name: string;
       key: string;
       expect:
-        | { ok: true; prefix: string; env: string; projectId: string }
+        | { ok: true; prefix: string; env: string; projectId: string; region: string | null }
         | { ok: false; reason: 'missing' | 'secret_key' | 'malformed' };
     }>;
   };
@@ -197,6 +197,7 @@ describe('conformance: publishable key decoding', () => {
         prefix: testCase.expect.prefix,
         env: testCase.expect.env,
         projectId: testCase.expect.projectId,
+        region: testCase.expect.region,
       });
     } else {
       let reason: string | undefined;

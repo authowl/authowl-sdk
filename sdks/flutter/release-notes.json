@@ -1,4 +1,10 @@
 {
+  "0.5.0": {
+    "date": "2026-10-21",
+    "notes": [
+      "Parses region-carrying API keys; decoded publishable keys expose region."
+    ]
+  },
   "0.4.2": {
     "date": "2026-09-16",
     "notes": [

@@ -12,7 +12,7 @@ func as(err error, target any) bool { return errors.As(err, target) }
 
 var (
 	publishableKeyPattern = regexp.MustCompile(
-		`^(pk_(live|test))_([0-9a-fA-F-]{36})_([A-Za-z0-9]{20,})$`,
+		`^(pk_(live|test))_(?:([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)_)?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})_([A-Za-z0-9]{20,})$`,
 	)
 	secretKeyPattern = regexp.MustCompile(`^(?i)sk_`)
 )
@@ -30,6 +30,8 @@ type PublishableKey struct {
 	Prefix    string
 	Env       Environment
 	ProjectID string
+	// Region is "" for a legacy four-part key.
+	Region string
 }
 
 // ErrSecretKeySupplied is returned when a secret key reaches a function that
@@ -53,18 +55,19 @@ func DecodePublishableKey(key string) (PublishableKey, error) {
 		return PublishableKey{}, ErrSecretKeySupplied
 	}
 	match := publishableKeyPattern.FindStringSubmatch(key)
-	if match == nil {
+	if match == nil || len(match[3]) > 24 {
 		return PublishableKey{}, fmt.Errorf(
-			"authowl: publishableKey is malformed; expected pk_(live|test)_<uuid>_<base62>",
+			"authowl: publishableKey is malformed; expected pk_(live|test)_[<region>_]<uuid>_<base62>",
 		)
 	}
 	return PublishableKey{
+		Region: strings.ToLower(match[3]),
 		Prefix: strings.ToLower(match[1]),
 		Env:    Environment(strings.ToLower(match[2])),
 		// Lowercased for the same reason as Prefix and Env: the pattern accepts
 		// `[0-9a-fA-F-]`, so an upper-case uuid is a VALID key, and returning it
 		// verbatim yields an id that never equals the lowercase Postgres `uuid`
 		// the server puts in a JWT `aud` or names its session cookie after.
-		ProjectID: strings.ToLower(match[3]),
+		ProjectID: strings.ToLower(match[4]),
 	}, nil
 }

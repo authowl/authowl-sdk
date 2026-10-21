@@ -24,6 +24,7 @@ pub struct PublishableKey {
     pub prefix: String,
     pub env: Environment,
     pub project_id: String,
+    pub region: Option<String>,
 }
 
 /// Validate a publishable key and extract its project id.
@@ -35,17 +36,36 @@ pub fn decode_publishable_key(key: &str) -> Result<PublishableKey, KeyError> {
     if key.is_empty() {
         return Err(KeyError::Required);
     }
-    if key.len() >= 3 && key[..3].eq_ignore_ascii_case("sk_") {
+    if key
+        .get(..3)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("sk_"))
+    {
         return Err(KeyError::SecretKeySupplied);
     }
 
     // Hand-rolled rather than a regex dependency: the grammar is fixed and this
     // keeps the crate's dependency surface to crypto only.
-    let mut parts = key.splitn(4, '_');
-    let pk = parts.next().ok_or(KeyError::Malformed)?;
-    let env_part = parts.next().ok_or(KeyError::Malformed)?;
-    let project_id = parts.next().ok_or(KeyError::Malformed)?;
-    let suffix = parts.next().ok_or(KeyError::Malformed)?;
+    let parts: Vec<_> = key.split('_').collect();
+    if parts.len() != 4 && parts.len() != 5 {
+        return Err(KeyError::Malformed);
+    }
+    let pk = parts[0];
+    let env_part = parts[1];
+    let region = if parts.len() == 5 {
+        let value = parts[2];
+        if value.len() > 24
+            || value
+                .split('-')
+                .any(|part| part.is_empty() || !part.bytes().all(|b| b.is_ascii_alphanumeric()))
+        {
+            return Err(KeyError::Malformed);
+        }
+        Some(value.to_ascii_lowercase())
+    } else {
+        None
+    };
+    let project_id = parts[parts.len() - 2];
+    let suffix = parts[parts.len() - 1];
 
     if pk != "pk" {
         return Err(KeyError::Malformed);
@@ -56,9 +76,13 @@ pub fn decode_publishable_key(key: &str) -> Result<PublishableKey, KeyError> {
         _ => return Err(KeyError::Malformed),
     };
     if project_id.len() != 36
-        || !project_id
-            .bytes()
-            .all(|b| b.is_ascii_hexdigit() || b == b'-')
+        || !project_id.bytes().enumerate().all(|(i, b)| {
+            if [8, 13, 18, 23].contains(&i) {
+                b == b'-'
+            } else {
+                b.is_ascii_hexdigit()
+            }
+        })
     {
         return Err(KeyError::Malformed);
     }
@@ -69,6 +93,7 @@ pub fn decode_publishable_key(key: &str) -> Result<PublishableKey, KeyError> {
     Ok(PublishableKey {
         prefix: format!("pk_{}", env.as_str()),
         env,
+        region,
         // Lowercased because the check above accepts any ASCII hex digit, so an
         // upper-case uuid is a VALID key. Returned verbatim it would never equal
         // the lowercase Postgres `uuid` the server puts in a JWT `aud` or names

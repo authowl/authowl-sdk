@@ -107,7 +107,7 @@ fn token_verification() {
         }
         checked += 1;
     }
-    assert_eq!(checked, 56, "unexpected token vector count");
+    assert_eq!(checked, 57, "unexpected token vector count");
 }
 
 #[test]
@@ -162,6 +162,7 @@ fn publishable_keys() {
                 result.unwrap_or_else(|error| panic!("{name}: expected success, got {error}"));
             assert_eq!(decoded.prefix, text(expected, "prefix"), "{name}: prefix");
             assert_eq!(decoded.env.as_str(), text(expected, "env"), "{name}: env");
+            assert_eq!(decoded.region.as_deref(), expected["region"].as_str());
             assert_eq!(
                 decoded.project_id,
                 text(expected, "projectId"),

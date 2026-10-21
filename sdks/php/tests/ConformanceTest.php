@@ -191,6 +191,7 @@ final class ConformanceTest extends TestCase
             self::assertSame($case->expect->prefix, $decoded->prefix);
             self::assertSame($case->expect->env, $decoded->env);
             self::assertSame($case->expect->projectId, $decoded->projectId);
+            self::assertSame($case->expect->region, $decoded->region);
 
             return;
         }

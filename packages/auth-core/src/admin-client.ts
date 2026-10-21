@@ -1,3 +1,4 @@
+import { parseApiKey } from './api-key-format';
 import type { components, operations } from './admin-api.generated';
 import { adminOperations, type AdminOperationId } from './admin-operations.generated';
 import { decodeAdminOperationResponse } from './admin-response-validator';
@@ -10,7 +11,6 @@ import {
 } from './transport';
 import { canonicalTransportUrl } from './url-policy';
 
-const SECRET_KEY_PATTERN = /^sk_(?:live|test)_[0-9a-f-]{36}_[A-Za-z0-9]{20,}$/i;
 const ADMIN_RESPONSE_MAX_BYTES = 1024 * 1024;
 const ADMIN_REQUEST_TIMEOUT_MS = 10_000;
 
@@ -212,8 +212,8 @@ function assertServerRuntime(): void {
 }
 
 function validateSecretKey(secretKey: string | undefined): string {
-  if (typeof secretKey !== 'string' || !SECRET_KEY_PATTERN.test(secretKey)) {
-    throw new TypeError('secretKey is malformed; expected sk_(live|test)_<uuid>_<random>.');
+  if (typeof secretKey !== 'string' || parseApiKey(secretKey)?.kind !== 'sk') {
+    throw new TypeError('secretKey is malformed; expected sk_(live|test)_[<region>_]<uuid>_<random>.');
   }
   return secretKey;
 }

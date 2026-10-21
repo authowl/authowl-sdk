@@ -379,3 +379,13 @@ describe('createAdminClient', () => {
     void assertOperationInputs;
   });
 });
+
+it.each(['', 'eu-de_'])('accepts a secret key with optional region %s', (region) => {
+  const key = `sk_test_${region}00000000-0000-4000-8000-000000000001_${'A'.repeat(32)}`;
+  expect(() => createAdminClient({ secretKey: key, apiUrl: 'https://auth.example.com' })).not.toThrow();
+});
+
+it.each(['K', '-eu', 'eu-', 'a'.repeat(25)])('rejects malformed secret region %s', (region) => {
+  const key = `sk_test_${region}_00000000-0000-4000-8000-000000000001_${'A'.repeat(32)}`;
+  expect(() => createAdminClient({ secretKey: key, apiUrl: 'https://auth.example.com' })).toThrow('secretKey is malformed');
+});

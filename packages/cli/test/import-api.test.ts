@@ -9,7 +9,8 @@ const projectId = "11111111-1111-4111-8111-111111111111";
 const secretKey = `sk_test_${projectId}_${"S".repeat(32)}`;
 
 describe("canonical import uploader", () => {
-  it("streams canonical NDJSON with the secret only in the bearer header", async () => {
+  it.each(["", "eu-de_"])("streams canonical NDJSON with optional region %s and the secret only in the bearer header", async (region) => {
+    const secretKey = `sk_test_${region}${projectId}_${"S".repeat(32)}`;
     let receivedBody = "";
     const request = vi.fn<typeof fetch>(async (url, init) => {
       receivedBody = await new Response(init?.body).text();
@@ -27,7 +28,7 @@ describe("canonical import uploader", () => {
     });
 
     const result = await uploadCanonicalImport(
-      options(),
+      { ...options(), secretKey },
       { fetch: request },
     );
 

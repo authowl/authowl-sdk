@@ -1,3 +1,4 @@
+import { parseApiKey } from "../key-format";
 import { resolveApiUrl } from "../api-url";
 import { CLI_USER_AGENT } from "../metadata";
 import { terminalText } from "../terminal";
@@ -9,8 +10,7 @@ import type {
 import { parseImportBatchResponse } from "./response-contract";
 import { ImportSourceError, isRecord } from "./source-reader";
 
-const SECRET_KEY_PATTERN =
-  /^sk_(?:live|test)_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_[A-Za-z0-9]{20,}$/i;
+
 const SOURCE_NAMESPACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
 const REQUEST_TIMEOUT_MS = 120_000;
 
@@ -141,11 +141,11 @@ function validateSecretKey(
       "AUTHOWL_SECRET_KEY is required and must grant the users:write scope.",
     );
   }
-  const match = SECRET_KEY_PATTERN.exec(secretKey.trim());
-  if (!match) {
+  const match = parseApiKey(secretKey.trim());
+  if (!match || match.kind !== "sk") {
     throw new Error("AUTHOWL_SECRET_KEY is malformed.");
   }
-  if (match[1]!.toLowerCase() !== projectId.toLowerCase()) {
+  if (match.projectId !== projectId.toLowerCase()) {
     throw new Error(
       "The AuthOwl secret key belongs to a different project than --project.",
     );

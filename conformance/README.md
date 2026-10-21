@@ -12,14 +12,16 @@ membership, and response-projection vectors.
 
 | File | Cases | Covers |
 |---|--:|---|
-| `jwt-verify.json` | 56 | ES256 verification: signature, `iss`/`aud`/`exp`/`nbf`, token purpose and `typ`, bound and unbound `cnf.jkt`, `alg` confusion, malformed structure, membership decoding |
+| `jwt-verify.json` | 57 | ES256 verification: signature, `iss`/`aud`/`exp`/`nbf`, token purpose and `typ`, bound and unbound `cnf.jkt`, `alg` confusion, malformed structure, membership decoding |
 | `jwks-parse.json` | 20 | JWKS hardening: private-member leakage, `key_ops`, unexpected members, wrong curve, duplicate `kid`, key-count ceiling |
 | `webhook-verify.json` | 26 | HMAC-SHA256 signatures, rotation overlap, replay window, malformed headers, config errors |
-| `membership-has.json` | 20 | `has()` / `hasPermission()`, AND semantics, the teams-absent rule |
-| `publishable-key.json` | 14 | Key decoding, the `sk_` refusal, and project-id canonicalisation |
+| `membership-has.json` | 25 | `has()` / `hasPermission()`, AND semantics, the teams-absent rule |
+| `publishable-key.json` | 55 | Key decoding, the `sk_` refusal, and project-id canonicalisation |
 | `cookie-name.json` | 7 | Session cookie-name derivation |
 | `response-projection.json` | 18 | Browser-safe response projection and secret-field stripping |
-| | **161** | |
+| | **208** | |
+
+The regenerated JWT corpus includes "valid token carrying every role the member holds", which was absent from main's committed vector file.
 
 ## The invariants worth stating out loud
 
@@ -113,3 +115,5 @@ nothing but these fixtures.
 
 The reference implementation is `packages/auth-core` — when a vector and the
 docs disagree, read `src/token-verify.ts`.
+
+Region is the third segment and is a hint; the discriminator is the part count. Legacy keys expose a null region. No routing uses this hint.
