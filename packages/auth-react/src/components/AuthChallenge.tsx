@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import type { ActionFetchOptions, AuthActionResult, AuthClientError } from '@authowl/core';
 import { usePublicConfig } from '../hooks';
@@ -54,6 +55,7 @@ function captchaTheme(
  * minted for another server action.
  */
 export function useAuthChallenge() {
+  const slot = useSlot();
   const { config, isLoading, retry } = usePublicConfig();
   const t = useT();
   const container = React.useRef<HTMLDivElement>(null);
@@ -191,8 +193,8 @@ export function useAuthChallenge() {
   );
 
   const control = captcha ? (
-    <div className="ba-auth-challenge" data-testid="auth-challenge">
-      {providerSupported ? <div className="ba-turnstile" ref={container} /> : null}
+    <div className={slot('ba-auth-challenge')} data-testid="auth-challenge">
+      {providerSupported ? <div className={slot('ba-turnstile')} ref={container} /> : null}
       {/*
         A provider this build cannot render is PERMANENT for this deployment, so
         it is shown rather than announced only to assistive technology. The
@@ -206,7 +208,7 @@ export function useAuthChallenge() {
           {t('authChallenge.error.unsupportedProvider', { provider: unavailableProvider })}
         </FormError>
       ) : (
-        <p className="ba-sr-only" role="status" aria-live="polite">
+        <p className={slot('ba-sr-only')} role="status" aria-live="polite">
           {status === 'checking'
             ? t('authChallenge.checking')
             : status === 'failed'

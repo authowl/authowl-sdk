@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useAuthClient, useSession, useUser } from '../hooks';
 import { useT } from '../i18n';
@@ -96,12 +97,13 @@ export type MfaEnrollmentStepProps = {
 
 /** The enrolment screen itself. Render only when `useConfirmedMfaPending()` is `pending`. */
 export function MfaEnrollmentStep({ title }: MfaEnrollmentStepProps) {
+  const slot = useSlot();
   const t = useT();
   const { refetch } = useSession();
   return (
     <>
-      <h2 className="ba-title">{title ?? t('mfaGate.title')}</h2>
-      <p className="ba-muted">{t('mfaGate.body')}</p>
+      <h2 className={slot('ba-title')}>{title ?? t('mfaGate.title')}</h2>
+      <p className={slot('ba-muted')}>{t('mfaGate.body')}</p>
       <MFAEnrollment onEnrolled={() => refetch({ query: { disableCookieCache: true } })} />
     </>
   );

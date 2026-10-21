@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import type { OrganizationDetails, OrganizationInvitation } from '@authowl/core';
 import { useAuthClient, usePublicConfig } from '../../hooks';
@@ -16,6 +17,7 @@ export function InvitationsSection({
   organization: OrganizationDetails;
   onChanged: () => void | Promise<void>;
 }) {
+  const slot = useSlot();
   const t = useT();
   const api = useAuthClient().organization;
   const { config } = usePublicConfig();
@@ -68,26 +70,26 @@ export function InvitationsSection({
   };
 
   return (
-    <section className="ba-organization-section">
-      <header className="ba-organization-section-header">
-        <h3 className="ba-title">{t('organization.profile.invitations.title')}</h3>
-        <p className="ba-muted">{t('organization.profile.invitations.description')}</p>
+    <section className={slot('ba-organization-section')}>
+      <header className={slot('ba-organization-section-header')}>
+        <h3 className={slot('ba-title')}>{t('organization.profile.invitations.title')}</h3>
+        <p className={slot('ba-muted')}>{t('organization.profile.invitations.description')}</p>
       </header>
-      <form method="post" className="ba-organization-invite-form" onSubmit={invite}>
-        <label className="ba-label">
+      <form method="post" className={slot('ba-organization-invite-form')} onSubmit={invite}>
+        <label className={slot('ba-label')}>
           {t('organization.profile.invitations.emails')}
-          <textarea className="ba-input" dir="ltr" rows={3} value={email} disabled={pending} onChange={(event) => setEmail(event.target.value)} required />
+          <textarea className={slot('ba-input')} dir="ltr" rows={3} value={email} disabled={pending} onChange={(event) => setEmail(event.target.value)} required />
         </label>
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('organization.profile.members.role')}
-          <select className="ba-input" value={role} onChange={(event) => setRole(event.target.value)}>
+          <select className={slot('ba-input')} value={role} onChange={(event) => setRole(event.target.value)}>
             {roles.map((option) => (
               <option key={option} value={option}>{organizationRoleLabel(option, t)}</option>
             ))}
           </select>
         </label>
         <button
-          className="ba-button"
+          className={slot('ba-button')}
           type="submit"
           disabled={pending || !email.trim()}
           aria-busy={pending || undefined}
@@ -95,27 +97,27 @@ export function InvitationsSection({
           <Busy busy={pending} label={t('common.working')}>{t('organization.profile.invitations.invite')}</Busy>
         </button>
       </form>
-      <p className="ba-muted">{t('organization.profile.invitations.allowance', { count: maxBatch })}</p>
+      <p className={slot('ba-muted')}>{t('organization.profile.invitations.allowance', { count: maxBatch })}</p>
       <FormError>{error}</FormError>
       {outcomes.length > 0 && (
-        <ul className="ba-organization-list ba-organization-invite-results" role="status">
+        <ul className={slot('ba-organization-list ba-organization-invite-results')} role="status">
           {outcomes.map((outcome) => (
-            <li className="ba-organization-invitation" key={outcome.email}>
+            <li className={slot('ba-organization-invitation')} key={outcome.email}>
               <span><strong><Bidi>{outcome.email}</Bidi></strong><small>{outcome.error ?? t('organization.profile.invitations.sent')}</small></span>
             </li>
           ))}
         </ul>
       )}
       {invitations.length === 0 ? (
-        <p className="ba-muted">{t('organization.profile.invitations.empty')}</p>
+        <p className={slot('ba-muted')}>{t('organization.profile.invitations.empty')}</p>
       ) : (
-        <ul className="ba-organization-list">
+        <ul className={slot('ba-organization-list')}>
           {invitations.map((invitation) => (
-            <li key={invitation.id} className="ba-organization-invitation">
+            <li key={invitation.id} className={slot('ba-organization-invitation')}>
               <span><strong><Bidi>{invitation.email}</Bidi></strong><small>{organizationRoleLabel(invitation.role, t)}</small></span>
-              <span className="ba-organization-card-actions">
-              <button className="ba-link-button" type="button" disabled={pending} onClick={() => resend(invitation)}>{t('organization.profile.invitations.resend')}</button>
-              <button className="ba-link-button ba-danger" type="button" disabled={pending} onClick={() => cancel(invitation)}>
+              <span className={slot('ba-organization-card-actions')}>
+              <button className={slot('ba-link-button')} type="button" disabled={pending} onClick={() => resend(invitation)}>{t('organization.profile.invitations.resend')}</button>
+              <button className={slot('ba-link-button ba-danger')} type="button" disabled={pending} onClick={() => cancel(invitation)}>
                 {t('organization.profile.invitations.cancel')}
               </button></span>
             </li>

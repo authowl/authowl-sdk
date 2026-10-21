@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { usePublicConfig, useUser } from '../hooks';
 import { useT, type MessageKey } from '../i18n';
@@ -69,6 +70,7 @@ function initialSection(fallback?: UserProfileSection): UserProfileSection {
 }
 
 export function UserProfile(props: UserProfileProps = {}) {
+  const slot = useSlot();
   const {
     section,
     defaultSection,
@@ -123,11 +125,11 @@ export function UserProfile(props: UserProfileProps = {}) {
   };
 
   const content = !isLoaded ? (
-    <div className="ba-profile-loading" aria-busy="true">
-      <div className="ba-skeleton" /><div className="ba-skeleton" /><div className="ba-skeleton" />
+    <div className={slot('ba-profile-loading')} aria-busy="true">
+      <div className={slot('ba-skeleton')} /><div className={slot('ba-skeleton')} /><div className={slot('ba-skeleton')} />
     </div>
   ) : !isSignedIn || !user ? (
-    <p className="ba-muted">{t('userProfile.signedOut')}</p>
+    <p className={slot('ba-muted')}>{t('userProfile.signedOut')}</p>
   ) : (
     <UserProfileBody
       key={user.id}
@@ -151,14 +153,14 @@ export function UserProfile(props: UserProfileProps = {}) {
   }
 
   return (
-    <article className="ba-profile ba-profile-page" data-testid="user-profile">
-      <header className="ba-profile-heading">
+    <article className={slot('ba-profile ba-profile-page')} data-testid="user-profile">
+      <header className={slot('ba-profile-heading')}>
         {showBranding ? <AuthOwlBranding /> : null}
         <h1>{t('userProfile.title')}</h1>
         <p>{t('userProfile.description')}</p>
       </header>
       {content}
-      <footer className="ba-profile-modal-footer">
+      <footer className={slot('ba-profile-modal-footer')}>
         <AuthOwlBadge />
       </footer>
     </article>
@@ -178,15 +180,16 @@ function UserProfileBody({
   onDeleted?: () => void;
   capabilities: ReturnType<typeof resolveProjectCapabilities>;
 }) {
+  const slot = useSlot();
   const t = useT();
   return (
-    <div className="ba-profile-layout">
-      <nav className="ba-profile-nav" aria-label={t('userProfile.nav.aria')}>
+    <div className={slot('ba-profile-layout')}>
+      <nav className={slot('ba-profile-nav')} aria-label={t('userProfile.nav.aria')}>
         {sections.map((item) => (
           <button
             key={item}
             type="button"
-            className="ba-profile-nav-item"
+            className={slot('ba-profile-nav-item')}
             aria-current={active === item ? 'page' : undefined}
             onClick={() => onSelect(item)}
           >
@@ -194,7 +197,7 @@ function UserProfileBody({
           </button>
         ))}
       </nav>
-      <div className="ba-profile-content" data-section={active}>
+      <div className={slot('ba-profile-content')} data-section={active}>
         {active === 'profile' && (
           <ProfileSection
             firstLastName={capabilities.firstLastName}

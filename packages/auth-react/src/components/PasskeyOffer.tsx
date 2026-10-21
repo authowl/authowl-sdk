@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { usePasskeys } from '../hooks';
 import { useT, type MessageKey } from '../i18n';
@@ -57,18 +58,19 @@ const COPY: Record<
  * on. Nothing here may strand someone who is already signed in.
  */
 export function PasskeyOffer({ onComplete, variant, title }: PasskeyOfferProps) {
+  const slot = useSlot();
   const t = useT();
   const { addPasskey } = usePasskeys();
   const { pending, error, run } = useSubmitAction();
   const copy = COPY[variant];
 
   return (
-    <div className="ba-fields" data-testid="passkey-offer">
-      <h3 className="ba-title">{title ?? t(copy.title)}</h3>
-      <p className="ba-muted">{t(copy.body)}</p>
+    <div className={slot('ba-fields')} data-testid="passkey-offer">
+      <h3 className={slot('ba-title')}>{title ?? t(copy.title)}</h3>
+      <p className={slot('ba-muted')}>{t(copy.body)}</p>
       <FormError>{error}</FormError>
       <button
-        className="ba-button"
+        className={slot('ba-button')}
         type="button"
         disabled={pending}
         aria-busy={pending || undefined}
@@ -79,7 +81,7 @@ export function PasskeyOffer({ onComplete, variant, title }: PasskeyOfferProps) 
       >
         <Busy busy={pending} label={t('passkey.waiting')}>{t(copy.submit)}</Busy>
       </button>
-      <button className="ba-link-button" type="button" disabled={pending} onClick={() => onComplete(false)}>
+      <button className={slot('ba-link-button')} type="button" disabled={pending} onClick={() => onComplete(false)}>
         {t(copy.skip)}
       </button>
     </div>

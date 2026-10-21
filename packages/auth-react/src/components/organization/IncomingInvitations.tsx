@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import type { OrganizationUserInvitation } from '@authowl/core';
 import { useAuthClient, useSession, useUser } from '../../hooks';
@@ -8,6 +9,7 @@ import { FormError } from '../FormError';
 import { organizationRoleLabel } from './role-label';
 
 export function IncomingInvitations({ onChanged }: { onChanged: () => Promise<void> }) {
+  const slot = useSlot();
   const t = useT();
   const toServerError = useServerError();
   const { user, isLoaded, isSignedIn } = useUser();
@@ -71,22 +73,22 @@ export function IncomingInvitations({ onChanged }: { onChanged: () => Promise<vo
 
   return <>
     <FormError>{error}</FormError>
-        <section className="ba-organization-user-invitations">
-          <header className="ba-organization-section-header"><h3 className="ba-title">{t('organization.list.invitationsTitle')}</h3><p className="ba-muted">{t('organization.list.invitationsDescription')}</p></header>
-          {invitationError && <div className="ba-inline-error"><FormError>{invitationError}</FormError><button className="ba-link-button" type="button" onClick={() => void loadInvitations()}>{t('organization.retry')}</button></div>}
+        <section className={slot('ba-organization-user-invitations')}>
+          <header className={slot('ba-organization-section-header')}><h3 className={slot('ba-title')}>{t('organization.list.invitationsTitle')}</h3><p className={slot('ba-muted')}>{t('organization.list.invitationsDescription')}</p></header>
+          {invitationError && <div className={slot('ba-inline-error')}><FormError>{invitationError}</FormError><button className={slot('ba-link-button')} type="button" onClick={() => void loadInvitations()}>{t('organization.retry')}</button></div>}
           {invitations?.length ? (
-            <ul className="ba-organization-list">
+            <ul className={slot('ba-organization-list')}>
               {invitations.map((invitation) => (
-                <li key={invitation.id} className="ba-organization-invitation">
+                <li key={invitation.id} className={slot('ba-organization-invitation')}>
                   <span><strong>{invitation.organizationName}</strong><small>{organizationRoleLabel(invitation.role, t)}</small></span>
-                  <span className="ba-organization-card-actions">
-                    <button className="ba-button" type="button" disabled={pending} onClick={() => invitationAction(invitation, 'accept')}>{t('organization.list.accept')}</button>
-                    <button className="ba-link-button" type="button" disabled={pending} onClick={() => invitationAction(invitation, 'reject')}>{t('organization.list.reject')}</button>
+                  <span className={slot('ba-organization-card-actions')}>
+                    <button className={slot('ba-button')} type="button" disabled={pending} onClick={() => invitationAction(invitation, 'accept')}>{t('organization.list.accept')}</button>
+                    <button className={slot('ba-link-button')} type="button" disabled={pending} onClick={() => invitationAction(invitation, 'reject')}>{t('organization.list.reject')}</button>
                   </span>
                 </li>
               ))}
             </ul>
-          ) : invitationError ? null : invitations === null ? <div className="ba-skeleton" /> : <p className="ba-muted">{t('organization.list.noInvitations')}</p>}
+          ) : invitationError ? null : invitations === null ? <div className={slot('ba-skeleton')} /> : <p className={slot('ba-muted')}>{t('organization.list.noInvitations')}</p>}
         </section>
   </>;
 }

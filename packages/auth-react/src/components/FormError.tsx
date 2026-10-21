@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 
 export type FormErrorProps = {
@@ -27,10 +28,11 @@ export type FormErrorProps = {
  * `resolveServerError`; this only owns the announced-wrapper semantics.
  */
 export function FormError({ children, className, 'data-testid': testId }: FormErrorProps) {
+  const slot = useSlot();
   if (children == null || children === '' || children === false) return null;
   return (
     <p
-      className={className ? `ba-error ${className}` : 'ba-error'}
+      className={slot(className ? `ba-error ${className}` : 'ba-error')}
       role="alert"
       aria-live="assertive"
       data-testid={testId}

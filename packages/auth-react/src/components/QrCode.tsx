@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useT } from '../i18n';
 import type { QrMatrix } from './qr';
@@ -18,6 +19,7 @@ export type QrCodeProps = {
  * encoded, so the caller's manual-entry fallback stays available throughout.
  */
 export function QrCode({ value, size = 200 }: QrCodeProps) {
+  const slot = useSlot();
   const t = useT();
   const [path, setPath] = React.useState<QrMatrix | null>(null);
 
@@ -48,7 +50,7 @@ export function QrCode({ value, size = 200 }: QrCodeProps) {
       role="img"
       aria-label={t('qr.ariaLabel')}
       shapeRendering="crispEdges"
-      className="ba-qr"
+      className={slot('ba-qr')}
     >
       <rect width={dim} height={dim} fill="#ffffff" />
       <g transform={`translate(${margin} ${margin})`}>

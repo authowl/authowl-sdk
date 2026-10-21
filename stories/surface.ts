@@ -10,8 +10,8 @@ export const card: CSSProperties = {
   maxWidth: 420,
   margin: '0 auto',
   padding: 24,
-  background: 'var(--ba-surface)',
-  color: 'var(--ba-fg)',
-  border: '1px solid var(--ba-border)',
+  background: 'var(--ba-surface, var(--ao-surface))',
+  color: 'var(--ba-fg, var(--ao-fg))',
+  border: '1px solid var(--ba-border, var(--ao-border))',
   borderRadius: 14,
 };

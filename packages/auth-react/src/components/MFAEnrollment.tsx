@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import type { TwoFactorEnableData } from '@authowl/core';
 import { useMFA, useUser } from '../hooks';
@@ -32,6 +33,7 @@ function secretFromUri(uri: string): string | null {
  * final verification, so an abandoned setup never half-enrols the account.
  */
 export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
+  const slot = useSlot();
   const t = useT();
   const { enable, verifyTotp } = useMFA();
   const { user, isLoaded } = useUser();
@@ -71,9 +73,9 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
   // showing the QR/backup codes even when no `onEnrolled` navigation is provided.
   if (done) {
     return (
-      <div className="ba-fields" data-testid="mfa-enroll-done">
-        <h2 className="ba-title">{t('mfa.enroll.doneTitle')}</h2>
-        <p className="ba-muted">{t('mfa.enroll.doneBody')}</p>
+      <div className={slot('ba-fields')} data-testid="mfa-enroll-done">
+        <h2 className={slot('ba-title')}>{t('mfa.enroll.doneTitle')}</h2>
+        <p className={slot('ba-muted')}>{t('mfa.enroll.doneBody')}</p>
       </div>
     );
   }
@@ -83,8 +85,8 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
     // Wait for the session so we can tell whether they're already enrolled.
     if (!isLoaded) {
       return (
-        <div className="ba-fields" data-testid="mfa-enroll-loading" aria-busy="true">
-          <div className="ba-skeleton" />
+        <div className={slot('ba-fields')} data-testid="mfa-enroll-loading" aria-busy="true">
+          <div className={slot('ba-skeleton')} />
         </div>
       );
     }
@@ -92,9 +94,9 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
     // out the existing authenticator, so we refuse and point at disable instead.
     if (user?.twoFactorEnabled) {
       return (
-        <div className="ba-fields" data-testid="mfa-enroll-active">
-          <h2 className="ba-title">{t('mfa.enroll.activeTitle')}</h2>
-          <p className="ba-muted">{t('mfa.enroll.activeBody')}</p>
+        <div className={slot('ba-fields')} data-testid="mfa-enroll-active">
+          <h2 className={slot('ba-title')}>{t('mfa.enroll.activeTitle')}</h2>
+          <p className={slot('ba-muted')}>{t('mfa.enroll.activeBody')}</p>
         </div>
       );
     }
@@ -103,7 +105,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
     return (
       <form
         method="post"
-        className="ba-fields"
+        className={slot('ba-fields')}
         data-testid="mfa-enroll-password"
         onSubmit={(e) => {
           e.preventDefault();
@@ -116,12 +118,12 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
           });
         }}
       >
-        {title !== null && <h2 className="ba-title">{title ?? t('mfa.enroll.title')}</h2>}
-        <p className="ba-muted">{t('mfa.enroll.passwordHint')}</p>
-        <label className="ba-label">
+        {title !== null && <h2 className={slot('ba-title')}>{title ?? t('mfa.enroll.title')}</h2>}
+        <p className={slot('ba-muted')}>{t('mfa.enroll.passwordHint')}</p>
+        <label className={slot('ba-label')}>
           {t('common.passwordLabel')}
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -130,7 +132,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
           />
         </label>
         <FormError>{error}</FormError>
-        <button className="ba-button" type="submit" disabled={pending || !password} aria-busy={pending || undefined}>
+        <button className={slot('ba-button')} type="submit" disabled={pending || !password} aria-busy={pending || undefined}>
           <Busy busy={pending} label={t('mfa.enroll.startPending')}>{t('common.continue')}</Busy>
         </button>
       </form>
@@ -140,15 +142,15 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
   // Step 2: show the QR + backup codes (once), then verify a live code to activate.
   const secret = secretFromUri(activeSetup.totpURI);
   return (
-    <div className="ba-fields" data-testid="mfa-enroll-verify">
-      <h2 className="ba-title">{t('mfa.enroll.scanQrTitle')}</h2>
-      <p className="ba-muted">{t('mfa.enroll.scanQrHint')}</p>
+    <div className={slot('ba-fields')} data-testid="mfa-enroll-verify">
+      <h2 className={slot('ba-title')}>{t('mfa.enroll.scanQrTitle')}</h2>
+      <p className={slot('ba-muted')}>{t('mfa.enroll.scanQrHint')}</p>
       <QrCode value={activeSetup.totpURI} />
       {secret && (
-        <p className="ba-muted">
+        <p className={slot('ba-muted')}>
           {richMessage(t('mfa.enroll.manualKey'), {
             secret: (
-              <code className="ba-code">
+              <code className={slot('ba-code')}>
                 <Bidi>{secret}</Bidi>
               </code>
             ),
@@ -157,14 +159,14 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
       )}
 
       <div>
-        <p className="ba-muted">
+        <p className={slot('ba-muted')}>
           <strong>{t('mfa.enroll.backupCodesWarningStrong')}</strong>{' '}
           {t('mfa.enroll.backupCodesWarningRest')}
         </p>
-        <ul className="ba-backup-codes" data-testid="mfa-backup-codes">
+        <ul className={slot('ba-backup-codes')} data-testid="mfa-backup-codes">
           {activeSetup.backupCodes.map((c) => (
             <li key={c}>
-              <code className="ba-code">{c}</code>
+              <code className={slot('ba-code')}>{c}</code>
             </li>
           ))}
         </ul>
@@ -172,7 +174,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
 
       <form
         method="post"
-        className="ba-fields"
+        className={slot('ba-fields')}
         onSubmit={(e) => {
           e.preventDefault();
           void run(() => verifyTotp({ code }), {
@@ -188,10 +190,10 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
           });
         }}
       >
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('mfa.enroll.codeLabel')}
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             value={code}
             onChange={(e) => setCode(e.target.value.trim())}
             inputMode="numeric"
@@ -200,7 +202,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
           />
         </label>
         <FormError>{error}</FormError>
-        <button className="ba-button" type="submit" disabled={pending || !code} aria-busy={pending || undefined}>
+        <button className={slot('ba-button')} type="submit" disabled={pending || !code} aria-busy={pending || undefined}>
           <Busy busy={pending} label={t('common.verifying')}>{t('mfa.enroll.activateSubmit')}</Busy>
         </button>
       </form>

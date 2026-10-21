@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import type { PublicConfig } from '@authowl/core';
 import { richMessage, useT } from '../i18n';
@@ -18,19 +19,20 @@ export function LegalConsentCheckbox({
   onAcceptedChange,
   testId,
 }: LegalConsentCheckboxProps) {
+  const slot = useSlot();
   const t = useT();
   if (!legal.required) return null;
   return (
-    <label className="ba-consent" data-testid={testId}>
-      <span className="ba-checkbox-control">
+    <label className={slot('ba-consent')} data-testid={testId}>
+      <span className={slot('ba-checkbox-control')}>
         <input
-          className="ba-checkbox"
+          className={slot('ba-checkbox')}
           type="checkbox"
           checked={accepted}
           onChange={(event) => onAcceptedChange(event.target.checked)}
         />
-        <span className="ba-checkbox-visual" aria-hidden="true">
-          <span className="ba-checkbox-check" />
+        <span className={slot('ba-checkbox-visual')} aria-hidden="true">
+          <span className={slot('ba-checkbox-check')} />
         </span>
       </span>
       <span>

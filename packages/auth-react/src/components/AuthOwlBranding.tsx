@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { usePublicConfig } from '../hooks';
 import { useT } from '../i18n';
@@ -16,6 +17,7 @@ export type AuthOwlBrandingProps = {
  * logo-only brands and the exact development or production environment.
  */
 export function AuthOwlBranding({ href, showEnvironment = true }: AuthOwlBrandingProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const { config } = usePublicConfig();
   const logoUrl = config?.branding?.logoUrl;
@@ -30,36 +32,36 @@ export function AuthOwlBranding({ href, showEnvironment = true }: AuthOwlBrandin
   if (!logoUrl && !showAppName && (!showEnvironment || !config.environmentType)) return null;
 
   const identity = (
-    <div className="ba-branding-identity">
+    <div className={slot('ba-branding-identity')}>
       {logoUrl && !logoFailed ? (
         <img
-          className="ba-branding-logo"
+          className={slot('ba-branding-logo')}
           src={logoUrl}
           alt={showAppName ? `${appName} logo` : 'Application logo'}
           referrerPolicy="no-referrer"
           onError={() => setLogoFailed(true)}
         />
       ) : showAppName ? (
-        <span className="ba-branding-fallback" aria-hidden="true">
+        <span className={slot('ba-branding-fallback')} aria-hidden="true">
           {appName.charAt(0).toLocaleUpperCase()}
         </span>
       ) : null}
-      {showAppName ? <span className="ba-branding-name">{appName}</span> : null}
+      {showAppName ? <span className={slot('ba-branding-name')}>{appName}</span> : null}
     </div>
   );
 
   return (
     <div
-      className={`ba-branding ba-branding-align-${alignment}`}
+      className={slot(`ba-branding ba-branding-align-${alignment}`)}
       data-testid="authowl-branding"
     >
-      {href ? <a className="ba-branding-link" href={href}>{identity}</a> : identity}
+      {href ? <a className={slot('ba-branding-link')} href={href}>{identity}</a> : identity}
       {showEnvironment && config.environmentType ? (
         <span
-          className={`ba-environment ba-environment-${config.environmentType}`}
+          className={slot(`ba-environment ba-environment-${config.environmentType}`)}
           data-testid="authowl-environment"
         >
-          <span className="ba-environment-dot" aria-hidden="true" />
+          <span className={slot('ba-environment-dot')} aria-hidden="true" />
           {t(`branding.environment.${config.environmentType}`)}
         </span>
       ) : null}

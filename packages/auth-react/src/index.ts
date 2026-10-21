@@ -161,3 +161,7 @@ export type {
 export { useLastUsedSignInMethod } from './last-used-method';
 
 export { AcceptApplicationInvitation, type AcceptApplicationInvitationProps } from './components/AcceptApplicationInvitation';
+
+export type { AppearanceVariables } from './appearance';
+export { slot } from './elements';
+export type { ELEMENT_SLOTS, ElementSlot, Elements } from './elements';

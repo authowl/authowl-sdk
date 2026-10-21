@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import type { OrganizationDetails } from '@authowl/core';
 import { useAuthClient } from '../../hooks';
@@ -17,6 +18,7 @@ export function GeneralSection({
   canManage: boolean;
   onChanged: () => void | Promise<void>;
 }) {
+  const slot = useSlot();
   const t = useT();
   const api = useAuthClient().organization;
   const { pending, error, run } = useSubmitAction();
@@ -32,9 +34,9 @@ export function GeneralSection({
 
   if (!canManage) {
     return (
-      <section className="ba-organization-section">
-        <p className="ba-muted">{t('organization.profile.general.readOnly')}</p>
-        <dl className="ba-organization-facts">
+      <section className={slot('ba-organization-section')}>
+        <p className={slot('ba-muted')}>{t('organization.profile.general.readOnly')}</p>
+        <dl className={slot('ba-organization-facts')}>
           <div><dt>{t('organization.create.name')}</dt><dd>{organization.name}</dd></div>
           <div><dt>{t('organization.create.slug')}</dt><dd><Bidi>{organization.slug}</Bidi></dd></div>
         </dl>
@@ -57,20 +59,20 @@ export function GeneralSection({
   };
 
   return (
-    <section className="ba-organization-section">
-      <header className="ba-organization-section-header">
-        <h3 className="ba-title">{t('organization.profile.general.title')}</h3>
-        <p className="ba-muted">{t('organization.profile.general.description')}</p>
+    <section className={slot('ba-organization-section')}>
+      <header className={slot('ba-organization-section-header')}>
+        <h3 className={slot('ba-title')}>{t('organization.profile.general.title')}</h3>
+        <p className={slot('ba-muted')}>{t('organization.profile.general.description')}</p>
       </header>
-      <form method="post" className="ba-fields" onSubmit={submit}>
-        <label className="ba-label">
+      <form method="post" className={slot('ba-fields')} onSubmit={submit}>
+        <label className={slot('ba-label')}>
           {t('organization.create.name')}
-          <input className="ba-input" value={name} onChange={(event) => setName(event.target.value)} required />
+          <input className={slot('ba-input')} value={name} onChange={(event) => setName(event.target.value)} required />
         </label>
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('organization.create.slug')}
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             dir="ltr"
             value={slug}
             onChange={(event) => setSlug(organizationSlugFromName(event.target.value))}
@@ -78,13 +80,13 @@ export function GeneralSection({
             required
           />
         </label>
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('organization.create.logo')}
-          <input className="ba-input" type="url" dir="ltr" value={logo} onChange={(event) => setLogo(event.target.value)} placeholder="https://" />
+          <input className={slot('ba-input')} type="url" dir="ltr" value={logo} onChange={(event) => setLogo(event.target.value)} placeholder="https://" />
         </label>
         <FormError>{error}</FormError>
         <button
-          className="ba-button ba-profile-submit"
+          className={slot('ba-button ba-profile-submit')}
           type="submit"
           disabled={pending || !name.trim() || !slug.trim()}
           aria-busy={pending || undefined}

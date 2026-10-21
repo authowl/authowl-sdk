@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import type { Organization } from '@authowl/core';
 import { useAuthClient, usePublicConfig, useSession, useUser } from '../hooks';
@@ -17,6 +18,7 @@ export type OrganizationSwitcherContentProps = {
 };
 
 export function OrganizationSwitcherContent({ showPersonalWorkspace = true, onOrganizationChange }: OrganizationSwitcherContentProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const { config, isLoading: configLoading } = usePublicConfig();
   const { isLoaded, isSignedIn } = useUser();
@@ -50,9 +52,9 @@ export function OrganizationSwitcherContent({ showPersonalWorkspace = true, onOr
     };
   }, [open]);
 
-  if (configLoading || !isLoaded) return <div className="ba-skeleton ba-organization-switcher-skeleton" aria-label={t('organization.loading')} />;
+  if (configLoading || !isLoaded) return <div className={slot('ba-skeleton ba-organization-switcher-skeleton')} aria-label={t('organization.loading')} />;
   if (config?.organizations !== true) return null;
-  if (!isSignedIn) return <p className="ba-muted">{t('organization.signedOut')}</p>;
+  if (!isSignedIn) return <p className={slot('ba-muted')}>{t('organization.signedOut')}</p>;
 
   const select = (organization: Organization | null) => {
     void run(
@@ -102,10 +104,10 @@ export function OrganizationSwitcherContent({ showPersonalWorkspace = true, onOr
 
   return (
     <>
-      <div ref={rootRef} className="ba-organization-switcher">
+      <div ref={rootRef} className={slot('ba-organization-switcher')}>
         <button
           ref={triggerRef}
-          className="ba-organization-switcher-trigger"
+          className={slot('ba-organization-switcher-trigger')}
           type="button"
           aria-haspopup="menu"
           aria-expanded={open}
@@ -118,38 +120,38 @@ export function OrganizationSwitcherContent({ showPersonalWorkspace = true, onOr
             focusMenuItem(event.key === 'ArrowDown' ? 'first' : 'last');
           }}
         >
-          <span className="ba-organization-avatar" aria-hidden="true">{active?.name.trim().charAt(0).toUpperCase() || 'P'}</span>
+          <span className={slot('ba-organization-avatar')} aria-hidden="true">{active?.name.trim().charAt(0).toUpperCase() || 'P'}</span>
           <span>{active?.name ?? t('organization.personal')}</span>
           <span aria-hidden="true">⌄</span>
         </button>
         {open && (
-          <div ref={menuRef} id={menuId} className="ba-organization-menu" role="menu" aria-label={t('organization.switcher.label')} onKeyDown={onMenuKeyDown}>
-            {isLoading ? <div className="ba-skeleton" /> : (
+          <div ref={menuRef} id={menuId} className={slot('ba-organization-menu')} role="menu" aria-label={t('organization.switcher.label')} onKeyDown={onMenuKeyDown}>
+            {isLoading ? <div className={slot('ba-skeleton')} /> : (
               <>
                 {showPersonalWorkspace && (
-                  <button className="ba-organization-menu-item" type="button" role="menuitem" aria-current={activeId === null ? 'true' : undefined} disabled={pending} onClick={() => select(null)}>
-                    <span className="ba-organization-avatar" aria-hidden="true">P</span>
+                  <button className={slot('ba-organization-menu-item')} type="button" role="menuitem" aria-current={activeId === null ? 'true' : undefined} disabled={pending} onClick={() => select(null)}>
+                    <span className={slot('ba-organization-avatar')} aria-hidden="true">P</span>
                     <span>{t('organization.personal')}</span>
                   </button>
                 )}
                 {organizations?.map((organization) => (
-                  <button key={organization.id} className="ba-organization-menu-item" type="button" role="menuitem" aria-current={activeId === organization.id ? 'true' : undefined} disabled={pending} onClick={() => select(organization)}>
-                    <span className="ba-organization-avatar" aria-hidden="true">{organization.name.trim().charAt(0).toUpperCase() || '?'}</span>
+                  <button key={organization.id} className={slot('ba-organization-menu-item')} type="button" role="menuitem" aria-current={activeId === organization.id ? 'true' : undefined} disabled={pending} onClick={() => select(organization)}>
+                    <span className={slot('ba-organization-avatar')} aria-hidden="true">{organization.name.trim().charAt(0).toUpperCase() || '?'}</span>
                     <span>{organization.name}<small>{organization.slug}</small></span>
                   </button>
                 ))}
               </>
             )}
             {(loadError || error) && (
-              <div className="ba-inline-error">
+              <div className={slot('ba-inline-error')}>
                 <FormError>{loadError ?? error}</FormError>
-                {loadError && <button className="ba-link-button" type="button" onClick={() => void refresh()}>{t('organization.retry')}</button>}
+                {loadError && <button className={slot('ba-link-button')} type="button" onClick={() => void refresh()}>{t('organization.retry')}</button>}
               </div>
             )}
-            <div className="ba-organization-menu-actions">
-              <button className="ba-menu-item" type="button" role="menuitem" onClick={() => { setOpen(false); setDialog('invitations'); }}>{t('organization.list.invitationsTitle')}</button>
-              {active && <button className="ba-menu-item" type="button" role="menuitem" onClick={() => { setOpen(false); setDialog('profile'); }}>{t('organization.switcher.manage')}</button>}
-              <button className="ba-menu-item" type="button" role="menuitem" onClick={() => { setOpen(false); setDialog('create'); }}>{t('organization.switcher.create')}</button>
+            <div className={slot('ba-organization-menu-actions')}>
+              <button className={slot('ba-menu-item')} type="button" role="menuitem" onClick={() => { setOpen(false); setDialog('invitations'); }}>{t('organization.list.invitationsTitle')}</button>
+              {active && <button className={slot('ba-menu-item')} type="button" role="menuitem" onClick={() => { setOpen(false); setDialog('profile'); }}>{t('organization.switcher.manage')}</button>}
+              <button className={slot('ba-menu-item')} type="button" role="menuitem" onClick={() => { setOpen(false); setDialog('create'); }}>{t('organization.switcher.create')}</button>
             </div>
           </div>
         )}

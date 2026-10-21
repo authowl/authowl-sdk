@@ -144,13 +144,18 @@ describe('DEFAULT_BRAND_COLOR + bridge vars', () => {
     const vars = brandRampVars(deriveBrandRamp(DEFAULT_BRAND_COLOR));
     expect(Object.keys(vars).sort()).toEqual(
       [
-        '--ba-rt-accent-d',
-        '--ba-rt-accent-fg',
-        '--ba-rt-accent-l',
-        '--ba-rt-solid-active-d',
-        '--ba-rt-solid-active-l',
-        '--ba-rt-solid-hover-d',
-        '--ba-rt-solid-hover-l',
+        '--ao-dark-brand-text',
+        '--ao-light-on-brand',
+        '--ao-dark-on-brand',
+        '--ao-light-brand',
+        '--ao-dark-brand',
+        '--ao-light-ring',
+        '--ao-dark-ring',
+        '--ao-light-brand-text',
+        '--ao-dark-brand-active',
+        '--ao-light-brand-active',
+        '--ao-dark-brand-hover',
+        '--ao-light-brand-hover',
       ].sort(),
     );
     for (const v of Object.values(vars)) expect(v).toMatch(/^#[0-9a-f]{6}$/);

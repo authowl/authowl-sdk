@@ -57,8 +57,9 @@ function TokensPage({ brand, scheme }: { brand: Brand; scheme: Scheme }) {
   return (
     <div
       className={scheme === 'dark' ? 'dark' : undefined}
-      data-brand={brand}
+      data-authowl-brand={brand}
       style={{
+        ...Object.fromEntries(Object.entries(colors).map(([key, value]) => [`--ao-${key}`, toCss(value)])),
         background: cssVar('canvas'), color: cssVar('fg'), fontFamily: cssVar('font-sans'),
         padding: 32, borderRadius: cssVar('radius-xl'), display: 'grid', gap: 32,
       }}

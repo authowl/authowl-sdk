@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useWaitlist } from '../hooks';
 import { useT } from '../i18n';
@@ -21,6 +22,7 @@ export type WaitlistProps = {
 };
 
 export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const { join } = useWaitlist();
   const { pending, error, run } = useSubmitAction();
@@ -30,23 +32,23 @@ export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistP
 
   if (joined) {
     return (
-      <div className="ba-form" data-testid="waitlist-accepted">
+      <div className={slot('ba-form')} data-testid="waitlist-accepted">
         {showBranding ? <AuthOwlBranding /> : null}
-        <h2 className="ba-title">{t('waitlist.acceptedTitle')}</h2>
-        <p className="ba-muted">{t('waitlist.acceptedDescription')}</p>
+        <h2 className={slot('ba-title')}>{t('waitlist.acceptedTitle')}</h2>
+        <p className={slot('ba-muted')}>{t('waitlist.acceptedDescription')}</p>
         <AuthOwlBadge force={showBadge} />
       </div>
     );
   }
 
   return (
-    <div className="ba-form" data-testid="waitlist-form">
+    <div className={slot('ba-form')} data-testid="waitlist-form">
       {showBranding ? <AuthOwlBranding /> : null}
-      <h2 className="ba-title">{t('waitlist.title')}</h2>
-      <p className="ba-muted">{t('waitlist.description')}</p>
+      <h2 className={slot('ba-title')}>{t('waitlist.title')}</h2>
+      <p className={slot('ba-muted')}>{t('waitlist.description')}</p>
       <form
         method="post"
-        className="ba-fields"
+        className={slot('ba-fields')}
         onSubmit={(event) => {
           event.preventDefault();
           void run(
@@ -64,10 +66,10 @@ export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistP
           );
         }}
       >
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('common.emailLabel')}
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             type="email"
             value={email}
             maxLength={320}
@@ -79,7 +81,7 @@ export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistP
         {authChallenge.control}
         <FormError>{error}</FormError>
         <button
-          className="ba-button"
+          className={slot('ba-button')}
           type="submit"
           disabled={pending || authChallenge.configPending}
           aria-busy={pending || undefined}

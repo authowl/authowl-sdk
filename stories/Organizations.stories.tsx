@@ -19,7 +19,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const frame = (children: React.ReactNode, width = 920, surface = false) => (
-  <div style={{ maxWidth: width, margin: '0 auto', ...(surface ? { background: 'var(--ba-surface)', color: 'var(--ba-fg)', border: '1px solid var(--ba-border)', borderRadius: 14, overflow: 'hidden' } : {}) }}>{children}</div>
+  <div style={{ maxWidth: width, margin: '0 auto', ...(surface ? { background: 'var(--ba-surface, var(--ao-surface))', color: 'var(--ba-fg, var(--ao-fg))', border: '1px solid var(--ba-border, var(--ao-border))', borderRadius: 14, overflow: 'hidden' } : {}) }}>{children}</div>
 );
 
 export const Switcher: Story = {

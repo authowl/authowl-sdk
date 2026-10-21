@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useMFA, useUser } from '../hooks';
 import { useT } from '../i18n';
@@ -24,6 +25,7 @@ export type BackupCodesManagerProps = {
  * {@link useStepUpAction}.
  */
 export function BackupCodesManager({ title }: BackupCodesManagerProps) {
+  const slot = useSlot();
   const t = useT();
   const { user } = useUser();
   const { regenerateBackupCodes } = useMFA();
@@ -52,18 +54,18 @@ export function BackupCodesManager({ title }: BackupCodesManagerProps) {
   };
 
   return (
-    <div className="ba-form" data-testid="backup-codes-manager">
-      {title !== null && <h2 className="ba-title">{title ?? t('backupCodes.title')}</h2>}
-      <p className="ba-muted">{t('backupCodes.hint')}</p>
+    <div className={slot('ba-form')} data-testid="backup-codes-manager">
+      {title !== null && <h2 className={slot('ba-title')}>{title ?? t('backupCodes.title')}</h2>}
+      <p className={slot('ba-muted')}>{t('backupCodes.hint')}</p>
       {codes ? (
         <>
-          <p className="ba-muted">
+          <p className={slot('ba-muted')}>
             <strong>{t('mfa.enroll.backupCodesWarningStrong')}</strong>{' '}
             {t('mfa.enroll.backupCodesWarningRest')}
           </p>
-          <ul className="ba-passkey-list" data-testid="backup-codes-list">
+          <ul className={slot('ba-passkey-list')} data-testid="backup-codes-list">
             {codes.map((c) => (
-              <li key={c} className="ba-passkey-item">
+              <li key={c} className={slot('ba-passkey-item')}>
                 <code>
                   <bdi>{c}</bdi>
                 </code>
@@ -74,11 +76,11 @@ export function BackupCodesManager({ title }: BackupCodesManagerProps) {
       ) : stepUpRequired ? (
         <MFAChallenge variant="step-up" onVerified={resume} onCancel={cancelStepUp} />
       ) : (
-        <form method="post" className="ba-fields" onSubmit={submit}>
-          <label className="ba-label">
+        <form method="post" className={slot('ba-fields')} onSubmit={submit}>
+          <label className={slot('ba-label')}>
             {t('common.passwordLabel')}
             <input
-              className="ba-input"
+              className={slot('ba-input')}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -87,7 +89,7 @@ export function BackupCodesManager({ title }: BackupCodesManagerProps) {
             />
           </label>
           <FormError>{error}</FormError>
-          <button className="ba-button" type="submit" disabled={pending || !password} aria-busy={pending || undefined}>
+          <button className={slot('ba-button')} type="submit" disabled={pending || !password} aria-busy={pending || undefined}>
             <Busy busy={pending} label={t('backupCodes.pending')}>{t('backupCodes.submit')}</Busy>
           </button>
         </form>

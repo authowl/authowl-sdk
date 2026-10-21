@@ -1,0 +1,71 @@
+# AO-58(b) screenshot colour declaration
+
+Every state below applies to **en-light, en-dark, ar-light and ar-dark**.
+No geometry change is intended. The Storybook main canvas stays unchanged.
+Legacy story surface variables now fall back to their new SDK counterparts, so
+cards continue painting the same layer instead of losing their background.
+
+| Story file | Every exported state | Intended colour differences |
+| --- | --- | --- |
+| GoogleOneTap.stories.tsx | ExistingSession | No expected change: existing-session copy and its frame use host colours; Google UI is suppressed. |
+| MFAChallenge.stories.tsx | Totp, BackupCode | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. |
+| MFAEnrollment.stories.tsx | Password, ScanQrAndBackupCodes, Enrolled | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. Success text changes where visible. |
+| Organizations.stories.tsx | Switcher, Directory, Create, General, Members, Invitations, DangerZone | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. DangerZone changes destructive borders/fill/hover; badges use the token success colour. |
+| PasskeyButton.stories.tsx | Default | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. |
+| PrivacyCenter.stories.tsx | Default | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. |
+| ResetPassword.stories.tsx | Default | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. |
+| SignIn.stories.tsx | Default, ConfigurationUnavailable, ForgotPassword, PasswordOnly, EmailCodeOnly, EmailLinkOnly, PasskeyOnly, PhoneOnly, SsoOnly, EmailCodeSent, MagicLinkSent, PhoneEntry, PhoneCode, WrongPassword | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. WrongPassword also changes error red to AA danger; ConfigurationUnavailable uses the same AA error token. |
+| SignUp.stories.tsx | Default, ConsentRequired, PrivacyEvidence | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. |
+| Tokens.stories.tsx | AuthOwl, Billow, Hitsend | No expected change: these swatches already use the token palette and their own brand/scheme scopes. |
+| UserProfile.stories.tsx | Profile, Email, Password, SocialConnections, Sessions, Passkeys, MultiFactor, Recovery, Privacy, DangerZone, Modal, WhiteBrandBoundary, BlackBrandBoundary | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. DangerZone changes destructive borders/fill/hover; WhiteBrandBoundary and BlackBrandBoundary retain their explicit primary ramps but change shared neutrals. |
+| VerifyEmail.stories.tsx | Success | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. Success text changes where visible. |
+| Waitlist.stories.tsx | Default | Shared neutral palette: text, borders, hover/selected fills, skeletons and dark surfaces where present. Primary hex ramps are retained by PreviewAuth. Success text changes where visible. |
+
+The shared neutral colours move from the old zinc literals to the token OKLCH
+palette. Light surface stays white. Dark surface, text, muted text, dividers,
+borders, hover/selected fills, skeletons, success text and destructive colours can
+change wherever visible. Existing shadow geometry and opacity stay unchanged.
+
+PreviewAuth supplies explicit #F5B84C (or the white/black boundary colour), so its
+hex brand ramp, label, hover and active colours remain the same. SDK users without
+an explicit primary colour now get the generated AuthOwl brand picks (including
+its darker gold label and token hover); selecting Billow or Hitsend uses those
+products' two scheme ramps. None of the current component stories selects those
+brands. Foundations/Tokens already showcases all three palettes.
+
+The WrongPassword story now enforces a11y instead of opting out. Other existing
+error states also use the AA danger token. Default theme inheritance does not
+change this matrix because PreviewAuth explicitly supplies light or dark.
+
+Canonical screenshots and browser a11y were not run here: Docker is unavailable
+and the sandbox denies Chromium's Mach bootstrap registration. Regenerate only
+after triage with AUTHOWL_SCREENSHOT_THRESHOLD=0. No baseline files were edited.
+
+Review fixes: SDK brand selectors now use `data-authowl-brand`, isolating them
+from token-host selectors. Foundations/Tokens applies its palette values inline
+under that attribute; its intended swatch colours remain unchanged. Explicit
+non-hex primaries now use complete computed ramps, including active and a
+contrast-selected label. White on Billow uses a dark AA label. Legacy CSS-only
+primary overrides derive hover, active, accent and focus before the brand
+fallback. No current component story changes its explicit hex ramp.
+
+Input box-sizing and height overrides are now gated by a validated controlHeight;
+without that override a host's universal border-box reset remains effective,
+and hosts without a reset retain their previous content-box geometry. Invalid
+appearance values are dropped identically in SSR and client renders. Theme
+attributes are root-scoped; host `.dark` still controls inherit. The existing
+explicit story themes keep this matrix unchanged. No screenshots were changed.
+
+Computed-style coverage lives in scripts/ci/appearance-browser-check.test.ts and
+runs in the local gate. It checks applied FormError danger colours, theme
+resolution, both host reset geometries, legacy primary-only states and supported
+non-hex ramps with the token stylesheet loaded after the SDK stylesheet. Local
+execution is blocked by the same Chromium sandbox restriction described above.
+
+Primary-label contrast is now solved separately against the emitted resting,
+hover and active fills in both schemes. A label may switch between light and
+dark during interaction to retain AA contrast; this affects explicit primary
+ramps as well as non-hex primaries. Fill derivation and geometry are unchanged.
+The legacy blue assertion can read the dark hover mix when Chromium retains
+the pointer over a remounted button; the resting declaration still uses the
+host primary verbatim.

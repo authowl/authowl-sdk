@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, usePublicConfig } from '../../hooks';
 import { useT } from '../../i18n';
@@ -11,6 +12,7 @@ function providerLabel(provider: string): string {
 }
 
 export function SocialSection() {
+  const slot = useSlot();
   const t = useT();
   const account = useAccount();
   const { config } = usePublicConfig();
@@ -52,19 +54,19 @@ export function SocialSection() {
   };
 
   return (
-    <section className="ba-profile-section" aria-labelledby={titleId}>
-      <header className="ba-profile-section-header">
-        <h2 id={titleId} className="ba-title">{t('userProfile.social.title')}</h2>
-        <p className="ba-muted">{t('userProfile.social.description')}</p>
+    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
+      <header className={slot('ba-profile-section-header')}>
+        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.social.title')}</h2>
+        <p className={slot('ba-muted')}>{t('userProfile.social.description')}</p>
       </header>
       {resource.data === null ? (
         resource.loading
-          ? <div className="ba-profile-list-skeleton" aria-busy="true"><div className="ba-skeleton" /></div>
+          ? <div className={slot('ba-profile-list-skeleton')} aria-busy="true"><div className={slot('ba-skeleton')} /></div>
           : null
       ) : (
-        <ul className="ba-profile-list">
+        <ul className={slot('ba-profile-list')}>
           {linked.map((item) => (
-            <li className="ba-profile-list-item" key={item.id}>
+            <li className={slot('ba-profile-list-item')} key={item.id}>
               <span>
                 <strong>{providerLabel(item.providerId)}</strong>
                 <small>
@@ -74,7 +76,7 @@ export function SocialSection() {
                 </small>
               </span>
               <button
-                className="ba-link-button ba-danger"
+                className={slot('ba-link-button ba-danger')}
                 type="button"
                 disabled={mutation.pending || !item.canUnlink}
                 onClick={() => unlink(
@@ -87,23 +89,23 @@ export function SocialSection() {
               </button>
             </li>
           ))}
-          {linked.length === 0 && <li className="ba-muted">{t('userProfile.social.empty')}</li>}
+          {linked.length === 0 && <li className={slot('ba-muted')}>{t('userProfile.social.empty')}</li>}
         </ul>
       )}
       {available.length > 0 && (
-        <div className="ba-profile-provider-actions">
-          <p className="ba-profile-subtitle">{t('userProfile.social.add')}</p>
+        <div className={slot('ba-profile-provider-actions')}>
+          <p className={slot('ba-profile-subtitle')}>{t('userProfile.social.add')}</p>
           {available.map((provider) => (
-            <button key={provider} type="button" className="ba-button ba-button-secondary" disabled={mutation.pending} onClick={() => link(provider)}>
+            <button key={provider} type="button" className={slot('ba-button ba-button-secondary')} disabled={mutation.pending} onClick={() => link(provider)}>
               {t('userProfile.social.connectProvider', { provider: providerLabel(provider) })}
             </button>
           ))}
         </div>
       )}
       {resource.error && (
-        <div className="ba-profile-inline-error">
+        <div className={slot('ba-profile-inline-error')}>
           <FormError>{resource.error}</FormError>
-          <button className="ba-link-button" type="button" onClick={() => void resource.load()}>{t('userProfile.retry')}</button>
+          <button className={slot('ba-link-button')} type="button" onClick={() => void resource.load()}>{t('userProfile.retry')}</button>
         </div>
       )}
       <FormError>{mutation.error}</FormError>

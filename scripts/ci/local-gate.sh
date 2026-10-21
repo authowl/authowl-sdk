@@ -740,6 +740,8 @@ run_step storybook-build docker_sdk_offline pnpm run build:storybook
 run_step storybook-browser run_storybook_browser
 run_step tokens-browser docker_sdk_offline \
   pnpm --filter @authowl/tokens run test:browser
+run_step react-appearance-browser docker_sdk_offline \
+  pnpm exec vitest run --config vitest.tools.config.ts scripts/ci/appearance-browser-check.test.ts
 run_step next-generator docker_sdk_offline --consumer-exec-tmp \
   pnpm run cli:verify-next
 run_step vite-generator docker_sdk_offline --consumer-exec-tmp \

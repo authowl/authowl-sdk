@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useT, richMessage, Bidi } from '../i18n';
 import { Busy } from './Spinner';
@@ -33,21 +34,22 @@ export function OtpCodeForm({
   pending,
   error,
 }: OtpCodeFormProps) {
+  const slot = useSlot();
   const t = useT();
   return (
     <form
       method="post"
-      className="ba-fields"
+      className={slot('ba-fields')}
       data-testid="emailotp-code"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit();
       }}
     >
-      <label className="ba-label">
+      <label className={slot('ba-label')}>
         {richMessage(t('emailOtp.codeLabel'), { email: <Bidi>{email}</Bidi> })}
         <input
-          className="ba-input"
+          className={slot('ba-input')}
           inputMode="numeric"
           autoComplete="one-time-code"
           value={code}
@@ -57,10 +59,10 @@ export function OtpCodeForm({
         />
       </label>
       <FormError>{error}</FormError>
-      <button className="ba-button" type="submit" disabled={pending} aria-busy={pending || undefined}>
+      <button className={slot('ba-button')} type="submit" disabled={pending} aria-busy={pending || undefined}>
         <Busy busy={pending} label={t('common.verifying')}>{t('emailOtp.verifySubmit')}</Busy>
       </button>
-      <button type="button" className="ba-link-button" onClick={onChangeEmail}>
+      <button type="button" className={slot('ba-link-button')} onClick={onChangeEmail}>
         {t('emailOtp.changeEmail')}
       </button>
     </form>

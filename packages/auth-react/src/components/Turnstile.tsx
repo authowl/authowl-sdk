@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import type { CaptchaAdapter, CaptchaApi, CaptchaWidgetId } from './captcha-providers';
 
@@ -29,6 +30,7 @@ export function Turnstile({
   onToken: (token: string | null) => void;
   onUnavailable: () => void;
 }) {
+  const slot = useSlot();
   const container = React.useRef<HTMLDivElement>(null);
   const callbacks = React.useRef({ onToken, onUnavailable });
   callbacks.current = { onToken, onUnavailable };
@@ -69,5 +71,5 @@ export function Turnstile({
   }, [siteKey, theme]);
 
   if (!siteKey) return null;
-  return <div className="ba-turnstile" ref={container} data-testid="phoneotp-turnstile" />;
+  return <div className={slot('ba-turnstile')} ref={container} data-testid="phoneotp-turnstile" />;
 }

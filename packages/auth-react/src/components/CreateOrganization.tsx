@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import type { Organization } from '@authowl/core';
 import { useAuthClient, usePublicConfig, useUser } from '../hooks';
@@ -15,6 +16,7 @@ export type CreateOrganizationProps = {
 };
 
 export function CreateOrganization({ onCreated, title }: CreateOrganizationProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const { config, isLoading: configLoading } = usePublicConfig();
   const { isLoaded, isSignedIn } = useUser();
@@ -26,10 +28,10 @@ export function CreateOrganization({ onCreated, title }: CreateOrganizationProps
   const [slugTouched, setSlugTouched] = React.useState(false);
 
   if (configLoading || !isLoaded) {
-    return <div className="ba-skeleton" aria-label={t('organization.loading')} />;
+    return <div className={slot('ba-skeleton')} aria-label={t('organization.loading')} />;
   }
   if (config?.organizations !== true) return null;
-  if (!isSignedIn) return <p className="ba-muted">{t('organization.signedOut')}</p>;
+  if (!isSignedIn) return <p className={slot('ba-muted')}>{t('organization.signedOut')}</p>;
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -57,18 +59,18 @@ export function CreateOrganization({ onCreated, title }: CreateOrganizationProps
   };
 
   return (
-    <section className="ba-organization-create">
+    <section className={slot('ba-organization-create')}>
       {title !== null && (
-        <header className="ba-organization-section-header">
-          <h2 className="ba-title">{title ?? t('organization.create.title')}</h2>
-          <p className="ba-muted">{t('organization.create.description')}</p>
+        <header className={slot('ba-organization-section-header')}>
+          <h2 className={slot('ba-title')}>{title ?? t('organization.create.title')}</h2>
+          <p className={slot('ba-muted')}>{t('organization.create.description')}</p>
         </header>
       )}
-      <form method="post" className="ba-fields" onSubmit={submit}>
-        <label className="ba-label">
+      <form method="post" className={slot('ba-fields')} onSubmit={submit}>
+        <label className={slot('ba-label')}>
           {t('organization.create.name')}
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             value={name}
             onChange={(event) => {
               const next = event.target.value;
@@ -79,10 +81,10 @@ export function CreateOrganization({ onCreated, title }: CreateOrganizationProps
             required
           />
         </label>
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('organization.create.slug')}
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             dir="ltr"
             value={slug}
             onChange={(event) => {
@@ -93,10 +95,10 @@ export function CreateOrganization({ onCreated, title }: CreateOrganizationProps
             required
           />
         </label>
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('organization.create.logo')}
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             type="url"
             dir="ltr"
             value={logo}
@@ -106,7 +108,7 @@ export function CreateOrganization({ onCreated, title }: CreateOrganizationProps
         </label>
         <FormError>{error}</FormError>
         <button
-          className="ba-button ba-profile-submit"
+          className={slot('ba-button ba-profile-submit')}
           type="submit"
           disabled={pending || !name.trim() || !slug.trim()}
           aria-busy={pending || undefined}

@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useMFA, usePublicConfig } from '../hooks';
 import { useT } from '../i18n';
@@ -47,6 +48,7 @@ export function MFAChallenge({
   variant = 'sign-in',
   onCancel,
 }: MFAChallengeProps) {
+  const slot = useSlot();
   const t = useT();
   const { config } = usePublicConfig();
   const { verifyTotp, verifyBackupCode, sendOtp, verifyOtp } = useMFA();
@@ -128,13 +130,13 @@ export function MFAChallenge({
         : t('mfa.challenge.otpLabel');
 
   return (
-    <form method="post" className="ba-fields" data-testid="mfa-challenge" onSubmit={submit}>
-      <h2 className="ba-title">{t(stepUp ? 'mfa.stepUp.title' : 'mfa.challenge.title')}</h2>
-      <p className="ba-muted">{hint}</p>
-      <label className="ba-label">
+    <form method="post" className={slot('ba-fields')} data-testid="mfa-challenge" onSubmit={submit}>
+      <h2 className={slot('ba-title')}>{t(stepUp ? 'mfa.stepUp.title' : 'mfa.challenge.title')}</h2>
+      <p className={slot('ba-muted')}>{hint}</p>
+      <label className={slot('ba-label')}>
         {label}
         <input
-          className="ba-input"
+          className={slot('ba-input')}
           value={code}
           onChange={(e) => {
             setCode(e.target.value.trim());
@@ -147,37 +149,37 @@ export function MFAChallenge({
         />
       </label>
       {mode !== 'backup' && canTrustDevice && (
-        <label className="ba-consent ba-consent-centered">
-          <span className="ba-checkbox-control">
-            <input className="ba-checkbox" type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)} />
-            <span className="ba-checkbox-visual" aria-hidden="true">
-              <span className="ba-checkbox-check" />
+        <label className={slot('ba-consent ba-consent-centered')}>
+          <span className={slot('ba-checkbox-control')}>
+            <input className={slot('ba-checkbox')} type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)} />
+            <span className={slot('ba-checkbox-visual')} aria-hidden="true">
+              <span className={slot('ba-checkbox-check')} />
             </span>
           </span>
           <span>{t('mfa.challenge.trustDevice', { days: 30 })}</span>
         </label>
       )}
       <FormError>{error}</FormError>
-      <button className="ba-button" type="submit" disabled={pending || !code} aria-busy={pending || undefined}>
+      <button className={slot('ba-button')} type="submit" disabled={pending || !code} aria-busy={pending || undefined}>
         <Busy busy={pending} label={t('common.verifying')}>{t('mfa.challenge.submit')}</Busy>
       </button>
       {mode !== 'totp' && (
-        <button type="button" className="ba-link-button" onClick={() => switchMode('totp')}>
+        <button type="button" className={slot('ba-link-button')} onClick={() => switchMode('totp')}>
           {t('mfa.challenge.useTotp')}
         </button>
       )}
       {mode !== 'backup' && (
-        <button type="button" className="ba-link-button" onClick={() => switchMode('backup')}>
+        <button type="button" className={slot('ba-link-button')} onClick={() => switchMode('backup')}>
           {t('mfa.challenge.useBackup')}
         </button>
       )}
       {canUseEmailOtp && (
-        <button type="button" className="ba-link-button" disabled={pending} onClick={requestOtp}>
+        <button type="button" className={slot('ba-link-button')} disabled={pending} onClick={requestOtp}>
           {t(mode === 'otp' ? 'mfa.challenge.resendOtp' : 'mfa.challenge.useEmailOtp')}
         </button>
       )}
       {onCancel && (
-        <button type="button" className="ba-link-button" disabled={pending} onClick={onCancel}>
+        <button type="button" className={slot('ba-link-button')} disabled={pending} onClick={onCancel}>
           {t('common.cancel')}
         </button>
       )}

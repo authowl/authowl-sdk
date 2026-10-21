@@ -47,8 +47,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react,react-dom && cp src/styles.css dist/styles.css && node ../../scripts/gen-notices.mjs src/index.ts",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --watch --external react,react-dom",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react,react-dom && node scripts/build-styles.mjs && node ../../scripts/gen-notices.mjs src/index.ts",
+    "dev": "node scripts/build-styles.mjs && tsup src/index.ts --format esm,cjs --dts --watch --external react,react-dom",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs"
@@ -70,6 +70,7 @@
     "react-dom": "^19.2.8",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "@authowl/tokens": "workspace:*"
   }
 }

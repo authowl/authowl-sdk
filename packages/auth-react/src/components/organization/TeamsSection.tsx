@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import type { OrganizationDetails, OrganizationMember, OrganizationTeam } from '@authowl/core';
 import { useAuthClient } from '../../hooks';
@@ -18,6 +19,7 @@ export default function TeamsSection({
   organization: OrganizationDetails;
   membership: OrganizationMember;
 }) {
+  const slot = useSlot();
   const t = useT();
   const api = useAuthClient().organization;
   const { pending, error: actionError, run } = useSubmitAction();
@@ -92,55 +94,55 @@ export default function TeamsSection({
   const selectedTeam = teams?.find((team) => team.id === selectedTeamId);
 
   return (
-    <section className="ba-organization-section">
-      <header className="ba-organization-section-header">
-        <h3 className="ba-title">{t('organization.profile.teams.title')}</h3>
-        <p className="ba-muted">{t('organization.profile.teams.description')}</p>
+    <section className={slot('ba-organization-section')}>
+      <header className={slot('ba-organization-section-header')}>
+        <h3 className={slot('ba-title')}>{t('organization.profile.teams.title')}</h3>
+        <p className={slot('ba-muted')}>{t('organization.profile.teams.description')}</p>
       </header>
       {capabilities.createTeam ? (
-        <form method="post" className="ba-organization-invite-form" onSubmit={create}>
-          <label className="ba-label">
+        <form method="post" className={slot('ba-organization-invite-form')} onSubmit={create}>
+          <label className={slot('ba-label')}>
             {t('organization.profile.teams.create')}
-            <input className="ba-input" value={name} onChange={(event) => setName(event.target.value)} required />
+            <input className={slot('ba-input')} value={name} onChange={(event) => setName(event.target.value)} required />
           </label>
-          <button className="ba-button" type="submit" disabled={pending || !name.trim()} aria-busy={pending || undefined}>
+          <button className={slot('ba-button')} type="submit" disabled={pending || !name.trim()} aria-busy={pending || undefined}>
             <Busy busy={pending} label={t('common.working')}>{t('organization.profile.teams.create')}</Busy>
           </button>
         </form>
       ) : null}
       <FormError>{actionError}</FormError>
       {teamsError && (
-        <div className="ba-inline-error">
+        <div className={slot('ba-inline-error')}>
           <FormError>{teamsError}</FormError>
-          <button className="ba-link-button" type="button" onClick={() => void reload()}>{t('organization.retry')}</button>
+          <button className={slot('ba-link-button')} type="button" onClick={() => void reload()}>{t('organization.retry')}</button>
         </div>
       )}
       {teams?.length ? (
-        <ul className="ba-organization-list">
+        <ul className={slot('ba-organization-list')}>
           {teams.map((team) => (
-            <li key={team.id} className="ba-organization-member">
-              <span className="ba-organization-avatar" aria-hidden="true">{team.name.trim().charAt(0).toUpperCase() || '?'}</span>
+            <li key={team.id} className={slot('ba-organization-member')}>
+              <span className={slot('ba-organization-avatar')} aria-hidden="true">{team.name.trim().charAt(0).toUpperCase() || '?'}</span>
               {editingTeamId === team.id ? (
-                <form method="post" className="ba-organization-invite-form" onSubmit={(event) => rename(event, team)}>
-                  <label className="ba-label">
+                <form method="post" className={slot('ba-organization-invite-form')} onSubmit={(event) => rename(event, team)}>
+                  <label className={slot('ba-label')}>
                     {t('organization.profile.teams.rename')}
-                    <input className="ba-input" value={editingName} onChange={(event) => setEditingName(event.target.value)} required autoFocus />
+                    <input className={slot('ba-input')} value={editingName} onChange={(event) => setEditingName(event.target.value)} required autoFocus />
                   </label>
-                  <button className="ba-button" type="submit" disabled={pending || !editingName.trim()}>{t('organization.profile.teams.rename')}</button>
-                  <button className="ba-link-button" type="button" disabled={pending} onClick={() => setEditingTeamId(null)}>{t('organization.profile.teams.cancel')}</button>
+                  <button className={slot('ba-button')} type="submit" disabled={pending || !editingName.trim()}>{t('organization.profile.teams.rename')}</button>
+                  <button className={slot('ba-link-button')} type="button" disabled={pending} onClick={() => setEditingTeamId(null)}>{t('organization.profile.teams.cancel')}</button>
                 </form>
               ) : (
                 <>
-                  <span className="ba-organization-member-copy"><strong>{team.name}</strong></span>
-                  <span className="ba-organization-member-actions">
-                    <button className="ba-link-button" type="button" disabled={pending} aria-expanded={selectedTeamId === team.id} onClick={() => setSelectedTeamId(selectedTeamId === team.id ? null : team.id)}>
+                  <span className={slot('ba-organization-member-copy')}><strong>{team.name}</strong></span>
+                  <span className={slot('ba-organization-member-actions')}>
+                    <button className={slot('ba-link-button')} type="button" disabled={pending} aria-expanded={selectedTeamId === team.id} onClick={() => setSelectedTeamId(selectedTeamId === team.id ? null : team.id)}>
                       {t('organization.profile.teams.manageMembers')}
                     </button>
                     {capabilities.updateTeam && (
-                      <button className="ba-link-button" type="button" disabled={pending} onClick={() => beginRename(team)}>{t('organization.profile.teams.rename')}</button>
+                      <button className={slot('ba-link-button')} type="button" disabled={pending} onClick={() => beginRename(team)}>{t('organization.profile.teams.rename')}</button>
                     )}
                     {capabilities.deleteTeam && (
-                      <button className="ba-link-button ba-danger" type="button" disabled={pending} onClick={() => remove(team)}>{t('organization.profile.teams.removeTeam')}</button>
+                      <button className={slot('ba-link-button ba-danger')} type="button" disabled={pending} onClick={() => remove(team)}>{t('organization.profile.teams.removeTeam')}</button>
                     )}
                   </span>
                 </>
@@ -149,9 +151,9 @@ export default function TeamsSection({
           ))}
         </ul>
       ) : teamsError ? null : teams === null ? (
-        <div className="ba-skeleton" aria-label={t('common.loading')} />
+        <div className={slot('ba-skeleton')} aria-label={t('common.loading')} />
       ) : teams.length === 0 ? (
-        <p className="ba-muted">{t('organization.profile.teams.empty')}</p>
+        <p className={slot('ba-muted')}>{t('organization.profile.teams.empty')}</p>
       ) : null}
       {selectedTeam && (
         <TeamMembersPanel

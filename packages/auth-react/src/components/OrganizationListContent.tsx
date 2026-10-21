@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import type { Organization } from '@authowl/core';
 import { useAuthClient, usePublicConfig, useSession, useUser } from '../hooks';
@@ -16,6 +17,7 @@ export type OrganizationListContentProps = {
 };
 
 export function OrganizationListContent({ onOrganizationChange }: OrganizationListContentProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const { config, isLoading: configLoading } = usePublicConfig();
   const { isLoaded, isSignedIn } = useUser();
@@ -29,9 +31,9 @@ export function OrganizationListContent({ onOrganizationChange }: OrganizationLi
   const dialogReturnFocusRef = React.useRef<HTMLElement | null>(null);
   const activeId = session.data?.session.activeOrganizationId ?? null;
 
-  if (configLoading || !isLoaded) return <div className="ba-skeleton" aria-label={t('organization.loading')} />;
+  if (configLoading || !isLoaded) return <div className={slot('ba-skeleton')} aria-label={t('organization.loading')} />;
   if (config?.organizations !== true) return null;
-  if (!isSignedIn) return <p className="ba-muted">{t('organization.signedOut')}</p>;
+  if (!isSignedIn) return <p className={slot('ba-muted')}>{t('organization.signedOut')}</p>;
 
   const setActive = (organization: Organization) => {
     void run(
@@ -61,36 +63,36 @@ export function OrganizationListContent({ onOrganizationChange }: OrganizationLi
 
   return (
     <>
-      <section className="ba-organization-directory">
-        <header className="ba-organization-directory-header">
-          <span><h2 className="ba-title">{t('organization.list.title')}</h2><p className="ba-muted">{t('organization.list.description')}</p></span>
-          <button className="ba-button" type="button" onClick={(event) => { dialogReturnFocusRef.current = event.currentTarget; setDialog('create'); }}>{t('organization.switcher.create')}</button>
+      <section className={slot('ba-organization-directory')}>
+        <header className={slot('ba-organization-directory-header')}>
+          <span><h2 className={slot('ba-title')}>{t('organization.list.title')}</h2><p className={slot('ba-muted')}>{t('organization.list.description')}</p></span>
+          <button className={slot('ba-button')} type="button" onClick={(event) => { dialogReturnFocusRef.current = event.currentTarget; setDialog('create'); }}>{t('organization.switcher.create')}</button>
         </header>
         {(organizationError || error) && (
-          <div className="ba-inline-error">
+          <div className={slot('ba-inline-error')}>
             <FormError>{organizationError ?? error}</FormError>
-            {organizationError && <button className="ba-link-button" type="button" onClick={() => void refresh()}>{t('organization.retry')}</button>}
+            {organizationError && <button className={slot('ba-link-button')} type="button" onClick={() => void refresh()}>{t('organization.retry')}</button>}
           </div>
         )}
         {/* A failed load is not an empty directory. Rendering the empty copy
             under the error told the user they belong to no organization, which
             is a claim this component cannot make when the request never
             answered - and the retry beside the error is the actual next step. */}
-        {isLoading ? <div className="ba-organization-card-grid"><div className="ba-skeleton" /><div className="ba-skeleton" /></div> : organizations?.length ? (
-          <ul className="ba-organization-card-grid">
+        {isLoading ? <div className={slot('ba-organization-card-grid')}><div className={slot('ba-skeleton')} /><div className={slot('ba-skeleton')} /></div> : organizations?.length ? (
+          <ul className={slot('ba-organization-card-grid')}>
             {organizations.map((organization) => (
-              <li key={organization.id} className="ba-organization-card">
-                <span className="ba-organization-avatar ba-organization-avatar-large" aria-hidden="true">{organization.name.trim().charAt(0).toUpperCase() || '?'}</span>
-                <span className="ba-organization-card-copy"><strong>{organization.name}</strong><small><Bidi>{organization.slug}</Bidi></small></span>
-                {activeId === organization.id && <span className="ba-organization-active">{t('organization.list.active')}</span>}
-                <span className="ba-organization-card-actions">
-                  {activeId !== organization.id && <button className="ba-button ba-button-secondary" type="button" disabled={pending} onClick={() => setActive(organization)}>{t('organization.list.switch')}</button>}
-                  <button className="ba-link-button" type="button" onClick={(event) => openProfile(organization, event.currentTarget)}>{t('organization.list.manage')}</button>
+              <li key={organization.id} className={slot('ba-organization-card')}>
+                <span className={slot('ba-organization-avatar ba-organization-avatar-large')} aria-hidden="true">{organization.name.trim().charAt(0).toUpperCase() || '?'}</span>
+                <span className={slot('ba-organization-card-copy')}><strong>{organization.name}</strong><small><Bidi>{organization.slug}</Bidi></small></span>
+                {activeId === organization.id && <span className={slot('ba-organization-active')}>{t('organization.list.active')}</span>}
+                <span className={slot('ba-organization-card-actions')}>
+                  {activeId !== organization.id && <button className={slot('ba-button ba-button-secondary')} type="button" disabled={pending} onClick={() => setActive(organization)}>{t('organization.list.switch')}</button>}
+                  <button className={slot('ba-link-button')} type="button" onClick={(event) => openProfile(organization, event.currentTarget)}>{t('organization.list.manage')}</button>
                 </span>
               </li>
             ))}
           </ul>
-        ) : organizationError ? null : <p className="ba-muted">{t('organization.list.empty')}</p>}
+        ) : organizationError ? null : <p className={slot('ba-muted')}>{t('organization.list.empty')}</p>}
 
         <IncomingInvitations onChanged={refresh} />
       </section>

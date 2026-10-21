@@ -132,12 +132,8 @@ export const PhoneCode: Story = {
 };
 
 export const WrongPassword: Story = {
-  // .ba-error's hardcoded red (#ef4444) fails WCAG AA contrast today (see
-  // ResetPassword.stories.tsx). The redesign's danger token fixes it; until then
-  // this story reports the violation instead of failing, and keeps the pixel baseline.
   parameters: {
     authowl: { signedIn: false, signInMethod: 'password', wrongPassword: true },
-    a11y: { test: 'todo' },
   },
   play: async ({ canvasElement }) => {
     await expectStoryMatrix(canvasElement);

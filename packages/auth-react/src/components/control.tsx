@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { membershipHas, type AuthUser } from '@authowl/core';
 import { useSession, useUser } from '../hooks';
@@ -112,14 +113,15 @@ export type AuthLoadingProps = {
  * `<AuthLoading>` owns the loading window.
  */
 export function AuthLoading({ children }: AuthLoadingProps) {
+  const slot = useSlot();
   const t = useT();
   const { isLoaded } = useUser();
   if (isLoaded) return null;
   if (children !== undefined) return <>{children}</>;
   return (
-    <div className="ba-auth-loading" role="status" aria-busy="true" data-testid="auth-loading">
+    <div className={slot('ba-auth-loading')} role="status" aria-busy="true" data-testid="auth-loading">
       <Spinner />
-      <span className="ba-sr-only">{t('common.loading')}</span>
+      <span className={slot('ba-sr-only')}>{t('common.loading')}</span>
     </div>
   );
 }

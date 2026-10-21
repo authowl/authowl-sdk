@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import type { OrganizationDetails, OrganizationTeam, OrganizationTeamMember } from '@authowl/core';
 import { useAuthClient } from '../../hooks';
@@ -18,6 +19,7 @@ export function TeamMembersPanel({
   canAdd: boolean;
   canRemove: boolean;
 }) {
+  const slot = useSlot();
   const t = useT();
   const api = useAuthClient().organization;
   const { pending, error: actionError, run } = useSubmitAction();
@@ -66,41 +68,41 @@ export function TeamMembersPanel({
   };
 
   return (
-    <div className="ba-organization-user-invitations">
+    <div className={slot('ba-organization-user-invitations')}>
       <h4>{t('organization.profile.teams.manageMembers')}</h4>
       {canAdd && availableMembers.length > 0 && members !== null && (
-        <form method="post" className="ba-organization-invite-form" onSubmit={addMember}>
-          <label className="ba-label">
+        <form method="post" className={slot('ba-organization-invite-form')} onSubmit={addMember}>
+          <label className={slot('ba-label')}>
             {t('organization.profile.teams.addMember')}
-            <select className="ba-input" value={addableUserId} onChange={(event) => setUserId(event.target.value)}>
+            <select className={slot('ba-input')} value={addableUserId} onChange={(event) => setUserId(event.target.value)}>
               {availableMembers.map((member) => (
                 <option key={member.userId} value={member.userId}>{member.user.name || member.user.email || member.userId}</option>
               ))}
             </select>
           </label>
-          <button className="ba-button" type="submit" disabled={pending || !addableUserId}>{t('organization.profile.teams.addMember')}</button>
+          <button className={slot('ba-button')} type="submit" disabled={pending || !addableUserId}>{t('organization.profile.teams.addMember')}</button>
         </form>
       )}
       <FormError>{actionError}</FormError>
       {error && (
-        <div className="ba-inline-error">
+        <div className={slot('ba-inline-error')}>
           <FormError>{error}</FormError>
-          <button className="ba-link-button" type="button" onClick={() => void reload()}>{t('organization.retry')}</button>
+          <button className={slot('ba-link-button')} type="button" onClick={() => void reload()}>{t('organization.retry')}</button>
         </div>
       )}
       {members?.length ? (
-        <ul className="ba-organization-list">
+        <ul className={slot('ba-organization-list')}>
           {members.map((member) => {
             const organizationMember = organization.members.find((entry) => entry.userId === member.userId);
             const displayName = organizationMember?.user.name || member.userId;
             return (
-              <li key={member.id} className="ba-organization-member">
-                <span className="ba-organization-member-copy">
+              <li key={member.id} className={slot('ba-organization-member')}>
+                <span className={slot('ba-organization-member-copy')}>
                   <strong>{displayName}</strong>
                   {organizationMember?.user.email && <small><Bidi>{organizationMember.user.email}</Bidi></small>}
                 </span>
                 {canRemove && (
-                  <button className="ba-link-button ba-danger" type="button" disabled={pending} onClick={() => removeMember(member)}>
+                  <button className={slot('ba-link-button ba-danger')} type="button" disabled={pending} onClick={() => removeMember(member)}>
                     {t('organization.profile.teams.removeMember')}
                   </button>
                 )}
@@ -109,9 +111,9 @@ export function TeamMembersPanel({
           })}
         </ul>
       ) : error ? null : members === null ? (
-        <div className="ba-skeleton" aria-label={t('common.loading')} />
+        <div className={slot('ba-skeleton')} aria-label={t('common.loading')} />
       ) : members.length === 0 ? (
-        <p className="ba-muted">{t('organization.profile.teams.membersEmpty')}</p>
+        <p className={slot('ba-muted')}>{t('organization.profile.teams.membersEmpty')}</p>
       ) : null}
     </div>
   );

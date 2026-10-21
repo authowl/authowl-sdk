@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useAuthClient, useSignIn } from '../hooks';
 import { useT } from '../i18n';
@@ -24,6 +25,7 @@ export type EmailOtpFormProps = {
  * on successful verification (unlike magic-link, which round-trips via email).
  */
 export function EmailOtpForm({ redirectTo, onSignedIn, webauthnAutofill }: EmailOtpFormProps) {
+  const slot = useSlot();
   const t = useT();
   const { sessionStore } = useAuthClient();
   const { sendEmailOtp, signInEmailOtp } = useSignIn();
@@ -69,13 +71,13 @@ export function EmailOtpForm({ redirectTo, onSignedIn, webauthnAutofill }: Email
           onSuccess: () => setStage('code'),
         });
       }}
-      className="ba-fields"
+      className={slot('ba-fields')}
       data-testid="emailotp-email"
     >
-      <label className="ba-label">
+      <label className={slot('ba-label')}>
         {t('common.emailLabel')}
         <input
-          className="ba-input"
+          className={slot('ba-input')}
           type="email"
           autoComplete={emailAutocomplete(!!webauthnAutofill)}
           value={email}
@@ -89,7 +91,7 @@ export function EmailOtpForm({ redirectTo, onSignedIn, webauthnAutofill }: Email
       {authChallenge.control}
       <FormError>{error}</FormError>
       <button
-        className="ba-button"
+        className={slot('ba-button')}
         type="submit"
         disabled={pending || authChallenge.configPending}
         aria-busy={pending || undefined}
