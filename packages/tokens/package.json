@@ -1,6 +1,6 @@
 {
   "name": "@authowl/tokens",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Design tokens shared by AuthOwl, Billow and Hitsend: semantic OKLCH colors for light and dark, type, space, radius, elevation and motion, as CSS variables, a Tailwind 4 theme and a typed export.",
   "license": "MIT",
   "publishConfig": {
