@@ -1,5 +1,4 @@
 'use client';
-import { flushSync } from 'react-dom';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useEmailVerification } from '../hooks';
@@ -38,11 +37,9 @@ export function VerificationPending({
   } = useEmailVerification();
   const { pending, error, setError, run } = useSubmitAction();
   const locked = useAuthCardPending(pending);
-  const formRef = React.useRef<HTMLFormElement>(null);
   const authChallenge = useAuthChallenge();
   const [resent, setResent] = React.useState(false);
   const [code, setCode] = React.useState('');
-  const [success, setSuccess] = React.useState(false);
   const [verified, setVerified] = React.useState(false);
 
   if (verified) {
@@ -56,7 +53,6 @@ export function VerificationPending({
   if (method === 'code') {
     return (
       <form
-        ref={formRef}
         method="post"
         className={slot('ba-fields')}
         data-testid="verify-code-pending"
@@ -67,7 +63,7 @@ export function VerificationPending({
             () => verifyEmailCode({ email, otp: code }),
             {
               failure: t('verifyPending.codeError'),
-              onSuccess: () => { flushSync(() => setSuccess(true)); setVerified(true); },
+              onSuccess: () => setVerified(true),
             },
           );
         }}
@@ -84,11 +80,10 @@ export function VerificationPending({
         <label className={slot('ba-label')}>
           {t('verifyPending.codeLabel')}
           <CodeInput value={code} onChange={(value) => { setCode(value); setError(null); }}
-            onComplete={() => formRef.current?.requestSubmit()} state={success ? 'success' : error ? 'error' : 'idle'} disabled={locked || success} />
+            state={error ? 'error' : 'idle'} readOnly={locked} />
         </label>
         {resent && <p role="status" className={slot('ba-muted')}>{t('verifyPending.resent')}</p>}
         {authChallenge.control}
-        {success && <CodeSuccess />}
         <FormError>{error}</FormError>
         <button
           className={slot('ba-button')}

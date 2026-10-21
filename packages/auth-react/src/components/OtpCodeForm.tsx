@@ -1,6 +1,8 @@
 'use client';
 import { CodeInput, CodeSuccess } from './CodeInput';
-import { AuthCardLock } from './AuthCardLock';
+import { useAuthCardPending } from './AuthCardLock';
+import { useSubmitAction } from './use-submit-action';
+import type { AuthActionResult } from '@authowl/core';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useT, richMessage, Bidi } from '../i18n';
@@ -14,19 +16,16 @@ export type OtpCodeFormProps = {
   code: string;
   onCodeChange: (code: string) => void;
   /** Verify the entered code. */
-  onSubmit: () => void;
+  onSubmit: () => Promise<AuthActionResult<unknown> | null | undefined>;
+  onSuccess: () => void | Promise<void>;
   /** Go back to collect a different email. */
   onChangeEmail: () => void;
-  pending: boolean;
-  error: string | null;
-  success?: boolean;
 };
 
 /**
  * The "enter the emailed code" step, shared by <SignIn/>'s passwordless email-OTP
- * flow and the standalone <EmailOtpForm/> so there is a single source of truth
- * for this screen. Presentational: the caller owns the send/verify calls and the
- * pending/error state (each surface has its own).
+ * flow and the standalone <EmailOtpForm/>. Owns the verification action and its
+ * pending, error and success status through the completion handoff.
  */
 export function OtpCodeForm({
   email,
@@ -34,25 +33,22 @@ export function OtpCodeForm({
   onCodeChange,
   onSubmit,
   onChangeEmail,
-  pending,
-  error,
-  success = false,
+  onSuccess,
 }: OtpCodeFormProps) {
-  const lock = React.useContext(AuthCardLock);
-  const locked = pending || Boolean(lock?.locked);
+  const { pending, succeeded, error, setError, run } = useSubmitAction();
+  const locked = useAuthCardPending(pending);
   const slot = useSlot();
   const t = useT();
   const messageId = React.useId();
-  const formRef = React.useRef<HTMLFormElement>(null);
   return (
     <form
-      ref={formRef}
       method="post"
       className={slot('ba-fields')}
       data-testid="emailotp-code"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!locked && !success) onSubmit();
+        if (locked || succeeded) return;
+        void run(onSubmit, { failure: t('emailOtp.error.invalidCode'), trackSuccess: true, onSuccess });
       }}
     >
       <p id={messageId} role="status" className={slot('ba-muted')}>
@@ -61,15 +57,14 @@ export function OtpCodeForm({
       <CodeInput
         aria-labelledby={messageId}
         value={code}
-        onChange={onCodeChange}
-        onComplete={() => formRef.current?.requestSubmit()}
-        state={success ? 'success' : error ? 'error' : 'idle'}
-        disabled={locked || success}
+        onChange={(value) => { onCodeChange(value); setError(null); }}
+        state={succeeded ? 'success' : error ? 'error' : 'idle'}
+        readOnly={locked} disabled={succeeded}
         autoFocus
       />
-      {success && <CodeSuccess />}
+      {succeeded && <CodeSuccess />}
       <FormError>{error}</FormError>
-      <button className={slot('ba-button')} type="submit" disabled={locked || success} aria-busy={pending || undefined}>
+      <button className={slot('ba-button')} type="submit" disabled={locked || succeeded} aria-busy={pending || undefined}>
         <Busy busy={pending} label={t('common.verifying')}>{t('emailOtp.verifySubmit')}</Busy>
       </button>
       <button type="button" className={slot('ba-link-button')} onClick={onChangeEmail}>

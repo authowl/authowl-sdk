@@ -4,7 +4,7 @@ import { expect, within } from 'storybook/test';
 import { VerifyEmail, VerificationPending } from '@authowl/react';
 import { expectStoryMatrix } from './matrix';
 import { card } from './surface';
-import { slot } from '../packages/auth-react/src/elements';
+import { slot } from '@authowl/react';
 
 const meta = {
   title: 'Conversion/VerifyEmail',

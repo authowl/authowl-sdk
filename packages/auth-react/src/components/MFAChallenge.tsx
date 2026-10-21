@@ -1,5 +1,4 @@
 'use client';
-import { flushSync } from 'react-dom';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useMFA, usePublicConfig, useUser } from '../hooks';
@@ -7,6 +6,7 @@ import { Bidi, richMessage, useT } from '../i18n';
 import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
 import { CodeInput, CodeSuccess } from './CodeInput';
+import { FactorIcon } from './factor-icons';
 import { useAuthCardPending } from './AuthCardLock';
 import { FormError } from './FormError';
 
@@ -59,12 +59,14 @@ export function MFAChallenge({
   const { config } = usePublicConfig();
   const { user } = useUser();
   const { verifyTotp, verifyBackupCode, sendOtp, verifyOtp } = useMFA();
-  const { pending, error, setError, run } = useSubmitAction();
-  const locked = useAuthCardPending(pending);
-  const formRef = React.useRef<HTMLFormElement>(null);
+  const { pending: verifying, succeeded: success, error: verifyError, setError, run } = useSubmitAction();
+  const resend = useSubmitAction();
+  const locked = useAuthCardPending(verifying || resend.pending);
+  const blocked = locked || success;
+  const error = verifyError || resend.error;
+  const [retryVerify, setRetryVerify] = React.useState(false);
   const helperId = React.useId();
-  const [success, setSuccess] = React.useState(false);
-  const [verifying, setVerifying] = React.useState(false);
+  const otherWaysId = React.useId();
   const [mode, setMode] = React.useState<'totp' | 'backup' | 'otp'>('totp');
   const [code, setCode] = React.useState('');
   const [trustDevice, setTrustDevice] = React.useState(false);
@@ -95,28 +97,34 @@ export function MFAChallenge({
   // has its own failure copy, so a stale one would read wrong under the new
   // input. (The otp path clears via `run` when it sends.)
   const switchMode = (next: 'totp' | 'backup') => {
-    if (locked || success) return;
+    if (blocked) return;
     setMode(next);
     setCode('');
     setError(null);
+    resend.setError(null);
+    setRetryVerify(false);
   };
 
   // B.5d lost-authenticator fallback: entering email-code mode sends the code.
   const requestOtp = () => {
-    if (locked || success) return;
-    void run(() => sendOtp({}), {
+    if (blocked) return;
+    setError(null);
+    void resend.run(() => sendOtp({}), {
       failure: t('mfa.challenge.error.otpSendFailed'),
       onSuccess: () => {
         setMode('otp');
         setCode('');
+        setRetryVerify(false);
       },
     });
   };
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (locked || success) return;
-    setVerifying(true);
+    if (blocked) return;
+    resend.setError(null);
+    // Throws and completion-handoff failures can retry the same code.
+    setRetryVerify(true);
     const action =
       mode === 'totp'
         ? () => verifyTotp({ code, trustDevice })
@@ -130,8 +138,14 @@ export function MFAChallenge({
           : mode === 'backup'
             ? t('mfa.challenge.error.invalidBackup')
             : t('mfa.challenge.error.invalidOtp'),
-      onSuccess: () => { flushSync(() => setSuccess(true)); return onVerified?.(); },
-    }).finally(() => setVerifying(false));
+      trackSuccess: true,
+      mapError: (authError) => {
+        const codeFailure = (authError.status ?? 400) < 500 && ['INVALID_CODE', 'INVALID_TOTP', 'INVALID_OTP', 'INVALID_BACKUP_CODE', 'OTP_EXPIRED', 'OTP_HAS_EXPIRED'].includes(authError.code ?? '');
+        setRetryVerify(!codeFailure);
+        return null;
+      },
+      onSuccess: () => onVerified?.(),
+    });
   };
 
   const hint =
@@ -148,7 +162,7 @@ export function MFAChallenge({
         : t('mfa.challenge.otpLabel');
 
   return (
-    <form ref={formRef} method="post" className={slot('ba-fields ba-factor-form')} data-testid="mfa-challenge" onSubmit={submit}>
+    <form method="post" className={slot('ba-fields ba-factor-form')} data-testid="mfa-challenge" onSubmit={submit}>
       <header className={slot('ba-factor-header')}>
         <h2 className={slot('ba-title')}>{t(stepUp ? 'mfa.stepUp.title' : 'mfa.challenge.title')}</h2>
         <p className={slot('ba-factor-subtitle')}>
@@ -162,20 +176,19 @@ export function MFAChallenge({
           {label}
           <input className={slot('ba-input')} value={code}
             onChange={(e) => { setCode(e.target.value.trim()); setError(null); }}
-            inputMode="text" autoComplete="one-time-code" autoFocus required disabled={locked || success} />
+            inputMode="text" autoComplete="one-time-code" autoFocus required readOnly={locked} disabled={success} />
         </label>
       ) : (
         <CodeInput key={mode} value={code} onChange={(value) => { setCode(value); setError(null); }}
-          aria-label={label} aria-describedby={helperId} autoFocus disabled={locked || success}
-          state={success ? 'success' : error ? 'error' : 'idle'}
-          onComplete={() => formRef.current?.requestSubmit()} />
+          aria-label={label} aria-describedby={helperId} autoFocus readOnly={locked} disabled={success}
+          state={success ? 'success' : error ? 'error' : 'idle'} />
       )}
-      <div className={slot('ba-code-status')} role="status">
-        <span className={slot('ba-code-verifying')}>
-          {success ? <CodeSuccess /> : verifying && <><span className={slot('ba-code-spin')} aria-hidden="true" />{t('common.verifying')}</>}
+      <div className={slot('ba-code-status')}>
+        <span className={slot('ba-code-verifying')} role="status" aria-busy={verifying && !success || undefined}>
+          {success ? <><CodeSuccess />{t('codeInput.verified')}</> : <Busy busy={verifying} label={t('common.verifying')}>{null}</Busy>}
         </span>
         {mode === 'otp' && canUseEmailOtp && (
-          <button type="button" className={slot('ba-link-button')} disabled={locked || success} onClick={requestOtp}>
+          <button type="button" className={slot('ba-link-button')} disabled={blocked} aria-busy={resend.pending || undefined} onClick={requestOtp}>
             {t('mfa.challenge.resendOtp')}
           </button>
         )}
@@ -184,7 +197,7 @@ export function MFAChallenge({
       {mode !== 'backup' && canTrustDevice && (
         <label className={slot('ba-consent ba-consent-centered ba-factor-trust')}>
           <span className={slot('ba-checkbox-control')}>
-            <input className={slot('ba-checkbox')} type="checkbox" checked={trustDevice} disabled={locked || success} onChange={(e) => setTrustDevice(e.target.checked)} />
+            <input className={slot('ba-checkbox')} type="checkbox" checked={trustDevice} disabled={blocked} onChange={(e) => setTrustDevice(e.target.checked)} />
             <span className={slot('ba-checkbox-visual')} aria-hidden="true">
               <span className={slot('ba-checkbox-check')} />
             </span>
@@ -193,29 +206,25 @@ export function MFAChallenge({
         </label>
       )}
       <FormError>{error}</FormError>
-      <button className={slot(mode === 'backup' ? 'ba-button' : 'ba-sr-only')} type="submit" tabIndex={mode === 'backup' ? undefined : -1} disabled={locked || success || !code} aria-busy={verifying || undefined}>
-        <Busy busy={verifying} label={t('common.verifying')}>{t('mfa.challenge.submit')}</Busy>
-      </button>
-      <section className={slot('ba-factor-options')} aria-label={t('mfa.challenge.otherWays')}>
-        <span>{t('mfa.challenge.otherWays')}</span>
+      {(mode === 'backup' || verifyError && retryVerify) && (
+        <button className={slot('ba-button')} type="submit" disabled={blocked || !code} aria-busy={verifying || undefined}>
+          <Busy busy={verifying} label={t('common.verifying')}>{t('mfa.challenge.submit')}</Busy>
+        </button>
+      )}
+      <div className={slot('ba-factor-options')} role="group" aria-labelledby={otherWaysId}>
+        <span id={otherWaysId}>{t('mfa.challenge.otherWays')}</span>
         <div className={slot('ba-factor-chips')}>
-          {mode !== 'totp' && (
-            <button type="button" className={slot('ba-factor-chip')} aria-label={t('mfa.challenge.useTotp')} disabled={locked || success} onClick={() => switchMode('totp')}>
-              <FactorIcon factor="totp" />{t('userProfile.mfa.authenticator')}
+          {([
+            { factor: 'totp', label: t('userProfile.mfa.authenticator'), show: true, select: () => switchMode('totp') },
+            { factor: 'backup', label: t('mfa.challenge.backupLabel'), show: true, select: () => switchMode('backup') },
+            { factor: 'otp', label: t('mfa.challenge.otpLabel'), show: canUseEmailOtp, select: requestOtp },
+          ] as const).filter(({ factor, show }) => factor !== mode && show).map(({ factor, label: factorLabel, select }) => (
+            <button key={factor} type="button" className={slot('ba-factor-chip')} disabled={blocked} onClick={select}>
+              <FactorIcon factor={factor} />{factorLabel}
             </button>
-          )}
-          {mode !== 'backup' && (
-            <button type="button" className={slot('ba-factor-chip')} aria-label={t('mfa.challenge.useBackup')} disabled={locked || success} onClick={() => switchMode('backup')}>
-              <FactorIcon factor="backup" />{t('mfa.challenge.backupLabel')}
-            </button>
-          )}
-          {mode !== 'otp' && canUseEmailOtp && (
-            <button type="button" className={slot('ba-factor-chip')} aria-label={t('mfa.challenge.useEmailOtp')} disabled={locked || success} onClick={requestOtp}>
-              <FactorIcon factor="otp" />{t('mfa.challenge.otpLabel')}
-            </button>
-          )}
+          ))}
         </div>
-      </section>
+      </div>
       {onCancel && (
         <button type="button" className={slot('ba-link-button')} onClick={onCancel}>
           {t('common.cancel')}
@@ -223,12 +232,4 @@ export function MFAChallenge({
       )}
     </form>
   );
-}
-
-function FactorIcon({ factor }: { factor: 'totp' | 'backup' | 'otp' }) {
-  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    {factor === 'totp' ? <><rect x="5" y="3" width="14" height="18" rx="3" /><path d="M11 17h2" /></>
-      : factor === 'backup' ? <><path d="M7 11V8a5 5 0 0 1 10 0v3" /><rect x="5" y="11" width="14" height="10" rx="2" /></>
-        : <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 6 9 7 9-7" /></>}
-  </svg>;
 }

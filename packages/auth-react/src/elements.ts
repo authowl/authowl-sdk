@@ -9,7 +9,6 @@ export type ELEMENT_SLOTS = [
   'code-check',
   'code-check-path',
   'code-status',
-  'code-spin',
   'code-verifying',
   'factor-form',
   'factor-options',

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import React from 'react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { MFAChallenge } from '@authowl/react';
-import { slot } from '../packages/auth-react/src/elements';
+import { slot } from '@authowl/react';
 import { expectStoryMatrix } from './matrix';
 
 // The sign-in second-factor prompt. It renders its initial TOTP step with no
@@ -76,11 +76,11 @@ export const EmailedCode: Story = {
 };
 
 export const Verifying: Story = {
-  parameters: { authowl: { codePending: true } },
+  parameters: { authowl: { codePending: true }, screenshot: { waitForIdle: false } },
   play: async ({ canvasElement }) => {
     await expectStoryMatrix(canvasElement);
     await userEvent.type(within(canvasElement).getByRole('textbox'), '123456');
-    await waitFor(() => expect(canvasElement.querySelector('.ba-code-status .ba-code-spin')).not.toBeNull());
+    await waitFor(() => expect(canvasElement.querySelector('.ba-code-status .ba-spinner')).not.toBeNull());
   },
 };
 

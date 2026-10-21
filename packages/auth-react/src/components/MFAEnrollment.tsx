@@ -1,5 +1,4 @@
 'use client';
-import { flushSync } from 'react-dom';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import type { TwoFactorEnableData } from '@authowl/core';
@@ -42,11 +41,9 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
   const { user, isLoaded } = useUser();
   const { pending, error, setError, run } = useSubmitAction();
   const locked = useAuthCardPending(pending);
-  const formRef = React.useRef<HTMLFormElement>(null);
   const [password, setPassword] = React.useState('');
   const [setup, setSetup] = React.useState<TwoFactorEnableData | null>(null);
   const [code, setCode] = React.useState('');
-  const [success, setSuccess] = React.useState(false);
   const [done, setDone] = React.useState(false);
   // The account that started the current setup. If the signed-in identity changes
   // (sign-out / account switch) while this stays mounted, drop the in-flight TOTP
@@ -73,6 +70,15 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
       setCode('');
     }
   }, [stale]);
+
+  // Effects run after the terminal view commits, so callbacks cannot observe secrets.
+  const notified = React.useRef(false);
+  React.useEffect(() => {
+    if (done && !notified.current) {
+      notified.current = true;
+      onEnrolled?.();
+    }
+  }, [done, onEnrolled]);
 
   // Terminal success: the factor is now active. Reached only after a live code
   // verified, with the secrets already cleared, so the drop-in component stops
@@ -181,7 +187,6 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
       </div>
 
       <form
-        ref={formRef}
         method="post"
         className={slot('ba-fields')}
         onSubmit={(e) => {
@@ -190,15 +195,13 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
           void run(() => verifyTotp({ code }), {
             failure: t('mfa.enroll.error.invalidCode'),
             onSuccess: () => {
-              flushSync(() => setSuccess(true));
               // Reach a terminal state: drop the secrets from memory/screen, then
               // hand off. Works whether or not `onEnrolled` navigates away.
-              flushSync(() => {
-                setSetup(null);
-                setCode('');
-                setDone(true);
-              });
-              onEnrolled?.();
+              setSetup(null);
+              setPassword('');
+              setCode('');
+              setupOwnerId.current = null;
+              setDone(true);
             },
           });
         }}
@@ -206,9 +209,8 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
         <label className={slot('ba-label')}>
           {t('mfa.enroll.codeLabel')}
           <CodeInput value={code} onChange={(value) => { setCode(value); setError(null); }}
-            onComplete={() => formRef.current?.requestSubmit()} state={success ? 'success' : error ? 'error' : 'idle'} disabled={locked || success} />
+            state={error ? 'error' : 'idle'} readOnly={locked} />
         </label>
-        {success && <CodeSuccess />}
         <FormError>{error}</FormError>
         <button className={slot('ba-button')} type="submit" disabled={locked || !code} aria-busy={pending || undefined}>
           <Busy busy={pending} label={t('common.verifying')}>{t('mfa.enroll.activateSubmit')}</Busy>

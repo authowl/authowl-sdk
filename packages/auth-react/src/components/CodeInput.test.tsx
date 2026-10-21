@@ -50,13 +50,12 @@ describe('CodeInput', () => {
     expect(complete).not.toHaveBeenCalled();
   });
 
-  it('never completes or changes a disabled field', () => {
+  it('never completes a disabled field', () => {
     const complete = vi.fn();
     const change = vi.fn();
     render(<CodeInput value="123456" onChange={change} onComplete={complete} disabled />);
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: '654321' } });
-    fireEvent.paste(screen.getByRole('textbox'), { clipboardData: { getData: () => '654321' } });
     expect(complete).not.toHaveBeenCalled();
+    expect((screen.getByRole('textbox') as HTMLInputElement).disabled).toBe(true);
     expect(change).not.toHaveBeenCalled();
   });
 
@@ -88,7 +87,8 @@ describe('CodeInput', () => {
     fireEvent.change(input, { target: { value: '12' } });
     expect(container.querySelector('[data-current]')).toBe(container.querySelectorAll('.ao-code-cell')[2]);
     fireEvent.blur(input);
-    expect(container.querySelector('[data-current]')).toBeNull();
+    // The focus-within CSS gates the ring; React only marks the current cell.
+    expect(container.querySelector('[data-current]')).toBe(container.querySelectorAll('.ao-code-cell')[2]);
   });
 
   it('keeps the input mounted across error feedback and renders safely on the server', () => {
@@ -98,4 +98,67 @@ describe('CodeInput', () => {
     expect(screen.getByRole('textbox')).toBe(input);
     expect(renderToString(<CodeInput value="" onChange={vi.fn()} />)).toContain('one-time-code');
   });
+});
+
+
+it.each(['123456', '12'])('replaces a %s field with a full-length paste', (value) => {
+  const change = vi.fn();
+  render(<CodeInput value={value} onChange={change} onComplete={vi.fn()} />);
+  fireEvent.paste(screen.getByRole('textbox'), { clipboardData: { getData: () => '654-321-9' } });
+  expect(change).toHaveBeenCalledExactlyOnceWith('654321');
+});
+
+it('appends a short paste, regardless of the caret position', () => {
+  const change = vi.fn();
+  render(<CodeInput value="12" onChange={change} />);
+  const input = screen.getByRole('textbox') as HTMLInputElement;
+  input.setSelectionRange(0, 0);
+  fireEvent.paste(input, { clipboardData: { getData: () => '3a4' } });
+  expect(change).toHaveBeenCalledExactlyOnceWith('1234');
+});
+
+it('keeps a failed value and its error through no-op pastes', () => {
+  const change = vi.fn();
+  render(<CodeInput value="123456" onChange={change} state="error" />);
+  const input = screen.getByRole('textbox');
+  for (const text of ['123-456', 'letters', '12']) {
+    fireEvent.paste(input, { clipboardData: { getData: () => text } });
+  }
+  expect(change).not.toHaveBeenCalled();
+  expect(input.getAttribute('aria-invalid')).toBe('true');
+});
+
+it('holds an IME draft and completes only after composition ends', () => {
+  const complete = vi.fn();
+  render(<Entry onComplete={complete} />);
+  const input = screen.getByRole('textbox') as HTMLInputElement;
+  fireEvent.compositionStart(input);
+  fireEvent.change(input, { target: { value: 'a123456' } });
+  expect(input.value).toBe('a123456');
+  expect(complete).not.toHaveBeenCalled();
+  fireEvent.compositionEnd(input);
+  expect(input.value).toBe('123456');
+  expect(complete).toHaveBeenCalledExactlyOnceWith('123456');
+});
+
+it('keeps the caret at the end on focus, click, selection and arrow keys', () => {
+  render(<CodeInput value="123" onChange={vi.fn()} />);
+  const input = screen.getByRole('textbox') as HTMLInputElement;
+  for (const type of ['focus', 'click', 'select', 'keyDown'] as const) {
+    input.setSelectionRange(0, 0);
+    fireEvent[type](input, { key: 'ArrowLeft' });
+    expect(input.selectionStart).toBe(3);
+    expect(input.selectionEnd).toBe(3);
+  }
+});
+
+it('submits its form by default once with the committed value', () => {
+  const submit = vi.fn((event: React.FormEvent) => event.preventDefault());
+  function Form() {
+    const [value, setValue] = React.useState('');
+    return <form method="post" onSubmit={submit}><CodeInput value={value} onChange={setValue} /></form>;
+  }
+  render(<Form />);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
+  expect(submit).toHaveBeenCalledTimes(1);
 });

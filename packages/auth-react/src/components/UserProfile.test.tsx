@@ -341,7 +341,7 @@ describe('UserProfile', () => {
       fireEvent.click(screen.getByRole('button', { name: 'backupCodes.submit' }));
 
       // The same prompt, reached from the other weakening endpoint.
-      fireEvent.click(await screen.findByRole('button', { name: 'mfa.challenge.useBackup' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'mfa.challenge.backupLabel' }));
       fireEvent.change(screen.getByLabelText('mfa.challenge.backupLabel'), {
         target: { value: 'backup-code-1' },
       });

@@ -248,6 +248,7 @@ export const en = {
   'mfaGate.title': 'Two-factor setup required',
   'mfaGate.body': 'This app requires two-factor authentication. Set it up to continue.',
 
+  'codeInput.verified': 'Code verified',
   'codeInput.autoSubmitHint': 'Codes submit on their own when the last digit lands. Paste works too.',
   'mfa.challenge.otherWays': 'Other ways in',
   'mfa.challenge.otpDestination': 'We sent a code to {email}. It expires in 3 minutes.',

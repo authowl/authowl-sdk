@@ -247,7 +247,8 @@ export const ar: Record<keyof typeof en, string> = {
   'mfaGate.title': 'إعداد المصادقة الثنائية مطلوب',
   'mfaGate.body': 'يتطلب هذا التطبيق المصادقة الثنائية. قم بإعدادها للمتابعة.',
 
-  'codeInput.autoSubmitHint': 'يُرسَل الرمز تلقائيًا عند إدخال الرقم الأخير. يمكنك لصقه أيضًا.',
+  'codeInput.verified': 'تم التحقق من الرمز',
+  'codeInput.autoSubmitHint': 'يُتحقَّق من الرمز تلقائيًا عند إدخال الرقم الأخير. يمكنك لصقه أيضًا.',
   'mfa.challenge.otherWays': 'طرق أخرى للدخول',
   'mfa.challenge.otpDestination': 'أرسلنا رمزًا إلى {email}. تنتهي صلاحيته خلال 3 دقائق.',
 

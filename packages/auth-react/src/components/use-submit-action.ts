@@ -1,5 +1,6 @@
 'use client';
 import * as React from 'react';
+import { flushSync } from 'react-dom';
 import type { AuthActionResult, AuthClientError } from '@authowl/core';
 import { useServerError } from '../i18n';
 
@@ -7,6 +8,8 @@ import { useServerError } from '../i18n';
 export type SubmitActionOptions<T> = {
   /** Generic, already-localized copy shown when the action fails. */
   failure: string;
+  /** Commit success before the completion handoff, and roll back on failure. */
+  trackSuccess?: boolean;
   onSuccess?: (res: AuthActionResult<T>) => void | Promise<void>;
   /**
    * Override the default code-based error message for an endpoint-specific
@@ -36,6 +39,8 @@ export type SubmitActionOptions<T> = {
 export type UseSubmitActionResult = {
   /** True while an action is in flight (drives disabled buttons / busy labels). */
   pending: boolean;
+  /** Successful action, including while its completion handoff is pending. */
+  succeeded: boolean;
   /** The last surfaced error message, or null. */
   error: string | null;
   /** Set/clear the error directly (e.g. an initial load outside `run`). */
@@ -57,6 +62,7 @@ export type UseSubmitActionResult = {
 export function useSubmitAction(): UseSubmitActionResult {
   // Completion and Enter/click can arrive before React paints pending.
   const inFlight = React.useRef(false);
+  const [succeeded, setSucceeded] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const toMessage = useServerError();
@@ -66,6 +72,7 @@ export function useSubmitAction(): UseSubmitActionResult {
       if (event.persisted) {
         inFlight.current = false;
         setPending(false);
+        setSucceeded(false);
       }
     };
     window.addEventListener('pageshow', restore);
@@ -73,9 +80,10 @@ export function useSubmitAction(): UseSubmitActionResult {
   }, []);
 
   const run = React.useCallback<UseSubmitActionResult['run']>(
-    async (action, { failure, onSuccess, mapError, intercept, keepPendingOnSuccess }) => {
+    async (action, { failure, onSuccess, mapError, intercept, keepPendingOnSuccess, trackSuccess }) => {
       if (inFlight.current) return;
       inFlight.current = true;
+      setSucceeded(false);
       setError(null);
       setPending(true);
       try {
@@ -89,6 +97,7 @@ export function useSubmitAction(): UseSubmitActionResult {
           setPending(false);
           return;
         }
+        if (trackSuccess) flushSync(() => setSucceeded(true));
         await onSuccess?.(res ?? { data: null, error: null });
         // On a redirect-out success (SSO), keep the spinner up through the
         // navigation instead of flashing back to idle; everything else resets.
@@ -97,6 +106,7 @@ export function useSubmitAction(): UseSubmitActionResult {
         // Thrown errors (network, SDK internals) carry English messages -
         // surface the localized generic instead. Always re-enable so the user
         // can retry (keepPendingOnSuccess never suppresses a failure reset).
+        setSucceeded(false);
         setError(failure);
         setPending(false);
       } finally {
@@ -106,5 +116,5 @@ export function useSubmitAction(): UseSubmitActionResult {
     [toMessage],
   );
 
-  return { pending, error, setError, run };
+  return { pending, succeeded, error, setError, run };
 }

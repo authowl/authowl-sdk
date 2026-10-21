@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import * as React from 'react';
+import { AuthCardLock, useAuthCardLock } from './AuthCardLock';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthActionResult, PhoneOtpChallengeData } from '@authowl/core';
@@ -200,6 +202,33 @@ describe('PhoneOTP challenge gating', () => {
 
     await waitFor(() => expect(onMfaPasswordRequired).toHaveBeenCalledTimes(1));
     expect(verifyPhoneOtp).toHaveBeenCalledTimes(1);
+  });
+
+  it('holds pending and the card lock until finishSignIn settles', async () => {
+    const finishing = deferred<undefined>();
+    finishSignIn.mockReturnValueOnce(finishing.promise);
+    preparePhoneOtp.mockResolvedValue({ data: shieldChallenge, error: null });
+    solvePhoneOtpChallenge.mockResolvedValue({ challengeToken: 'proof', nonce: 1 });
+    startPhoneOtp.mockResolvedValue({ data: { status: 'pending' }, error: null });
+    verifyPhoneOtp.mockResolvedValue({ data: {}, error: null });
+    function Card() {
+      const lock = useAuthCardLock(false);
+      return <AuthCardLock.Provider value={lock}>
+        <PhoneOTP /><button disabled={lock.locked}>Other method</button>
+      </AuthCardLock.Provider>;
+    }
+    render(<Card />);
+    await waitFor(() => expect(sendButton().disabled).toBe(false));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '01000000000' } });
+    fireEvent.click(sendButton());
+    await screen.findByTestId('phoneotp-code');
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '424242' } });
+    await waitFor(() => expect(finishSignIn).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('button', { name: 'common.verifying' }).getAttribute('aria-busy')).toBe('true');
+    expect(screen.getByRole('button', { name: 'Other method' })).toHaveProperty('disabled', true);
+    await act(async () => { finishing.resolve(undefined); });
+    expect(screen.getByRole('button', { name: 'Other method' })).toHaveProperty('disabled', false);
+    expect(screen.queryByRole('button', { name: 'common.verifying' })).toBeNull();
   });
 
   it.each([

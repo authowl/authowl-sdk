@@ -8,7 +8,7 @@ if (configuredThreshold.trim() === '' || !Number.isFinite(threshold) || threshol
 }
 
 /** Storybook invokes preview.afterEach after play, before tearing down the story. */
-export async function captureStory(storyId: string) {
+export async function captureStory(storyId: string, { waitForIdle = true }: { waitForIdle?: boolean } = {}) {
   const [width, height] = (import.meta.env.AUTHOWL_STORY_VIEWPORT ?? '').split('x').map(Number);
   if (width && height) await page.viewport(width, height);
   const style = document.createElement('style');
@@ -20,7 +20,7 @@ export async function captureStory(storyId: string) {
   `;
   document.head.append(style);
   try {
-    await expect.poll(() => document.querySelector('[aria-busy="true"], .ba-skeleton')).toBeNull();
+    if (waitForIdle) await expect.poll(() => document.querySelector('[aria-busy="true"], .ba-skeleton')).toBeNull();
     await document.fonts.ready;
     await Promise.all(Array.from(document.images, (image) => image.decode()));
     // Include portalled dialogs as well as the canvas, and all vertical content.

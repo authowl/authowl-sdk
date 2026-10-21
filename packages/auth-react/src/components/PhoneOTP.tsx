@@ -1,5 +1,4 @@
 'use client';
-import { flushSync } from 'react-dom';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import {
@@ -53,10 +52,8 @@ export function PhoneOTP({
   const { sessionStore } = useAuthClient();
   const { config, isLoading } = usePublicConfig();
   const { preparePhoneOtp, startPhoneOtp, verifyPhoneOtp } = useSignIn();
-  const { pending, error, setError, run } = useSubmitAction();
+  const { pending, succeeded: success, error, setError, run } = useSubmitAction();
   const locked = useAuthCardPending(pending);
-  const formRef = React.useRef<HTMLFormElement>(null);
-  const [success, setSuccess] = React.useState(false);
   const [stage, setStage] = React.useState<'phone' | 'code' | 'hosted'>('phone');
   const [phoneNumber, setPhoneNumber] = React.useState('');
   const [code, setCode] = React.useState('');
@@ -117,7 +114,6 @@ export function PhoneOTP({
   const changePhone = React.useCallback(() => {
     setStage('phone');
     setCode('');
-    setSuccess(false);
     setHostedAttempt(null);
     setError(null);
     attempt.current = null;
@@ -135,7 +131,6 @@ export function PhoneOTP({
   if (stage === 'code') {
     return (
       <form
-        ref={formRef}
         method="post"
         className={slot('ba-fields')}
         data-testid="phoneotp-code"
@@ -157,7 +152,8 @@ export function PhoneOTP({
                 }
                 return null;
               },
-              onSuccess: () => { flushSync(() => setSuccess(true)); finishSignIn({ sessionStore, redirectTo, onSignedIn }); },
+              trackSuccess: true,
+              onSuccess: () => finishSignIn({ sessionStore, redirectTo, onSignedIn }),
             },
           );
         }}
@@ -166,8 +162,7 @@ export function PhoneOTP({
         <label className={slot('ba-label')}>
           {t('phoneOtp.codeLabel')} <Bidi>{phoneNumber}</Bidi>
           <CodeInput value={code} onChange={(value) => { setCode(value); setError(null); }}
-            onComplete={() => formRef.current?.requestSubmit()}
-            state={success ? 'success' : error ? 'error' : 'idle'} disabled={locked || success} autoFocus />
+            state={success ? 'success' : error ? 'error' : 'idle'} readOnly={locked} disabled={success} autoFocus />
         </label>
         {success && <CodeSuccess />}
         <FormError>{error}</FormError>

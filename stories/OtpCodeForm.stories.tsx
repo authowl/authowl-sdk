@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import React from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 import { EmailOtpForm } from '@authowl/react';
-import { slot } from '../packages/auth-react/src/elements';
+import { slot } from '@authowl/react';
 import { expectStoryMatrix } from './matrix';
 
 const meta = {
@@ -25,7 +25,7 @@ async function enterCode(canvasElement: HTMLElement) {
 
 export const Empty: Story = { play: async ({ canvasElement }) => { await enterCode(canvasElement); } };
 export const Filled: Story = {
-  parameters: { authowl: { signedIn: false, signInMethod: 'email_otp', codePending: true } },
+  parameters: { authowl: { signedIn: false, signInMethod: 'email_otp', codePending: true }, screenshot: { waitForIdle: false } },
   play: async ({ canvasElement }) => {
     const form = await enterCode(canvasElement);
     await userEvent.type(form.querySelector('input')!, '123456');
