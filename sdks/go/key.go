@@ -31,7 +31,7 @@ type PublishableKey struct {
 	Env       Environment
 	ProjectID string
 	// Region is "" for a legacy four-part key.
-	Region    string
+	Region string
 }
 
 // ErrSecretKeySupplied is returned when a secret key reaches a function that
