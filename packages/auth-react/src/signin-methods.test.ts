@@ -11,6 +11,20 @@ function cfg(partial: Partial<PublicConfig>): PublicConfig {
 }
 
 describe('resolveSignInMethods', () => {
+  it('uses the first ordered tab for username plus magic-link sign-in', () => {
+    const plan = resolveSignInMethods(cfg({
+      authentication: {
+        email: { signUp: true, signIn: ['magic_link'] },
+        phone: { signUp: false, signIn: false },
+        password: { signUp: false, add: false },
+        passkey: { signIn: false, add: false },
+        username: { collectOnSignUp: true, signIn: true },
+      },
+    }));
+    expect(plan.tabs).toEqual(['password', 'magic']);
+    expect(plan.primary).toBe(plan.tabs[0]);
+    expect(plan.primary).toBe('password');
+  });
   it('provides a structural password default before config is available', () => {
     const plan = resolveSignInMethods(null);
     expect(plan.password).toBe(true);

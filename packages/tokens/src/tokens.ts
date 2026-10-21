@@ -199,16 +199,20 @@ const black = (alpha: number) => toCss(oklch(0, 0, 0, alpha));
 const edge = toCss(neutral.dark.line);
 
 /**
- * The boards are flat; only floating layers cast a shadow. Light shadows are
+ * Cards, selected tabs and floating layers cast shadows. Light shadows are
  * tinted with the text colour; dark ones add a hairline, since a shadow alone
  * barely shows on a near-black canvas.
  */
-export const elevation: Record<Scheme, { popover: string; dialog: string }> = {
+export const elevation: Record<Scheme, { popover: string; dialog: string; card: string; tab: string }> = {
   light: {
+    card: `0 4px 16px ${ink(0.06)}, 0 1px 2px ${ink(0.05)}`,
+    tab: `0 1px 2px ${ink(0.1)}, 0 0 0 1px ${toCss(neutral.light.line)}`,
     popover: `0 4px 16px ${ink(0.08)}, 0 1px 2px ${ink(0.06)}`,
     dialog: `0 16px 48px ${ink(0.16)}, 0 2px 6px ${ink(0.08)}`,
   },
   dark: {
+    card: `0 16px 48px ${black(0.6)}, 0 0 0 1px ${edge}`,
+    tab: `0 0 0 1px ${toCss(neutral.dark['line-strong'])}`,
     popover: `0 4px 16px ${black(0.4)}, 0 0 0 1px ${edge}`,
     dialog: `0 16px 48px ${black(0.6)}, 0 0 0 1px ${edge}`,
   },

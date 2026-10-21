@@ -32,6 +32,7 @@ export function FormError({ children, className, 'data-testid': testId }: FormEr
   if (children == null || children === '' || children === false) return null;
   return (
     <p
+      key={typeof children === 'string' ? children : undefined}
       className={slot(className ? `ba-error ${className}` : 'ba-error')}
       role="alert"
       aria-live="assertive"

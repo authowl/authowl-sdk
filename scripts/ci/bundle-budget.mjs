@@ -266,10 +266,16 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // class merging: 82.16kb (+1.83kb). Tokens remain build-only, so their runtime
 // is absent from React. Core (25.63kb) and tokens (3.88kb) are unchanged.
 // The new ceiling retains about 0.84kb of explicit regression headroom.
+// AO-58(c) authentication cards and accessible method tabs (2026-10-21)
+// raises React 83->85.5. Same-machine slice-b baseline: 82.16kb; this slice:
+// 85.03kb (+2.87kb): post-mount method hints, localized copy, the card-wide
+// counted pending lock with back-forward-cache unlock, step focus handoff and
+// the passkey/email-code helper panels from review. The ceiling keeps 0.47kb
+// of headroom. Core is 25.80kb, within its 26kb cap.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 83,
+    maxGzipKb: 85.5,
     label: '@authowl/react (provider + hooks + components)',
   },
   {

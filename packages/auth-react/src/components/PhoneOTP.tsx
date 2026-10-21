@@ -330,7 +330,7 @@ export function PhoneOTP({
       </button>
       {onBack && (
         <button type="button" className={slot('ba-link-button')} onClick={onBack}>
-          {t('phoneOtp.backToSignIn')}
+          <span className={slot('ba-icon-back')} aria-hidden="true">←</span> {t('phoneOtp.backToSignIn')}
         </button>
       )}
     </form>

@@ -27,15 +27,14 @@ import { usePublicConfig } from './hooks';
  * Everything is per project and per browser, and never keyed by an identifier -
  * see the core module for why that line matters.
  */
-export function useLastUsedSignInMethod(): LastUsedSignInMethod | null {
+export function useLastUsedSignInMethod(enabled = true): LastUsedSignInMethod | null {
   const { config } = usePublicConfig();
   const projectId = config?.environmentId ?? null;
-  // Read once per project rather than subscribing: this decides a hint, and a
-  // value that changed mid-render would move a control under the pointer.
-  return React.useMemo(
-    () => (projectId ? readLastUsedSignInMethod(projectId) : null),
-    [projectId],
-  );
+  const [hint, setHint] = React.useState<{ projectId: string; method: LastUsedSignInMethod | null } | null>(null);
+  React.useEffect(() => {
+    if (enabled && projectId) setHint({ projectId, method: readLastUsedSignInMethod(projectId) });
+  }, [enabled, projectId]);
+  return hint && hint.projectId === projectId ? hint.method : null;
 }
 
 /** Recorder bound to the active project, or a no-op before config resolves. */

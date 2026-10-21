@@ -64,7 +64,7 @@ export function VerificationPending({
           );
         }}
       >
-        <p className={slot('ba-muted')}>
+        <p role="status" className={slot('ba-muted')}>
           {richMessage(t('verifyPending.codeBody'), {
             email: (
               <strong>
@@ -84,7 +84,7 @@ export function VerificationPending({
             required
           />
         </label>
-        {resent && <p className={slot('ba-muted')}>{t('verifyPending.resent')}</p>}
+        {resent && <p role="status" className={slot('ba-muted')}>{t('verifyPending.resent')}</p>}
         {authChallenge.control}
         <FormError>{error}</FormError>
         <button
@@ -125,7 +125,7 @@ export function VerificationPending({
 
   return (
     <div className={slot('ba-fields')} data-testid="verify-pending">
-      <p className={slot('ba-muted')}>
+      <p role="status" className={slot('ba-muted')}>
         {richMessage(t('verifyPending.body'), {
           email: (
             <strong>
@@ -134,7 +134,7 @@ export function VerificationPending({
           ),
         })}
       </p>
-      {resent && <p className={slot('ba-muted')}>{t('verifyPending.resent')}</p>}
+      {resent && <p role="status" className={slot('ba-muted')}>{t('verifyPending.resent')}</p>}
       {authChallenge.control}
       <FormError>{error}</FormError>
       <button

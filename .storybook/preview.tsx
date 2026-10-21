@@ -1,4 +1,5 @@
 import './screenshot-environment';
+import './preview.css';
 import type { Preview } from '@storybook/react-vite';
 import React from 'react';
 import '@authowl/react/styles.css';
@@ -69,10 +70,10 @@ const preview: Preview = {
           mfaEnrollment={context.parameters.authowl?.mfaEnrollment === true}
         >
           <main
+            className="authowl-story-surface"
             style={{
               minHeight: '100vh',
               boxSizing: 'border-box',
-              padding: '40px 20px',
               background: dark ? '#09090b' : '#f4f4f5',
               color: dark ? '#fafafa' : '#18181b',
               fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',

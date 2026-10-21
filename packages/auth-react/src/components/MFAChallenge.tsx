@@ -179,7 +179,7 @@ export function MFAChallenge({
         </button>
       )}
       {onCancel && (
-        <button type="button" className={slot('ba-link-button')} disabled={pending} onClick={onCancel}>
+        <button type="button" className={slot('ba-link-button')} onClick={onCancel}>
           {t('common.cancel')}
         </button>
       )}

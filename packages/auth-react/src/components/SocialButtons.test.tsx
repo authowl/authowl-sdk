@@ -29,7 +29,8 @@ vi.mock('../hooks', () => ({
 vi.mock('../i18n', () => ({
   useServerError: () => (_error: unknown, fallback: string) => fallback,
   useT: () => (key: string, values?: { provider?: string }) =>
-    key === 'social.continueWith' ? `Continue with ${values?.provider}` : key,
+    key === 'social.continueWith' ? `Continue with ${values?.provider}`
+      : key === 'social.signUpWith' ? `Sign up with ${values?.provider}` : key,
 }));
 
 import { SocialButtons } from './SocialButtons';
@@ -40,6 +41,17 @@ describe('SocialButtons OAuth return destination', () => {
   });
 
   afterEach(cleanup);
+
+  it.each([null, 'social:google'] as const)('reuses an explicit %s hint without reading storage', (lastUsed) => {
+    const read = vi.spyOn(Storage.prototype, 'getItem');
+    try {
+      render(<SocialButtons providers={['google']} lastUsed={lastUsed} />);
+      expect(read).not.toHaveBeenCalled();
+      expect(Boolean(screen.queryByText('signIn.lastUsed'))).toBe(lastUsed !== null);
+    } finally {
+      read.mockRestore();
+    }
+  });
 
   it('returns to the current page when no callback is configured', async () => {
     render(<SocialButtons providers={['google']} />);
@@ -87,6 +99,34 @@ describe('SocialButtons OAuth return destination', () => {
     expect(screen.getByRole('button', { name: 'social.redirecting' }).getAttribute('aria-busy')).toBe(
       'true',
     );
+  });
+
+  it('clears its redirect state on persisted pageshow and can start another provider', async () => {
+    const { container } = render(<SocialButtons providers={['google', 'github']} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    await waitFor(() => expect(mocks.signInSocial).toHaveResolved());
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Continue with GitHub' }).disabled).toBe(true);
+    fireEvent(window, new PageTransitionEvent('pageshow', { persisted: false }));
+    expect(screen.getByRole('button', { name: 'social.redirecting' })).toBeTruthy();
+    fireEvent(window, new PageTransitionEvent('pageshow', { persisted: true }));
+    expect(container.querySelector('.ba-spinner')).toBeNull();
+    for (const button of screen.getAllByRole<HTMLButtonElement>('button')) expect(button.disabled).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with GitHub' }));
+    await waitFor(() => expect(mocks.signInSocial).toHaveBeenLastCalledWith(expect.objectContaining({ provider: 'github' })));
+  });
+
+  it('announces the visible Last used chip as a description', () => {
+    render(<SocialButtons providers={['google', 'github']} lastUsed="social:google" />);
+    const google = screen.getByRole('button', { name: 'Continue with Google', description: 'signIn.lastUsed' });
+    expect(document.getElementById(google.getAttribute('aria-describedby')!)).toBe(screen.getByText('signIn.lastUsed'));
+    expect(screen.getByRole('button', { name: 'Continue with GitHub' }).getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('uses sign-up names without a Last used chip', () => {
+    render(<SocialButtons providers={['google', 'github']} lastUsed="social:google" signUp />);
+    expect(screen.getByRole('button', { name: 'Sign up with Google' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sign up with GitHub' })).toBeTruthy();
+    expect(screen.queryByText('signIn.lastUsed')).toBeNull();
   });
 
   it('clears the spinner and re-enables when the start fails', async () => {

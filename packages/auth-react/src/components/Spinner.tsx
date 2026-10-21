@@ -39,7 +39,5 @@ export function Busy({ busy, label, children }: BusyProps) {
       <Spinner />
       {label}
     </>
-  ) : (
-    <>{children}</>
-  );
+  ) : children;
 }

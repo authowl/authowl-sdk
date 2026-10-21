@@ -1,4 +1,4 @@
-import type { PublicConfig } from '@authowl/core';
+import type { LastUsedSignInMethod, PublicConfig } from '@authowl/core';
 import { resolveProjectCapabilities } from './project-capabilities';
 
 /**
@@ -27,17 +27,20 @@ export type KnownMethod = (typeof KNOWN_METHODS)[number];
  */
 export type AutofillHost = 'password' | 'magic_link' | 'email_otp' | 'sso' | null;
 
-/**
- * The primary sign-in action - the one bound to <SignIn/>'s form submit (Enter
- * key), rendered as the single filled button. Password wins when enabled;
- * otherwise the first passwordless email method in priority order. The other
- * email methods render as secondary (outlined) buttons reusing the same email.
- * `null` when no email method is enabled (social/passkey only). SSO is last in
- * priority: it is the filled submit only when it is the sole email method.
- */
-export type SignInPrimary = 'password' | 'magic' | 'otp' | 'sso' | null;
+/** Tab methods in resolver priority order; the first email method is primary. */
+export type TabMethod = 'password' | 'magic' | 'otp' | 'sso' | 'passkey';
+export type SignInPrimary = Exclude<TabMethod, 'passkey'> | null;
+
+export const AUTOFILL_SLUG = {
+  password: 'password', magic: 'magic_link', otp: 'email_otp', sso: 'sso',
+} as const;
+export const LAST_USED_TAB: Partial<Record<LastUsedSignInMethod, TabMethod>> = {
+  password: 'password', username: 'password', 'magic-link': 'magic',
+  'email-otp': 'otp', sso: 'sso', passkey: 'passkey',
+};
 
 export type SignInPlan = {
+  tabs: TabMethod[];
   password: boolean;
   username: boolean;
   magicLink: boolean;
@@ -49,7 +52,7 @@ export type SignInPlan = {
   social: string[];
   /** True when at least one surface can render. */
   renderable: boolean;
-  /** The primary action (filled submit button); see {@link SignInPrimary}. */
+  /** The first email method in the ordered tab list. */
   primary: SignInPrimary;
   /**
    * Why nothing renders, when `renderable` is false:
@@ -59,9 +62,8 @@ export type SignInPlan = {
    */
   emptyReason: 'unsupported' | 'none' | null;
   /**
-   * The single email input that should arm passkey autofill. The priority order
-   * here MUST match the order <SignIn/> renders these methods, so the token lands
-   * on the first visible email field.
+   * The single email input that should arm passkey autofill, derived from
+   * the same ordered list as the default tab.
    */
   autofillHost: AutofillHost;
 };
@@ -197,32 +199,20 @@ export function resolveSignInMethods(
   const phoneOtp = capabilities.phoneSignIn && !capabilities.mfaRequired;
   const passkey = capabilities.passkeySignIn && passkeyReachableForConfig(config, pageHost);
   const sso = has('sso');
-  const renderable =
-    password || username || magicLink || emailOtp || phoneOtp || passkey || sso
-    || social.length > 0;
-  const emptyReason = renderable ? null : methods.length > 0 ? 'unsupported' : 'none';
 
-  // Method priority in ONE place: password, then magic-link, then email-OTP,
-  // then SSO. <SignIn/> renders this as the primary submit; the passkey autofill
-  // host is the same first email input (so the webauthn token lands on it).
-  const primary: SignInPrimary = password
-    ? 'password'
-    : magicLink
-      ? 'magic'
-      : emailOtp
-        ? 'otp'
-        : sso
-          ? 'sso'
-          : null;
-  const AUTOFILL_SLUG = {
-    password: 'password',
-    magic: 'magic_link',
-    otp: 'email_otp',
-    sso: 'sso',
-  } as const;
+  const tabs: TabMethod[] = [];
+  if (password || username) tabs.push('password');
+  if (magicLink) tabs.push('magic');
+  if (emailOtp) tabs.push('otp');
+  if (sso) tabs.push('sso');
+  const primary = tabs[0] as SignInPrimary | undefined ?? null;
+  if (passkey) tabs.push('passkey');
+  const renderable = tabs.length > 0 || phoneOtp || social.length > 0;
+  const emptyReason = renderable ? null : methods.length > 0 ? 'unsupported' : 'none';
   const autofillHost: AutofillHost = passkey && primary ? AUTOFILL_SLUG[primary] : null;
 
   return {
+    tabs,
     password,
     username,
     magicLink,

@@ -1,4 +1,5 @@
 'use client';
+import { FOCUSABLE } from './focusable';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -54,7 +55,7 @@ export function ModalSurface({
       }
       if (event.key !== 'Tab' || !panelRef.current) return;
       const focusable = [...panelRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        FOCUSABLE,
       )];
       if (focusable.length === 0) return;
       const first = focusable[0]!;

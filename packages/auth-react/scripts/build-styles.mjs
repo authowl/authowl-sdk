@@ -34,6 +34,8 @@ function palette(scheme) {
     'shadow-menu-ink': 'rgba(0,0,0,0.12)',
     'shadow-toggle-ink': 'rgba(0,0,0,.2)',
     'shadow-dialog-ink': 'rgba(0,0,0,0.3)',
+    // No existing token pairs surface in light with highlight in dark.
+    'auth-tab-surface': scheme === 'light' ? 'var(--ao-surface)' : 'var(--ao-highlight)',
     'shadow-organization-ink': 'rgba(0,0,0,0.18)',
     overlay: scheme === 'light' ? 'rgba(9, 9, 11, 0.58)' : 'rgba(0, 0, 0, 0.72)',
   };

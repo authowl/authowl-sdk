@@ -59,6 +59,14 @@ export function useSubmitAction(): UseSubmitActionResult {
   const [error, setError] = React.useState<string | null>(null);
   const toMessage = useServerError();
 
+  React.useEffect(() => {
+    const restore = (event: PageTransitionEvent) => {
+      if (event.persisted) setPending(false);
+    };
+    window.addEventListener('pageshow', restore);
+    return () => window.removeEventListener('pageshow', restore);
+  }, []);
+
   const run = React.useCallback<UseSubmitActionResult['run']>(
     async (action, { failure, onSuccess, mapError, intercept, keepPendingOnSuccess }) => {
       setError(null);

@@ -65,7 +65,7 @@
 /* Project logo, optional wordmark, and environment identity shared by the
    managed sign-in and sign-up components. */
 :where(.authowl-root) .ao-branding { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-:where(.authowl-root) .ao-branding-identity, :where(.authowl-root) .ao-branding-link { display: inline-flex; min-width: 0; align-items: center; gap: 10px; }
+:where(.authowl-root) :is(.ao-branding-identity, .ao-branding-link) { display: inline-flex; min-width: 0; align-items: center; gap: 10px; }
 :where(.authowl-root) .ao-branding-link { color: inherit; text-decoration: none; }
 :where(.authowl-root) .ao-branding-link:hover .ao-branding-name { text-decoration: underline; text-underline-offset: 3px; }
 :where(.authowl-root) .ao-branding-logo { display: block; width: auto; max-width: 148px; height: 40px; max-height: 40px; flex: 0 0 auto; object-fit: contain; }
@@ -110,10 +110,10 @@
 :where(.authowl-root) .ao-passkey-actions { display: flex; gap: 12px; flex-shrink: 0; }
 
 /* Social sign-in */
-:where(.authowl-root) .ao-social { display: flex; flex-direction: column; gap: 8px; }
-:where(.authowl-root) .ao-social-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--ao-control-height, 40px); box-sizing: border-box; background: var(--ba-surface, var(--ao-surface)); color: var(--ba-fg, var(--ao-fg)); padding: 9px 14px; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: var(--ao-border-radius, 6px); cursor: pointer; font-weight: 500; font-size: 14px; }
-:where(.authowl-root) .ao-social-button:hover:not(:disabled) { border-color: var(--ba-accent, var(--ao-accent)); background: var(--ba-hover, var(--ao-hover)); }
-:where(.authowl-root) .ao-social-button:disabled { opacity: 0.5; cursor: not-allowed; }
+:where(.authowl-root) .ao-social { display: grid; grid-template-columns: repeat(var(--ao-social-columns, 1), minmax(0, 1fr)); gap: 8px; }
+:where(.authowl-root) .ao-social-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--ao-control-height, 40px); box-sizing: border-box; background: var(--ba-surface, var(--ao-surface)); color: var(--ba-fg, var(--ao-fg)); padding: 9px 14px; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: var(--ao-border-radius, 6px); cursor: pointer; font-weight: 500; font-size: 14px; }
+:where(.authowl-root) .ao-social-button:where(:hover:not(:disabled)) { border-color: var(--ba-accent, var(--ao-accent)); background: var(--ba-hover, var(--ao-hover)); }
+:where(.authowl-root) .ao-social-button:where(:disabled) { opacity: 0.5; cursor: not-allowed; }
 :where(.authowl-root) .ao-social-icon { width: 18px; height: 18px; flex-shrink: 0; display: block; }
 :where(.authowl-root) .ao-divider { display: flex; align-items: center; text-align: center; color: var(--ba-muted, var(--ao-muted)); font-size: 12px; }
 :where(.authowl-root) .ao-divider::before, :where(.authowl-root) .ao-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
@@ -121,17 +121,16 @@
 :where(.authowl-root) .ao-divider::after { margin-inline-start: 8px; }
 
 /* Loading skeleton */
-:where(.authowl-root) .ao-skeleton { height: 38px; border-radius: var(--ao-border-radius, 6px); background: linear-gradient(90deg, var(--ba-skeleton-a, var(--ao-skeleton-a)) 25%, var(--ba-skeleton-b, var(--ao-skeleton-b)) 37%, var(--ba-skeleton-a, var(--ao-skeleton-a)) 63%); background-size: 400% 100%; animation: ba-shimmer 1.4s ease infinite; }
+:where(.authowl-root) .ao-skeleton { height: 38px; border-radius: var(--ao-border-radius, 6px); background: linear-gradient(90deg, var(--ba-skeleton-a, var(--ao-skeleton-a)) 25%, var(--ba-skeleton-b, var(--ao-skeleton-b)) 37%, var(--ba-skeleton-a, var(--ao-skeleton-a)) 63%); background-size: 400% 100%; animation: ba-shimmer calc(var(--ao-duration-slow) * 4) ease infinite; }
 @keyframes ba-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 
 /* In-flight spinner (action buttons via <Busy>, session bootstrap via
    <AuthLoading>). `currentColor` picks up the right hue on filled/secondary/
    social buttons; `border-inline-end-color` + rotation is RTL-safe with no
    [dir] override. It sits inline in the button's existing flex gap. */
-:where(.authowl-root) .ao-spinner { width: 14px; height: 14px; flex: none; border: 2px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; animation: ba-spin 0.6s linear infinite; }
+:where(.authowl-root) .ao-spinner { width: 14px; height: 14px; flex: none; border: 2px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; animation: ba-spin calc(var(--ao-duration-slow) * 2) linear infinite; }
 @keyframes ba-spin { to { transform: rotate(360deg); } }
 :where(.authowl-root) .ao-auth-loading { display: flex; align-items: center; justify-content: center; padding: 24px; color: var(--ba-muted, var(--ao-muted)); }
-@media (prefers-reduced-motion: reduce) { :where(.authowl-root) .ao-spinner { animation-duration: 1.6s; } :where(.authowl-root) .ao-skeleton { animation: none; } }
 
 :where(.authowl-root) .ao-user-button { position: relative; display: inline-block; }
 :where(.authowl-root) .ao-user-button-trigger { background: none; border: 0; padding: 0; cursor: pointer; }
@@ -144,7 +143,7 @@
 /* UserProfile account settings */
 :where(.authowl-root) .ao-profile { color: var(--ba-fg, var(--ao-fg)); background: var(--ba-surface, var(--ao-surface)); border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 14px; font-size: 14px; }
 :where(.authowl-root) .ao-profile-page { width: min(100%, 920px); margin-inline: auto; overflow: hidden; }
-:where(.authowl-root) .ao-profile-heading, :where(.authowl-root) .ao-profile-modal-header { padding: 24px 28px; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
+:where(.authowl-root) :is(.ao-profile-heading, .ao-profile-modal-header) { padding: 24px 28px; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
 :where(.authowl-root) .ao-profile-heading h1, :where(.authowl-root) .ao-profile-modal-header h1 { margin: 0; font-size: 22px; line-height: 1.25; }
 :where(.authowl-root) .ao-profile-heading p, :where(.authowl-root) .ao-profile-modal-header p { margin: 6px 0 0; color: var(--ba-muted, var(--ao-muted)); }
 /* No min-height. A grid row already sizes to its tallest column, which here is
@@ -221,7 +220,7 @@
 :where(.authowl-root) .ao-profile-list-skeleton { display: flex; flex-direction: column; gap: 8px; }
 :where(.authowl-root) .ao-profile-provider-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 :where(.authowl-root) .ao-profile-provider-actions .ao-profile-subtitle { width: 100%; margin: 0 0 2px; font-weight: 600; }
-:where(.authowl-root) .ao-inline-error, :where(.authowl-root) .ao-profile-inline-error { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+:where(.authowl-root) :is(.ao-inline-error, .ao-profile-inline-error) { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 :where(.authowl-root) .ao-profile-status { display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px; padding: 14px 16px; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 8px; background: var(--ba-hover, var(--ao-hover)); }
 :where(.authowl-root) .ao-profile-status span { color: var(--ba-muted, var(--ao-muted)); font-size: 12px; }
 :where(.authowl-root) .ao-profile-security-form { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--ba-divider, var(--ao-divider)); }
@@ -295,7 +294,7 @@
 :where(.authowl-root) .ao-organization-card-actions { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 :where(.authowl-root) .ao-organization-user-invitations { margin-top: 30px; padding-top: 26px; border-top: 1px solid var(--ba-divider, var(--ao-divider)); }
 :where(.authowl-root) .ao-organization-list { list-style: none; display: flex; flex-direction: column; margin: 0; padding: 0; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 10px; overflow: hidden; }
-:where(.authowl-root) .ao-organization-member, :where(.authowl-root) .ao-organization-invitation { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 12px 14px; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
+:where(.authowl-root) :is(.ao-organization-member, .ao-organization-invitation) { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 12px 14px; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
 :where(.authowl-root) .ao-organization-member:last-child, :where(.authowl-root) .ao-organization-invitation:last-child { border-bottom: 0; }
 :where(.authowl-root) .ao-organization-member-copy, :where(.authowl-root) .ao-organization-invitation > span:first-child { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 4px; }
 :where(.authowl-root) .ao-organization-member-copy small, :where(.authowl-root) .ao-organization-invitation small { color: var(--ba-muted, var(--ao-muted)); }
@@ -325,7 +324,7 @@
 @media (max-width: 680px) {
   :where(.authowl-root) .ao-profile-overlay { align-items: end; padding: 0; }
   :where(.authowl-root) .ao-profile-modal { width: 100%; max-height: 94dvh; border-radius: 16px 16px 0 0; border-bottom: 0; }
-  :where(.authowl-root) .ao-profile-heading, :where(.authowl-root) .ao-profile-modal-header { padding: 20px; }
+  :where(.authowl-root) :is(.ao-profile-heading, .ao-profile-modal-header) { padding: 20px; }
   :where(.authowl-root) .ao-profile-layout { display: block; }
   :where(.authowl-root) .ao-profile-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 14px; border-inline-end: 0; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
   :where(.authowl-root) .ao-profile-nav-item { width: 100%; min-width: 0; }
@@ -335,7 +334,7 @@
   :where(.authowl-root) .ao-organization-overlay { align-items: end; padding: 0; }
   :where(.authowl-root) .ao-organization-modal { width: 100%; max-height: 94dvh; border-radius: 16px 16px 0 0; border-bottom: 0; }
   :where(.authowl-root) .ao-organization-modal-header { padding: 16px 18px; }
-  :where(.authowl-root) .ao-organization-create, :where(.authowl-root) .ao-organization-directory { padding: 20px; }
+  :where(.authowl-root) :is(.ao-organization-create, .ao-organization-directory) { padding: 20px; }
   :where(.authowl-root) .ao-organization-directory { border-radius: 0; }
   :where(.authowl-root) .ao-organization-directory-header { flex-direction: column; }
   :where(.authowl-root) .ao-organization-card-grid { grid-template-columns: 1fr; }
@@ -354,7 +353,7 @@
    Targeted at the component surfaces directly (not inheritance from the
    root): a host font-family anywhere between the root and our markup would
    silently win by inheritance, and form controls don't inherit fonts at all. */
-.authowl-root[dir='rtl'] .ao-form, .authowl-root[dir='rtl'] .ao-menu, .authowl-root[dir='rtl'] .ao-input, .authowl-root[dir='rtl'] .ao-button, .authowl-root[dir='rtl'] .ao-social-button, .authowl-root[dir='rtl'] .ao-link-button, .authowl-root[dir='rtl'] .ao-organization-switcher-trigger, .authowl-root[dir='rtl'] .ao-organization-menu-item {
+.authowl-root[dir='rtl'] .ao-form, .authowl-root[dir='rtl'] .ao-menu, .authowl-root[dir='rtl'] .ao-input, .authowl-root[dir='rtl'] .ao-button, :where(.authowl-root[dir='rtl']) .ao-social-button, .authowl-root[dir='rtl'] .ao-link-button, .authowl-root[dir='rtl'] .ao-organization-switcher-trigger, .authowl-root[dir='rtl'] .ao-organization-menu-item {
   font-family: var(--ao-font-family, 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif);
 }
 .authowl-root[dir='rtl'] .ao-profile, .authowl-root[dir='rtl'] .ao-profile button, .authowl-root[dir='rtl'] .ao-profile input {
@@ -365,7 +364,72 @@
 
 .authowl-root { font-family: var(--ao-font-family, inherit); }
 
-.authowl-root[data-authowl-control-height] :is(.ao-input, .ao-button, .ao-social-button) { height: var(--ao-control-height); box-sizing: border-box; }
+:where(.authowl-root[data-authowl-control-height]) :is(.ao-input, .ao-button, .ao-social-button) { height: var(--ao-control-height); box-sizing: border-box; }
 
 /* Only override native control fonts when the host actually supplies a font. */
-.authowl-root[style*="--ao-font-family:"] :is(.ao-input, .ao-button, .ao-social-button, .ao-link-button, .ao-profile button, .ao-profile input) { font-family: var(--ao-font-family); }
+:where(.authowl-root[style*="--ao-font-family:"] :is(.ao-input, .ao-button, .ao-link-button, .ao-profile button, .ao-profile input)), :where(.authowl-root[style*="--ao-font-family:"]) .ao-social-button { font-family: var(--ao-font-family); }
+
+
+/* AO-58 authentication surfaces. Hosts can replace the shell through elements. */
+:where(.authowl-root) .ao-auth-card { box-sizing: border-box; width: 400px; max-width: 100%; padding: 28px; gap: 20px; border: 1px solid var(--ao-border); border-radius: var(--ao-border-radius, var(--ao-radius-xl)); background: var(--ao-surface); box-shadow: var(--ao-shadow-card); }
+:where(.authowl-root .ao-auth-card) .ao-title { font-size: 18px; line-height: 24px; margin: 0; letter-spacing: -.01em; }
+/* A step heading takes focus only so screen readers announce the step; it is
+   not interactive, so it draws no focus ring. */
+:where(.authowl-root) .ao-title:where([tabindex="-1"]:focus) { outline: none; }
+:where(.authowl-root .ao-auth-card) .ao-subtitle { font-size: 13px; line-height: 1.5; margin: -10px 0 0; color: var(--ao-muted); }
+:where(.authowl-root .ao-auth-card) .ao-branding { margin: 0; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+:where(.authowl-root .ao-auth-card) .ao-fields { gap: 14px; }
+:where(.authowl-root .ao-auth-card) :is(.ao-input, .ao-button, .ao-social-button) { box-sizing: border-box; min-width: 0; width: 100%; height: var(--ao-control-height, 40px); border-radius: var(--ao-border-radius, 10px); }
+:where(.authowl-root .ao-auth-card) .ao-input { padding-inline: 12px; }
+:where(.authowl-root .ao-auth-card) .ao-label { gap: 6px; font-size: 13px; font-weight: 500; }
+:where(.authowl-root .ao-auth-card) .ao-social-button { font-size: 13px; }
+:where(.authowl-root .ao-auth-card .ao-social) > .ao-error { grid-column: 1 / -1; }
+:where(.authowl-root .ao-auth-card) .ao-badge { align-self: stretch; justify-content: center; border-block-start: 1px solid var(--ao-divider); padding-block-start: 16px; margin: 0; font-size: 11px; }
+:where(.authowl-root) .ao-last-used { position: absolute; top: -8px; inset-inline-end: -4px; border-radius: 999px; padding: 1px 6px; background: var(--ao-brand); color: var(--ao-on-brand); font-size: 10px; line-height: 14px; font-weight: 600; }
+:where(.authowl-root) .ao-method-tabs { --ao-tab-padding: 3px; display: grid; grid-template-columns: repeat(var(--ao-tab-columns), minmax(0, 1fr)); position: relative; padding: var(--ao-tab-padding); border-radius: 10px; background: var(--ao-hover); }
+:where(.authowl-root) .ao-method-tab { z-index: 1; height: 30px; padding-inline: 4px; border: 0; border-radius: 7px; background: transparent; color: var(--ao-muted); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+:where(.authowl-root) .ao-method-tab:where([aria-selected=true]) { color: var(--ao-fg); }
+:where(.authowl-root) .ao-method-tab:where(:focus-visible) { outline: 2px solid var(--ao-accent); outline-offset: 1px; }
+:where(.authowl-root) .ao-tab-indicator { position: absolute; top: var(--ao-tab-padding); inset-inline-start: calc(3px + var(--ao-tab-col) * (100% - 6px) / var(--ao-tab-columns)); width: calc((100% - var(--ao-tab-padding) * 2) / var(--ao-tab-columns)); height: 30px; transform: translateY(calc(var(--ao-tab-row) * 100%)); border-radius: 7px; background: var(--ao-auth-tab-surface); box-shadow: var(--ao-shadow-tab); transition: inset-inline-start var(--ao-duration-base) var(--ao-ease-standard), transform var(--ao-duration-base) var(--ao-ease-standard); }
+:where(.authowl-root) .ao-step:where(:not(.ao-step .ao-step)) { animation: ao-in var(--ao-duration-base); }
+:where(.authowl-root .ao-auth-card) .ao-error { padding: 10px 12px; border: 0; border-radius: 10px; background: var(--ao-danger-soft); animation: ao-shake var(--ao-duration-slow); }
+:where(.authowl-root .ao-auth-card) :is(.ao-button, .ao-social-button) { transition: transform var(--ao-duration-fast), background var(--ao-duration-fast); -webkit-tap-highlight-color: transparent; }
+:where(.authowl-root .ao-auth-card) :is(.ao-button:where(:active:not(:disabled)), .ao-social-button:where(:active:not(:disabled))) { transform: scale(.98); }
+:where(.authowl-root .ao-auth-card) .ao-spinner, :where(.authowl-root .ao-auth-card .ao-spinner)::before, :where(.authowl-root .ao-auth-card .ao-spinner)::after { width: 5px; height: 5px; border: 0; border-radius: 50%; background: currentColor; animation: ao-dot calc(var(--ao-duration-slow) * 3) infinite; }
+:where(.authowl-root .ao-auth-card) .ao-spinner { position: relative; margin-inline: 9px; animation-delay: var(--ao-duration-fast); }
+:where(.authowl-root .ao-auth-card .ao-spinner)::before, :where(.authowl-root .ao-auth-card .ao-spinner)::after { content: ''; position: absolute; top: 0; }
+:where(.authowl-root .ao-auth-card .ao-spinner)::before { inset-inline-start: -9px; }
+:where(.authowl-root .ao-auth-card .ao-spinner)::after { inset-inline-start: 9px; animation-delay: calc(var(--ao-duration-fast) * 2); }
+:where(.authowl-root) .ao-icon-back { display: inline-block; }
+:where(.authowl-root[dir=rtl], .authowl-root [dir=rtl]) .ao-icon-back { transform: scaleX(-1); }
+@keyframes ao-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes ao-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-3px); } 50% { transform: translateX(3px); } 75% { transform: translateX(-1.5px); } }
+@keyframes ao-dot { 0%, 100% { opacity: .25; transform: none; } 40% { opacity: 1; transform: translateY(-2px); } }
+@media (max-width: 480px) {
+  :where(.authowl-root) .ao-auth-card { width: 100%; max-width: none; padding: 24px; }
+  :where(.authowl-root .ao-auth-card) :is(.ao-input, .ao-button, .ao-social-button) { height: var(--ao-control-height, 48px); min-height: 48px; }
+  :where(.authowl-root .ao-auth-card) .ao-input { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.authowl-root .ao-auth-card) .ao-spinner, :where(.authowl-root .ao-auth-card .ao-spinner)::before, :where(.authowl-root .ao-auth-card .ao-spinner)::after { animation: none; }
+}
+
+:where(.authowl-root) .ao-name-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
+/* Mark | heading and subtitle | environment. Empty auto tracks collapse, and
+   spacing lives on the items, so an unbranded header has no stray offset. */
+:where(.authowl-root) .ao-auth-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 2px; align-items: center; }
+:where(.authowl-root .ao-auth-header) > .ao-branding { display: contents; }
+:where(.authowl-root .ao-auth-header) :is(.ao-branding-identity, .ao-branding-link) { grid-column: 1; grid-row: 1 / 3; margin-inline-end: 12px; }
+:where(.authowl-root .ao-auth-header) .ao-branding-name { display: none; }
+:where(.authowl-root .ao-auth-header) .ao-branding-logo { max-width: 80px; height: 36px; }
+:where(.authowl-root .ao-auth-header) .ao-branding-fallback { width: 36px; height: 36px; flex-basis: 36px; }
+:where(.authowl-root .ao-auth-header) .ao-environment { grid-column: 3; grid-row: 1; align-self: start; margin-inline-start: 8px; }
+:where(.authowl-root .ao-auth-header) > :is(.ao-title, .ao-subtitle) { grid-column: 2; margin: 0; }
+:where(.authowl-root .ao-auth-header) > .ao-subtitle { grid-column: 2 / 4; }
+
+:where(.authowl-root) .ao-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+:where(.authowl-root .ao-label-row) .ao-link-button { font-size: 12px; }
+:where(.authowl-root) .ao-method-help { margin: 0; font-size: 12px; line-height: 16px; color: var(--ao-muted); }
+:where(.authowl-root) .ao-passkey-info { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 10px; background: var(--ao-inset); color: var(--ao-fg); font-size: 13px; }
+:where(.authowl-root .ao-passkey-info) strong { font-weight: 500; }
