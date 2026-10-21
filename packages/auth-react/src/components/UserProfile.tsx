@@ -10,6 +10,8 @@ import { AuthOwlBranding } from './AuthOwlBranding';
 import { resolveProjectCapabilities } from '../project-capabilities';
 import {
   userProfileSectionsFor,
+  userProfileGroupsFor,
+  USER_PROFILE_GROUPS,
   userProfileSectionFromHash,
   userProfileSectionHash,
   type UserProfileSection,
@@ -112,7 +114,10 @@ export function UserProfile(props: UserProfileProps = {}) {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, [mode, section, sections]);
 
-  const visibleActive = sections.includes(active) ? active : 'profile';
+  const activeGroup = USER_PROFILE_GROUPS.find((group) => group.sections.some((item) => item === active));
+  const availableGroups = userProfileGroupsFor(sections);
+  const visibleActive = sections.includes(active) ? active
+    : (availableGroups.find((group) => group.id === activeGroup?.id) ?? availableGroups[0])!.sections[0];
 
   React.useEffect(() => {
     if (previousSection.current === section) return;

@@ -77,7 +77,9 @@
 :where(.authowl-root) .ao-branding-align-left { align-items: flex-start; text-align: left; }
 :where(.authowl-root) .ao-branding-align-center { align-items: center; text-align: center; }
 :where(.authowl-root) .ao-branding-align-right { align-items: flex-end; text-align: right; }
-:where(.authowl-root .ao-profile-heading) .ao-branding, :where(.authowl-root .ao-profile-modal-header) .ao-branding { margin-bottom: 16px; }
+:where(.authowl-root .ao-profile-modal-header) .ao-branding { margin-bottom: 16px; }
+/* Page mode carries only the brand: one row, identity at inline-start and the environment at inline-end. */
+:where(.authowl-root .ao-profile-heading) .ao-branding { margin: 0; flex-direction: row; align-items: center; justify-content: space-between; }
 
 /* "Secured by AuthOwl" attribution (free plan; hidden on paid, or forced on
    via the showBadge prop). A small owl mark + wordmark, like other embeddable
@@ -144,6 +146,7 @@
 :where(.authowl-root) .ao-profile { box-sizing: border-box; color: var(--ba-fg, var(--ao-fg)); background: var(--ba-surface, var(--ao-surface)); border: 1px solid var(--ao-line); border-radius: var(--ao-radius-xl); font-size: 14px; container: ao-profile / inline-size; contain-intrinsic-inline-size: 920px; }
 :where(.authowl-root) .ao-profile-page { width: min(100%, 920px); margin-inline: auto; overflow: hidden; }
 :where(.authowl-root :is(.ao-profile-heading, .ao-profile-modal-header)) { padding: 24px 28px; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
+:where(.authowl-root .ao-profile-heading) { padding-block: 16px; }
 :where(.authowl-root) .ao-profile-modal-header h1 { margin: 0; font-size: 22px; line-height: 1.25; }
 :where(.authowl-root) .ao-profile-modal-header p { margin: 6px 0 0; color: var(--ba-muted, var(--ao-muted)); }
 /* No min-height. A grid row already sizes to its tallest column, which here is
@@ -338,8 +341,12 @@
 .authowl-root[dir='rtl'] .ao-form, .authowl-root[dir='rtl'] .ao-menu, .authowl-root[dir='rtl'] .ao-input, .authowl-root[dir='rtl'] .ao-button, :where(.authowl-root[dir='rtl']) .ao-social-button, .authowl-root[dir='rtl'] .ao-link-button, .authowl-root[dir='rtl'] .ao-organization-switcher-trigger, .authowl-root[dir='rtl'] .ao-organization-menu-item {
   font-family: var(--ao-font-family, 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif);
 }
-:where(.authowl-root[dir='rtl'] .ao-profile), :where(.authowl-root)[dir='rtl'] .ao-profile button, :where(.authowl-root)[dir='rtl'] .ao-profile input {
+:where(.authowl-root[dir='rtl']) .ao-profile, :where(.authowl-root)[dir='rtl'] .ao-profile button, :where(.authowl-root)[dir='rtl'] .ao-profile input {
   font-family: var(--ao-font-family, 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif);
+}
+
+@media (max-width: 640px) {
+  :where(.authowl-root .ao-organization-profile-layout) .ao-profile-nav-item { width: 100%; min-width: 0; height: auto; min-height: 32px; white-space: normal; overflow-wrap: anywhere; }
 }
 
 :where(.authowl-root) .ao-organization-invite-results { margin-block: 16px; }
@@ -462,6 +469,9 @@
 :where(.authowl-root) .ao-profile-group-title { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
 :where(.authowl-root) .ao-profile-group-subtitle { margin: 0; font-size: 13px; color: var(--ao-fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 :where(.authowl-root) .ao-profile-section-title { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--ao-fg-faint); text-transform: uppercase; letter-spacing: 0.04em; scroll-margin-block: 100px; }
+/* A group's rows are contiguous, as in the design; a list section (its own uppercase heading) starts a new block. */
+:where(.authowl-root) .ao-profile-sections { display: flex; flex-direction: column; }
+:where(.authowl-root .ao-profile-sections) > .ao-profile-section-list:where(:not(:first-child)) { margin-block-start: 20px; }
 :where(.authowl-root) .ao-profile-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--ao-line); }
 :where(.authowl-root) .ao-profile-icon { width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--ao-inset); color: var(--ao-fg-muted); display: flex; align-items: center; justify-content: center; }
 :where(.authowl-root) .ao-profile-icon-svg { width: 15px; height: 15px; }
@@ -470,7 +480,9 @@
 :where(.authowl-root) .ao-profile-row-meta { display: block; font-size: 12px; color: var(--ao-fg-muted); white-space: normal; line-height: 1.5; }
 :where(.authowl-root) .ao-profile-row-button { box-sizing: border-box; flex: none; height: 30px; padding: 0 12px; border: 1px solid var(--ao-line-strong); border-radius: 8px; background: var(--ao-surface); font: inherit; font-size: 12px; font-weight: 500; color: var(--ao-fg); cursor: pointer; white-space: nowrap; transition: background var(--ao-duration-fast) var(--ao-ease-standard); }
 :where(.authowl-root) .ao-profile-row-button:where(:hover) { background: var(--ao-inset); }
-:where(.authowl-root) :is(.ao-profile-row-button, .ao-profile-nav-item, .ao-profile-section-title, .ao-profile-row-title):where(:focus-visible) { outline: 2px solid var(--ao-brand-text); outline-offset: 2px; }
+:where(.authowl-root) :is(.ao-profile-row-button, .ao-profile-nav-item):where(:focus-visible) { outline: 2px solid var(--ao-brand-text); outline-offset: 2px; }
+/* Section headings take focus only for deep links and announcements; they are not interactive, so no ring. */
+:where(.authowl-root) :is(.ao-profile-section-title, .ao-profile-row-title):where([tabindex="-1"]:focus) { outline: none; }
 :where(.authowl-root) .ao-profile-row-button:where(:disabled) { opacity: 0.5; cursor: default; }
 :where(.authowl-root) .ao-profile-row-body { padding-block: 12px; }
 :where(.authowl-root) .ao-profile-sheet-handle { display: none; }

@@ -41,7 +41,7 @@ export function UserProfileBody({
   const t = useT();
   const { user } = useUser();
   const groups = userProfileGroupsFor(sections);
-  const group = groups.find((item) => item.sections.some((item) => item === active)) ?? groups.find((item) => item.id === 'profile');
+  const group = groups.find((item) => item.sections.some((item) => item === active)) ?? groups[0];
   const contentRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (focusSection?.section !== active) return;
@@ -95,7 +95,9 @@ export function UserProfileBody({
           <p className={slot('ba-profile-group-subtitle')}>{t(group.subtitle)}</p>
         </header>
         <ProfileDisclosureContext.Provider value={disclosure}>
-          {group.sections.map((section) => <React.Fragment key={section}>{SECTION_RENDERERS[section]}</React.Fragment>)}
+          <div className={slot('ba-profile-sections')}>
+            {group.sections.map((section) => <React.Fragment key={section}>{SECTION_RENDERERS[section]}</React.Fragment>)}
+          </div>
         </ProfileDisclosureContext.Provider>
       </div>
     </div>

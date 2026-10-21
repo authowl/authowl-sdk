@@ -183,6 +183,8 @@ export type ELEMENT_SLOTS = [
   'profile-recovery-card',
   'profile-section',
   'profile-section-header',
+  'profile-section-list',
+  'profile-sections',
   'profile-security-form',
   'profile-status',
   'profile-submit',

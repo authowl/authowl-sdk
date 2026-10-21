@@ -315,9 +315,25 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.signedOut': 'سجّل الدخول لإدارة حسابك.',
   'userProfile.save': 'حفظ التغييرات',
   'userProfile.retry': 'حاول مرة أخرى',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.cancel': 'إلغاء',
   'userProfile.nav.aria': 'إعدادات الحساب',
   'userProfile.nav.profile': 'الملف الشخصي',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.email': 'البريد الإلكتروني',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.password': 'كلمة المرور',
   'userProfile.nav.social': 'الحسابات المرتبطة',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.sessions': 'الجلسات',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.passkeys': 'مفاتيح المرور',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.mfa': 'المصادقة الثنائية',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.recovery': 'الاسترداد',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.danger': 'حذف الحساب',
   'userProfile.profile.title': 'الملف الشخصي',
   'userProfile.profile.description': 'اختر طريقة ظهور اسمك وصورتك.',
   'userProfile.profile.imageLabel': 'رابط صورة الحساب',
@@ -339,6 +355,8 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.password.saved': 'تم تغيير كلمة المرور.',
   'userProfile.password.error': 'تعذر تغيير كلمة المرور.',
   'userProfile.social.title': 'الحسابات المرتبطة',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.social.description': 'أدر الحسابات الاجتماعية التي يمكنك استخدامها لتسجيل الدخول.',
   'userProfile.social.connected': 'مرتبط',
   'userProfile.social.disconnect': 'إلغاء الربط',
   'userProfile.social.confirmDisconnect': 'هل تريد إلغاء ربط {provider} بهذا الحساب؟',
@@ -350,6 +368,8 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.social.linkError': 'تعذر ربط هذا الحساب.',
   'userProfile.social.unlinkError': 'تعذر إلغاء ربط هذا الحساب.',
   'userProfile.sessions.title': 'الأجهزة التي سجلت الدخول منها',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.sessions.description': 'راجع الأجهزة المسجّل دخولها إلى حسابك.',
   'userProfile.sessions.current': 'هذا الجهاز',
   'userProfile.sessions.unknownDevice': 'جهاز غير معروف',
   'userProfile.sessions.revoke': 'إلغاء الجلسة',

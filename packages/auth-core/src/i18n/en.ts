@@ -317,9 +317,25 @@ export const en = {
   'userProfile.signedOut': 'Sign in to manage your account.',
   'userProfile.save': 'Save changes',
   'userProfile.retry': 'Try again',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.cancel': 'Cancel',
   'userProfile.nav.aria': 'Account settings',
   'userProfile.nav.profile': 'Profile',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.email': 'Email',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.password': 'Password',
   'userProfile.nav.social': 'Connected accounts',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.sessions': 'Sessions',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.passkeys': 'Passkeys',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.mfa': 'Two-factor',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.recovery': 'Recovery',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.nav.danger': 'Delete account',
   'userProfile.profile.title': 'Profile',
   'userProfile.profile.description': 'Choose how your name and avatar appear.',
   'userProfile.profile.imageLabel': 'Avatar image URL',
@@ -341,6 +357,8 @@ export const en = {
   'userProfile.password.saved': 'Your password has been changed.',
   'userProfile.password.error': 'Could not change your password.',
   'userProfile.social.title': 'Connected accounts',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.social.description': 'Manage the social accounts you can use to sign in.',
   'userProfile.social.connected': 'Connected',
   'userProfile.social.disconnect': 'Disconnect',
   'userProfile.social.confirmDisconnect': 'Disconnect {provider} from this account?',
@@ -352,6 +370,8 @@ export const en = {
   'userProfile.social.linkError': 'Could not connect that account.',
   'userProfile.social.unlinkError': 'Could not disconnect that account.',
   'userProfile.sessions.title': 'Where you are signed in',
+  // Unused; kept for override compatibility until the 1.0 major.
+  'userProfile.sessions.description': 'Review the devices that are signed in to your account.',
   'userProfile.sessions.current': 'This device',
   'userProfile.sessions.unknownDevice': 'Unknown device',
   'userProfile.sessions.revoke': 'Revoke',

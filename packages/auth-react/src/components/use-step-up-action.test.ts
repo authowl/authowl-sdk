@@ -55,7 +55,7 @@ describe('useStepUpAction', () => {
     expect(result.current.stepUpRequired).toBe(true);
   });
 
-  it('invalidates verification callbacks and late gates on unmount', async () => {
+  it('invalidates verification callbacks on unmount', async () => {
     const action = vi.fn().mockResolvedValue(gated);
     const { result, unmount } = renderHook(() => useStepUpAction());
     await act(async () => { await result.current.run(action, { failure: 'failed' }); });

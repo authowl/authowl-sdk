@@ -7,6 +7,7 @@ import { useStepUpAction } from './use-step-up-action';
 import { MFAChallenge } from './MFAChallenge';
 import { Busy } from './Spinner';
 import { FormError } from './FormError';
+import { useBackupCodesCloseGuard } from './BackupCodesCloseGuard';
 
 export type BackupCodesManagerProps = {
   /** Optional heading; pass null to hide it. */
@@ -32,6 +33,7 @@ export function BackupCodesManager({ title }: BackupCodesManagerProps) {
   const { pending, error, stepUpRequired, run, resume, cancel } = useStepUpAction();
   const [password, setPassword] = React.useState('');
   const [codes, setCodes] = React.useState<string[] | null>(null);
+  useBackupCodesCloseGuard(codes !== null && user?.twoFactorEnabled === true);
 
   if (!user?.twoFactorEnabled) return null;
 

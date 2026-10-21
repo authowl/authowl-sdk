@@ -285,10 +285,15 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // Existing security workflows remain mounted only while their row is open.
 // CSS-only container navigation and phone-sheet geometry add no runtime tokens
 // dependency. Core remains 25.80kb. The ceiling keeps 0.55kb of headroom.
+// AO-58(e) final review (2026-10-21) raises React 89.5->90.25:
+// deprecated catalog keys kept until 1.0. Restoring all ten English/Arabic
+// override keys alongside the avatar fallback and fresh-code close guard
+// measures 89.60kb on this machine. The ceiling keeps 0.65kb of headroom.
+// Core remains 25.80kb, within its existing ceiling.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 89.5,
+    maxGzipKb: 90.25,
     label: '@authowl/react (provider + hooks + components)',
   },
   {

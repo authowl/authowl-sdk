@@ -91,6 +91,52 @@ function selectors(rules: CSSRuleList): string[] {
   });
 }
 
+function sourceSelectors(): string[] {
+  const source = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  return Array.from(source.matchAll(/([^{}]+)\{/g)).flatMap((match) => {
+    const header = match[1]!.trim();
+    return header.startsWith('@') || /^(?:from|to|[\d.]+%)(?:\s*,|$)/.test(header)
+      ? [] : selectorList(header).map((selector) => selector.trim());
+  });
+}
+
+function hasClassOutsideWhere(selector: string): boolean {
+  const tokens = /:where\(|\.[\w-]+|\[[^\]]*\]/g;
+  let token: RegExpExecArray | null;
+  while ((token = tokens.exec(selector))) {
+    if (token[0].startsWith('.')) return true;
+    if (token[0] !== ':where(') continue;
+    let depth = 1;
+    while (depth && tokens.lastIndex < selector.length) {
+      const char = selector[tokens.lastIndex++];
+      if (char === '(') depth++;
+      if (char === ')') depth--;
+    }
+  }
+  return false;
+}
+
+function assertBareElementFloor(selector: string): void {
+  // Find the subject without treating spaces inside :where() or attributes
+  // as descendant combinators. Attributes and pseudos can qualify a bare tag.
+  let depth = 0;
+  let start = 0;
+  let quote = '';
+  for (let i = 0; i < selector.length; i++) {
+    const char = selector[i]!;
+    if (char === '\\') { i++; continue; }
+    if (quote) { if (char === quote) quote = ''; continue; }
+    if (char === '"' || char === "'") { quote = char; continue; }
+    if (char === '(' || char === '[') depth++;
+    else if (char === ')' || char === ']') depth--;
+    else if (depth === 0 && /[\s>+~]/.test(char)) start = i + 1;
+  }
+  const subject = selector.slice(start);
+  if (!/^[a-z][\w-]*(?:$|\[|:)/i.test(subject)) return;
+  expect(compare(specificity(selector), [0, 0, 1]), selector).toBeGreaterThan(0);
+  expect(hasClassOutsideWhere(selector), selector).toBe(true);
+}
+
 // Legacy rules and bare descendants retain a class floor above host resets.
 // Class-targeted selectors stay at or below one class. Each exception is exact.
 const LEGACY_EXCEPTIONS: Record<string, string> = {
@@ -207,11 +253,8 @@ describe('authentication stylesheet specificity', () => {
   });
 
   it('validates every source selector, including rules discarded by CSSOM', () => {
-    const source = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-    for (const match of source.matchAll(/([^{}]+)\{/g)) {
-      const header = match[1]!.trim();
-      if (header.startsWith('@') || /^(?:from|to|[\d.]+%)(?:\s*,|$)/.test(header)) continue;
-      expect(() => validateSelector(header), header).not.toThrow();
+    for (const selector of sourceSelectors()) {
+      expect(() => validateSelector(selector), selector).not.toThrow();
     }
   });
   it('measures functional selectors using CSS specificity rules', () => {
@@ -222,9 +265,13 @@ describe('authentication stylesheet specificity', () => {
   });
 
   it('keeps bare-element rules above a host preflight element selector', () => {
-    for (const selector of Object.keys(LEGACY_EXCEPTIONS).filter((selector) => / (?:h1|p|span|strong|small|em|bdi|svg|input)(?:\b|\[)/.test(selector))) {
-      expect(compare(specificity(selector), [0, 0, 1]), selector).toBeGreaterThan(0);
-    }
+    for (const selector of sourceSelectors()) assertBareElementFloor(selector);
+  });
+
+  it('rejects new bare-element subjects whose class floor is hidden in :where', () => {
+    expect(() => assertBareElementFloor(':where(.authowl-root .ao-x) strong')).toThrow();
+    expect(() => assertBareElementFloor(':where(.authowl-root .ao-x) input[type="email"]')).toThrow();
+    expect(() => assertBareElementFloor(':where(.authowl-root) .ao-x strong')).not.toThrow();
   });
 
   it('caps every source selector at one class except documented legacy rules', () => {

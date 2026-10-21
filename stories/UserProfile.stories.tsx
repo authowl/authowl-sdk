@@ -48,7 +48,6 @@ function groupStory(group: 'security' | 'connections', section: UserProfileSecti
 }
 
 export const Security = groupStory('security', 'password');
-export const ConnectedAccounts = groupStory('connections', 'social');
 export const Email = sectionStory('email');
 export const Password = sectionStory('password');
 export const SocialConnections = sectionStory('social');

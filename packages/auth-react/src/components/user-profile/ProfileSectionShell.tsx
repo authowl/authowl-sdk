@@ -3,6 +3,7 @@ import * as React from 'react';
 import { useSlot } from '../../elements';
 import { useT, type MessageKey } from '../../i18n';
 import { codeIconAttributes } from '../factor-icons';
+import { BackupCodesCloseGuard } from '../BackupCodesCloseGuard';
 import type { UserProfileSection } from './model';
 
 export const ProfileDisclosureContext = React.createContext<{ requested?: { section: UserProfileSection }; closeVersion: number }>({ closeVersion: 0 });
@@ -37,7 +38,7 @@ export function ProfileSectionShell({ section, title, children, list = false }: 
   const slot = useSlot();
   const titleId = React.useId();
   const heading = <h2 id={titleId} tabIndex={-1} className={slot(list ? 'ba-profile-section-title' : 'ba-profile-row-title')}>{title}</h2>;
-  return <section className={slot('ba-profile-section')} data-profile-section={section} aria-labelledby={titleId}>
+  return <section className={slot(list ? 'ba-profile-section ba-profile-section-list' : 'ba-profile-section')} data-profile-section={section} aria-labelledby={titleId}>
     {list && heading}
     {typeof children === 'function' ? children(heading, titleId) : children}
   </section>;
@@ -76,7 +77,9 @@ export function ProfileSectionDisclosure({ section, title, meta, action, childre
   const t = useT();
   const request = React.useContext(ProfileDisclosureContext);
   const [open, setOpen] = React.useState(request.requested?.section === section);
+  const [codesVisible, setCodesVisible] = React.useState(false);
   const bodyId = React.useId();
+  const closeReasonId = React.useId();
   const previousClose = React.useRef(request.closeVersion);
   React.useEffect(() => {
     if (previousClose.current !== request.closeVersion) setOpen(false);
@@ -89,10 +92,11 @@ export function ProfileSectionDisclosure({ section, title, meta, action, childre
     {(heading, titleId) => <>
       <ProfileRow section={section} title={heading} meta={meta ?? (row && t(row.meta))} success={success}
         badge={success ? <span className={slot('ba-profile-pill ba-profile-pill-success')}>{t('privacy.on')}</span> : undefined}
-        action={children && <button type="button" className={slot('ba-profile-row-button')} aria-expanded={open} aria-controls={bodyId} aria-describedby={titleId} aria-label={open ? `${label}: ${t('common.close')}` : undefined} onClick={() => setOpen(!open)}>
+        action={children && <button type="button" className={slot('ba-profile-row-button')} disabled={open && codesVisible} aria-expanded={open} aria-controls={bodyId} aria-describedby={open && codesVisible ? `${titleId} ${closeReasonId}` : titleId} aria-label={open ? `${label}: ${t('common.close')}` : undefined} onClick={() => setOpen(!open)}>
           {open ? t('common.close') : action ?? (row && 'action' in row ? t(row.action) : t('userProfile.manage'))}
         </button>} />
-      {open && <div id={bodyId} className={slot('ba-profile-row-body')}>{children}</div>}
+      {open && codesVisible && <p id={closeReasonId} className={slot('ba-muted')}>{t('mfa.enroll.backupCodesWarningStrong')}</p>}
+      {open && <div id={bodyId} className={slot('ba-profile-row-body')}><BackupCodesCloseGuard.Provider value={setCodesVisible}>{children}</BackupCodesCloseGuard.Provider></div>}
     </>}
   </ProfileSectionShell>;
 }

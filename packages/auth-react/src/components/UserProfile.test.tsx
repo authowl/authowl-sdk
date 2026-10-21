@@ -126,6 +126,7 @@ vi.mock('./PrivacyCenter', () => ({ PrivacyCenter: () => <div data-testid="priva
 
 vi.mock('../i18n', () => ({
   Bidi: ({ children }: { children: React.ReactNode }) => <bdi>{children}</bdi>,
+  richMessage: (message: string) => message,
   useLocale: () => 'en',
   useServerError: () => mocks.serverError,
   useT: () => (key: string, params?: Record<string, string | number>) => {
@@ -272,6 +273,61 @@ describe('UserProfile', () => {
     fireEvent.click(security);
     expect(window.location.hash).toBe('#authowl-profile-sessions');
     expect(screen.queryByRole('heading', { name: 'userProfile.password.title' })).toBeNull();
+  });
+
+  it('stays in Security when disabling MFA removes the active Recovery section', () => {
+    mocks.user.twoFactorEnabled = true;
+    const { container, rerender } = render(<UserProfile defaultSection="recovery" />);
+    expect(container.querySelector('[data-section="recovery"]')).toBeTruthy();
+    mocks.user.twoFactorEnabled = false;
+    rerender(<UserProfile defaultSection="recovery" />);
+    expect(container.querySelector('[data-group="security"][data-section="password"]')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'userProfile.recovery.title' })).toBeNull();
+  });
+
+  it('uses group order when the active security section becomes unavailable', () => {
+    const { container, rerender } = render(<UserProfile section="password" />);
+    mocks.config.enabledMethods = ['passkey'];
+    rerender(<UserProfile section="password" />);
+    expect(container.querySelector('[data-group="security"][data-section="passkeys"]')).toBeTruthy();
+  });
+
+  it('falls back within Privacy before considering the first group overall', () => {
+    Object.assign(mocks.config, { privacy: {} });
+    const { container, rerender } = render(<UserProfile section="privacy" />);
+    Object.assign(mocks.config, { privacy: undefined });
+    rerender(<UserProfile section="privacy" />);
+    expect(container.querySelector('[data-group="privacy"][data-section="danger"]')).toBeTruthy();
+    mocks.config.accountDeletion = false;
+    rerender(<UserProfile section="privacy" />);
+    expect(container.querySelector('[data-group="profile"][data-section="profile"]')).toBeTruthy();
+  });
+
+  it.each(['mfa', 'recovery'] as const)('disables %s row Close with a reason while fresh backup codes are displayed', async (section) => {
+    mocks.user.twoFactorEnabled = section === 'recovery';
+    mocks.mfa.enable.mockResolvedValueOnce({ data: {
+      totpURI: 'otpauth://totp/AuthOwl?secret=JBSWY3DPEHPK3PXP',
+      backupCodes: ['fresh-code'],
+    }, error: null });
+    render(<UserProfile defaultSection={section} />);
+    const close = screen.getByRole('button', { name: `userProfile.${section}.title: common.close` });
+    expect(close).toHaveProperty('disabled', false);
+    fireEvent.change(screen.getByLabelText('common.passwordLabel'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: section === 'mfa' ? 'common.continue' : 'backupCodes.submit' }));
+    const codes = await screen.findByTestId(section === 'mfa' ? 'mfa-backup-codes' : 'backup-codes-list');
+    await waitFor(() => expect(close).toHaveProperty('disabled', true));
+    const reasonId = close.getAttribute('aria-describedby')!.split(' ').at(-1)!;
+    expect(document.getElementById(reasonId)?.textContent).toBe('mfa.enroll.backupCodesWarningStrong');
+    fireEvent.click(close);
+    expect(codes.isConnected).toBe(true);
+    if (section === 'mfa') {
+      mocks.mfa.verifyTotp.mockResolvedValueOnce({ data: { token: 'session-token' }, error: null });
+      fireEvent.change(screen.getByLabelText('mfa.enroll.codeLabel'), { target: { value: '123456' } });
+      await screen.findByTestId('mfa-enroll-done');
+      await waitFor(() => expect(close).toHaveProperty('disabled', false));
+      fireEvent.click(close);
+      expect(screen.queryByTestId('mfa-enroll-done')).toBeNull();
+    }
   });
 
   it('drops the parked weakening action and password when its row is collapsed', async () => {
