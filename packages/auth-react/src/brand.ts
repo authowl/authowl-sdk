@@ -46,12 +46,15 @@ export function parseColor(value: string): string | null {
   if (Object.hasOwn(names, color)) return names[color] ?? null;
   if (/^#[0-9a-f]{6}$/.test(color)) return color;
   if (/^#[0-9a-f]{3}$/.test(color)) return '#' + [...color.slice(1)].map(c => c + c).join('');
+  if (color.length > 64) return null;
   const match = /^(rgb|hsl|oklch)\(([^()]+)\)$/.exec(color);
   if (!match) return null;
   const [, format, body = ''] = match;
   // Only opaque absolute colours: alpha, relative colours and substitutions
   // would make the label contrast dependent on the host surface.
-  const parts = body.trim().split(format !== 'oklch' && body.includes(',') ? /\s*,\s*/ : /\s+/);
+  const parts = format !== 'oklch' && body.includes(',')
+    ? body.split(',').map(part => part.trim())
+    : body.trim().split(/ +/);
   if (parts.length !== 3 || !parts.every(p => /^[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:%|deg)?$/.test(p))) return null;
   const [first, second, third] = parts;
   if (first === undefined || second === undefined || third === undefined) return null;
