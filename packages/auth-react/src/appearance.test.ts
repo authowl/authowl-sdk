@@ -40,10 +40,11 @@ describe('resolveAppearance', () => {
     expect(r.style['--ao-light-on-brand']).toBe('#18181b');
   });
 
-  it('emits CSS mixes for a non-hex primary color', () => {
+  it('emits complete ramps for a supported named primary color', () => {
     const r = resolveAppearance({ primaryColor: 'rebeccapurple' }, null);
-    expect(r.style['--ba-primary']).toBe('rebeccapurple');
-    expect(r.style['--ao-light-brand-text']).toContain('color-mix(in oklab, rebeccapurple');
+    expect(r.style['--ba-primary']).toBe('#663399');
+    expect(r.style['--ao-light-brand']).toBe('#663399');
+    expect(r.style['--ao-light-brand-active']).toMatch(/^#[0-9a-f]{6}$/);
   });
 
   it('lets the appearance prop override branding', () => {
@@ -91,4 +92,45 @@ describe('appearance variables and brands', () => {
     expect(resolveAppearance({ brand: 'hitsend', theme: 'inherit' }, config({ theme: 'dark', primaryColor: '#000000' })))
       .toMatchObject({ brand: 'hitsend', theme: 'inherit', style: {} });
   });
+});
+
+it.each(['#abc', 'rgb(14, 165, 164)', 'rgb(5% 65% 64%)', 'hsl(180 80% 35%)', 'oklch(0.51 0.23 277)', 'white'])('derives the complete primary ramp for %s', primary => {
+  const { style } = resolveAppearance({ brand: 'billow', variables: { colorPrimary: primary } }, null);
+  for (const scheme of ['light', 'dark']) {
+    for (const token of ['brand', 'brand-hover', 'brand-active', 'on-brand', 'brand-text', 'ring']) {
+      expect(style[`--ao-${scheme}-${token}`]).toMatch(/^#[0-9a-f]{6}$/);
+    }
+  }
+});
+
+it.each(['transparent', 'currentColor', 'rgb(1 2 3 / .5)', 'color(display-p3 1 0 0)', 'hsl(1 2 3)', 'oklch(2 0 0)'])('rejects unsupported primary %s atomically', primaryColor => {
+  expect(resolveAppearance({ primaryColor }, null).style).toEqual({});
+});
+
+it.each(['2rem', '32px', '100%', 'calc(2rem + 4px)'])('accepts one length expression %s', controlHeight => {
+  expect(resolveAppearance({ variables: { controlHeight } }, null).style['--ao-control-height']).toBe(controlHeight);
+});
+
+it.each(['2rem 3rem', 'auto', 'calc(2rem + red)', 'var(--height)', '32'])('rejects invalid length %s', controlHeight => {
+  expect(resolveAppearance({ variables: { controlHeight } }, null).style).toEqual({});
+});
+
+it('chooses an AA label for white on Billow and matching OKLCH active colours', async () => {
+  const { contrastRatio, deriveBrandRamp, parseColor } = await import('./brand');
+  const white = resolveAppearance({ brand: 'billow', variables: { colorPrimary: 'white' } }, null).style;
+  expect(contrastRatio(white['--ao-light-brand']!, white['--ao-light-on-brand']!)).toBeGreaterThanOrEqual(4.5);
+  const primaryColor = 'oklch(0.51 0.23 277)';
+  const result = resolveAppearance({ primaryColor }, null).style;
+  const ramp = deriveBrandRamp(parseColor(primaryColor));
+  expect(result['--ao-light-brand-active']).toBe(ramp.light.accentSolidActive);
+  expect(result['--ao-dark-brand-active']).toBe(ramp.dark.accentSolidActive);
+  expect(result['--ba-primary']).toBe(ramp.light.accentSolid);
+});
+
+it.each([
+  ['#abc', '#aabbcc'], ['rgb(255, 0, 0)', '#ff0000'], ['hsl(120deg 100% 50%)', '#00ff00'],
+  ['hsl(240, 100%, 50%)', '#0000ff'], ['oklch(100% 0 0)', '#ffffff'],
+])('normalizes %s consistently without browser APIs', async (input, hex) => {
+  const { parseColor } = await import('./brand');
+  expect(parseColor(input)).toBe(hex);
 });

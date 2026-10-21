@@ -117,10 +117,54 @@ it('renders theme, brand, variables and element classes in SSR HTML without fetc
     </AuthOwlProvider>,
   );
   expect(html).toContain('data-authowl-theme="system"');
-  expect(html).toContain('data-brand="hitsend"');
+  expect(html).toContain('data-authowl-brand="hitsend"');
   expect(html).toContain('--ao-light-brand:#123456');
   expect(html).toContain('--ao-dark-brand:#123456');
   expect(html).toContain('--ao-control-height:2rem');
   expect(html).toContain('ao-error ba-error host-error');
   expect(fetchSpy).not.toHaveBeenCalled();
+});
+
+it.each([
+  'white;display:block;position:fixed', 'white{}', '<style>', 'white\\3b',
+  'white/*comment*/', 'white!important', 'url(https://example.com)',
+  'expression(alert(1))', 'white\n', 'white\r',
+])('drops the entire unsafe value on server and client: %j', value => {
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const node = <AuthOwlProvider publishableKey={PK} apiUrl={API_URL} fetch={fetchNever}
+    appearance={{ primaryColor: value, variables: { colorPrimary: value, colorText: value, controlHeight: value, borderRadius: value, fontFamily: value } }}><div /></AuthOwlProvider>;
+  const html = renderToString(node);
+  expect(html).toContain('style="display:contents"');
+  expect(html).not.toContain('--ao-');
+  expect(html).not.toContain('--ba-');
+  expect(html).not.toContain('data-authowl-control-height');
+  const { container } = render(node);
+  expect(container.querySelector('.authowl-root')?.getAttribute('style')).toBe('display: contents;');
+  warning.mockRestore();
+});
+
+it('warns only once per invalid variable in development', () => {
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const node = <AuthOwlProvider publishableKey={PK} apiUrl={API_URL} fetch={fetchNever}
+    appearance={{ variables: { colorSuccess: 'green;display:none' } }}><div /></AuthOwlProvider>;
+  renderToString(node);
+  render(node);
+  expect(warning).toHaveBeenCalledTimes(1);
+  warning.mockRestore();
+});
+
+it.each(['white', 'rgb(14, 165, 164)', 'hsl(180 80% 35%)', 'oklch(0.51 0.23 277)'])('emits complete non-hex ramps on server and client for %s', primaryColor => {
+  const node = <AuthOwlProvider publishableKey={PK} apiUrl={API_URL} fetch={fetchNever}
+    appearance={{ brand: 'billow', primaryColor }}><div /></AuthOwlProvider>;
+  const html = renderToString(node);
+  const { container } = render(node);
+  const root = container.querySelector('.authowl-root') as HTMLElement;
+  for (const scheme of ['light', 'dark']) {
+    for (const token of ['brand', 'brand-hover', 'brand-active', 'on-brand', 'brand-text', 'ring']) {
+      const name = `--ao-${scheme}-${token}`;
+      const value = root.style.getPropertyValue(name);
+      expect(value).toMatch(/^#[0-9a-f]{6}$/);
+      expect(html).toContain(`${name}:${value}`);
+    }
+  }
 });

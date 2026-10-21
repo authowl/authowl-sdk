@@ -229,7 +229,8 @@ export function AuthOwlProvider({
       <div
         className="authowl-root"
         data-authowl-theme={merged.theme}
-        data-brand={merged.brand}
+        data-authowl-brand={merged.brand}
+        data-authowl-control-height={merged.style['--ao-control-height'] ? '' : undefined}
         // Not read by our CSS (RTL keys off [dir]) - a deliberate hook for
         // HOST stylesheets to target per-locale, like data-authowl-theme.
         data-authowl-locale={locale}

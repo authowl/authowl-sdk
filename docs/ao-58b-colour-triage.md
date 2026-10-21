@@ -40,3 +40,24 @@ change this matrix because PreviewAuth explicitly supplies light or dark.
 Canonical screenshots and browser a11y were not run here: Docker is unavailable
 and the sandbox denies Chromium's Mach bootstrap registration. Regenerate only
 after triage with AUTHOWL_SCREENSHOT_THRESHOLD=0. No baseline files were edited.
+
+Review fixes: SDK brand selectors now use `data-authowl-brand`, isolating them
+from token-host selectors. Foundations/Tokens applies its palette values inline
+under that attribute; its intended swatch colours remain unchanged. Explicit
+non-hex primaries now use complete computed ramps, including active and a
+contrast-selected label. White on Billow uses a dark AA label. Legacy CSS-only
+primary overrides derive hover, active, accent and focus before the brand
+fallback. No current component story changes its explicit hex ramp.
+
+Input box-sizing and height overrides are now gated by a validated controlHeight;
+without that override a host's universal border-box reset remains effective,
+and hosts without a reset retain their previous content-box geometry. Invalid
+appearance values are dropped identically in SSR and client renders. Theme
+attributes are root-scoped; host `.dark` still controls inherit. The existing
+explicit story themes keep this matrix unchanged. No screenshots were changed.
+
+Computed-style coverage lives in scripts/ci/appearance-browser-check.test.ts and
+runs in the local gate. It checks applied FormError danger colours, theme
+resolution, both host reset geometries, legacy primary-only states and supported
+non-hex ramps with the token stylesheet loaded after the SDK stylesheet. Local
+execution is blocked by the same Chromium sandbox restriction described above.

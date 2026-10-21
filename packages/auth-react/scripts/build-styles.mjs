@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { neutral, brands, radius, motion, elevation, font, type, space, toCss } from '@authowl/tokens';
 
 // Import token data only at build time. Never ship the tokens JS with React.
@@ -17,11 +17,15 @@ function palette(scheme) {
     ...Object.fromEntries(Object.keys(brands.authowl[scheme]).map(k => [k, `var(--ao-${scheme}-${k})`])),
     ...Object.fromEntries(Object.entries(aliases).map(([k, v]) => [k, `var(--ao-${v})`])),
     'brand-active': `var(--ao-${scheme}-brand-active, var(--ao-${scheme}-brand-hover))`,
+    'legacy-hover': `color-mix(in oklab, var(--ba-primary) ${scheme === 'light' ? '90%' : '80%'}, ${scheme === 'light' ? 'black' : 'white'})`,
+    'legacy-active': `color-mix(in oklab, var(--ba-primary) ${scheme === 'light' ? '84%' : '65%'}, ${scheme === 'light' ? 'black' : 'white'})`,
+    'legacy-accent': `color-mix(in oklab, var(--ba-primary) ${scheme === 'light' ? '65%' : '80%'}, ${scheme === 'light' ? 'black' : 'white'})`,
     'accent-solid': 'var(--ba-primary, var(--ao-brand))',
-    'accent-solid-hover': `var(--ba-rt-solid-hover-${scheme === 'light' ? 'l' : 'd'}, var(--ao-brand-hover))`,
-    'accent-solid-active': `var(--ba-rt-solid-active-${scheme === 'light' ? 'l' : 'd'}, var(--ao-brand-active))`,
+    'accent-solid-hover': `var(--ba-rt-solid-hover-${scheme === 'light' ? 'l' : 'd'}, var(--ao-legacy-hover, var(--ao-brand-hover)))`,
+    'accent-solid-active': `var(--ba-rt-solid-active-${scheme === 'light' ? 'l' : 'd'}, var(--ao-legacy-active, var(--ao-brand-active)))`,
     'accent-fg': 'var(--ba-rt-accent-fg, var(--ao-on-brand))',
-    accent: `var(--ba-rt-accent-${scheme === 'light' ? 'l' : 'd'}, var(--ao-brand-text))`,
+    accent: `var(--ba-rt-accent-${scheme === 'light' ? 'l' : 'd'}, var(--ao-legacy-accent, var(--ao-brand-text)))`,
+    ring: `var(--ba-rt-accent-${scheme === 'light' ? 'l' : 'd'}, var(--ao-legacy-accent, var(--ao-brand-text)))`,
     'danger-solid': toCss(neutral.light.danger),
     'danger-solid-hover': `color-mix(in oklab, ${toCss(neutral.light.danger)} 90%, black)`,
     'on-danger': '#fff',
@@ -51,10 +55,11 @@ css += rule(root, palette('light'));
 for (const [brand, schemes] of Object.entries(brands)) {
   const ramps = Object.fromEntries(Object.entries(schemes).flatMap(([scheme, values]) => Object.entries(values).map(([k, v]) => [`${scheme}-${k}`, toCss(v)])));
   if (brand === 'authowl') css += rule(root, ramps);
-  css += rule(`${root}[data-brand='${brand}']`, ramps);
+  css += rule(`${root}[data-authowl-brand='${brand}']`, ramps);
 }
 css += rule(`${root}[data-authowl-theme='dark'], .dark ${root}[data-authowl-theme='inherit'], ${root}.dark[data-authowl-theme='inherit']`, palette('dark'));
 css += `@media (prefers-color-scheme: dark) {\n${rule(`${root}[data-authowl-theme='system']`, palette('dark'))}}\n`;
 css += `@media (prefers-reduced-motion: reduce) {\n${rule(root, Object.fromEntries(Object.keys(motion.duration).map(k => [`duration-${k}`, '0ms'])))}}\n`;
 css += readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8');
+mkdirSync(new URL('../dist/', import.meta.url), { recursive: true });
 writeFileSync(new URL('../dist/styles.css', import.meta.url), css);

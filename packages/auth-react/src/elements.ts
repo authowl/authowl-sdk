@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 
 /** Stable class suffixes available through appearance.elements. */
-export const ELEMENT_SLOTS = [
+export type ELEMENT_SLOTS = [
   'auth-challenge',
   'auth-loading',
   'avatar',
@@ -158,8 +158,8 @@ export const ELEMENT_SLOTS = [
   'organization-modal',
   'profile-overlay',
   'profile-modal',
-] as const;
-export type ElementSlot = (typeof ELEMENT_SLOTS)[number];
+];
+export type ElementSlot = ELEMENT_SLOTS[number];
 export type Elements = Partial<Record<ElementSlot, string>>;
 export const ElementsContext = createContext<Elements | undefined>(undefined);
 

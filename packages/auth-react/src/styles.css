@@ -365,8 +365,7 @@
 
 .authowl-root { font-family: var(--ao-font-family, inherit); }
 
-:where(.authowl-root) :is(.ao-input, .ao-button, .ao-social-button) { height: var(--ao-control-height); }
-:where(.authowl-root) .ao-input { box-sizing: var(--ao-control-box-sizing, content-box); }
+.authowl-root[data-authowl-control-height] :is(.ao-input, .ao-button, .ao-social-button) { height: var(--ao-control-height); box-sizing: border-box; }
 
 /* Only override native control fonts when the host actually supplies a font. */
 .authowl-root[style*="--ao-font-family:"] :is(.ao-input, .ao-button, .ao-social-button, .ao-link-button, .ao-profile button, .ao-profile input) { font-family: var(--ao-font-family); }

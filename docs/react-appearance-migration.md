@@ -35,18 +35,31 @@ should import it in their components layer so utility classes in `elements` win:
 All variable values are CSS strings. `variables.colorPrimary` takes precedence
 over the deprecated `primaryColor`, which takes precedence over dashboard
 branding. An explicit `brand` selects that product's palette instead of the
-dashboard colour; an explicit primary colour overrides that selection. Hex
-primary colours derive both light and dark ramps in the server HTML. Other CSS
-colours use CSS mixes. There is no runtime token package or font download.
+dashboard colour; an explicit primary colour overrides that selection. Supported
+opaque colours are 3/6 digit hex, rgb(), hsl(), oklch(), and the names white,
+black, red, blue, green and rebeccapurple. All supported primary formats derive
+complete light and dark ramps synchronously in sRGB, including an AA label and active
+colour. Unsupported colours (including alpha and relative colours) are dropped.
+Billow can retain its existing `primaryColor: 'oklch(0.51 0.23 277)'` path, or
+move to `appearance={{ brand: 'billow' }}` for the shared Billow palette without
+a primary override. There is no runtime token package or font download.
+
+Values must be a single supported colour, length/percentage, or font-family list
+for the corresponding variable. Lengths also accept calc() sums/differences of
+lengths. CSS substitutions, escapes, comments, declaration delimiters, URLs,
+expression constructs, important flags and newlines are rejected in full on
+both server and client, with one development warning per variable.
 
 Theme precedence is `appearance.theme`, then `config.branding.theme`, then
 `inherit`. **The default changed from `light` to `inherit`.** Set `theme: 'light'`
 to retain the previous default. `inherit` follows the nearest host `.dark`
 convention. Explicit light/dark ignore that convention, and `system` follows the
 OS through a media query. `data-authowl-theme` remains available to host CSS;
-`data-brand` identifies the selected product. Tokens only affect `.authowl-root`.
+An `<html data-authowl-theme="dark">` no longer forces SDK dark: that
+attribute is root-scoped now. Set it through `appearance.theme`, or use host
+`.dark` with `inherit`. `data-authowl-brand` identifies the selected product. Tokens only affect `.authowl-root`.
 
-`ElementSlot` and `ELEMENT_SLOTS` are the typed slot table. Each suffix is the
+`ElementSlot` and `ELEMENT_SLOTS` are type-only slot definitions, with no runtime table. Each suffix is the
 class name: `elements.input` appends classes after `ao-input ba-input`.
 `slot('input', elements)` is also exported. Existing forms now carry `ao-card
 ba-card` on their existing block box. This slice retains their current width,
@@ -90,3 +103,24 @@ Use the appearance API for a primary colour rather than assigning `--ao-primary`
 alone: it emits the full scheme ramps. Low-level scheme variables must be set
 on `.authowl-root`; custom properties resolve where they are declared. Keep any
 existing legacy overrides until their new equivalents have been applied there.
+
+Hitsend should import the stylesheet with `layer(components)` as above, then use
+its utilities on the slots and the compact height explicitly:
+
+```tsx
+appearance={{
+  brand: 'hitsend',
+  variables: { controlHeight: '2rem' },
+  elements: {
+    input: 'h-8 rounded-md px-3',
+    button: 'h-8 rounded-md px-3',
+    title: 'hidden',
+  },
+}}
+```
+
+`elements.title` replaces Hitsend's old title `display:none` rule. Without
+`controlHeight`, input sizing follows the host's existing box-sizing reset.
+A CSS-only legacy `--ba-primary` override still drives hover, active, accent
+and focus colours before token-brand fallbacks. Prefer the provider colour API
+for computed contrast labels and complete perceptual ramps.

@@ -32,9 +32,52 @@ export function isHex6(value: string | undefined | null): value is string {
 
 /** Normalize `#RRGGBB` to lowercase; returns null for anything else (named
  *  colors, rgb()/hsl(), 3-digit hex, undefined). The ramp needs channel access,
- *  so non-hex inputs fall through to the caller's CSS fallback path. */
+ *  so appearance callers use parseColor for other supported formats. */
 export function normalizeHex(value: string | undefined | null): string | null {
   return isHex6(value) ? value.toLowerCase() : null;
+}
+
+/** Opaque supported CSS colours, normalized for deterministic ramp math. */
+export function parseColor(value: string): string | null {
+  if (typeof value !== 'string') return null;
+  const color = value.trim().toLowerCase();
+  const names: Record<string, string> = { white: '#ffffff', black: '#000000', red: '#ff0000',
+    blue: '#0000ff', green: '#008000', rebeccapurple: '#663399' };
+  if (Object.hasOwn(names, color)) return names[color] ?? null;
+  if (/^#[0-9a-f]{6}$/.test(color)) return color;
+  if (/^#[0-9a-f]{3}$/.test(color)) return '#' + [...color.slice(1)].map(c => c + c).join('');
+  const match = /^(rgb|hsl|oklch)\(([^()]+)\)$/.exec(color);
+  if (!match) return null;
+  const [, format, body = ''] = match;
+  // Only opaque absolute colours: alpha, relative colours and substitutions
+  // would make the label contrast dependent on the host surface.
+  const parts = body.trim().split(format !== 'oklch' && body.includes(',') ? /\s*,\s*/ : /\s+/);
+  if (parts.length !== 3 || !parts.every(p => /^[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:%|deg)?$/.test(p))) return null;
+  const [first, second, third] = parts;
+  if (first === undefined || second === undefined || third === undefined) return null;
+  const numbers = [parseFloat(first), parseFloat(second), parseFloat(third)];
+  if (!numbers.every(Number.isFinite)) return null;
+  const a = parseFloat(first), b = parseFloat(second), c = parseFloat(third);
+  if (format === 'rgb') {
+    if (parts.some(p => p.endsWith('deg')) || parts.some(p => p.endsWith('%')) && !parts.every(p => p.endsWith('%'))) return null;
+    const max = first.endsWith('%') ? 100 : 255;
+    if (numbers.some(n => n < 0 || n > max)) return null;
+    return rgbToHex({ r: a / max, g: b / max, b: c / max });
+  }
+  if (first.endsWith('deg') && format === 'oklch' || format === 'oklch' && third.endsWith('%')) return null;
+  if (format === 'hsl') {
+    if (first.endsWith('%') || !second.endsWith('%') || !third.endsWith('%')) return null;
+    if (b < 0 || b > 100 || c < 0 || c > 100) return null;
+    const h = ((a % 360) + 360) % 360 / 30;
+    const sat = b / 100, light = c / 100;
+    const amplitude = sat * Math.min(light, 1 - light);
+    const channel = (n: number) => light - amplitude * Math.max(-1, Math.min((n + h) % 12 - 3, 9 - (n + h) % 12, 1));
+    return rgbToHex({ r: channel(0), g: channel(8), b: channel(4) });
+  }
+  const L = first.endsWith('%') ? a / 100 : a;
+  const C = second.endsWith('%') ? b * 0.004 : b;
+  if (L < 0 || L > 1 || C < 0 || C > 0.4 || second.endsWith('deg')) return null;
+  return oklchToHex({ L, C, h: c * Math.PI / 180 });
 }
 
 // --- sRGB <-> linear -------------------------------------------------------

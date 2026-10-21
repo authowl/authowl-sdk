@@ -48,7 +48,7 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --external react,react-dom && node scripts/build-styles.mjs && node ../../scripts/gen-notices.mjs src/index.ts",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --watch --external react,react-dom",
+    "dev": "node scripts/build-styles.mjs && tsup src/index.ts --format esm,cjs --dts --watch --external react,react-dom",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs"
