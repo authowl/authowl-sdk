@@ -78,6 +78,8 @@ Publishable keys (`pk_test_…` in development, `pk_live_…` in production) are
 safe to embed in client code; secret keys (`sk_test_…` / `sk_live_…`) are bearer
 credentials and must stay server-side.
 
+API keys accept both `{pk|sk}_{live|test}_<uuid>_<base62>` and `{pk|sk}_{live|test}_<region>_<uuid>_<base62>`. Regions are ASCII alphanumeric groups separated by single hyphens, at most 24 characters; tails contain at least 20 ASCII alphanumeric characters. `decodePublishableKey` exposes `region: string | null`, lowercases the region and UUID, and refuses secret keys. Region is a hint and does not change routing or the explicit `apiUrl`.
+
 The operation names, path/query/body inputs, and result types are generated from
 AuthOwl's versioned OpenAPI contract. Failed API responses throw
 `AuthOwlAdminApiError`, which exposes `status`, `code`, `requestId`, `problem`,
@@ -309,5 +311,3 @@ See the full integration guide in the AuthOwl app repo (`INTEGRATION.md`).
 ## License
 
 MIT
-
-API keys accept both `{pk|sk}_{live|test}_<uuid>_<base62>` and `{pk|sk}_{live|test}_<region>_<uuid>_<base62>`. Regions are ASCII alphanumeric groups separated by single hyphens, at most 24 characters; tails contain at least 20 ASCII alphanumeric characters. `decodePublishableKey` exposes `region: string | null`, lowercases the region and UUID, and refuses secret keys. Region is a hint and does not change routing or the explicit `apiUrl`.

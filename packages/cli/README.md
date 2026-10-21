@@ -56,7 +56,7 @@ uploaded. Set a project secret key with the `users:write` scope in the
 environment:
 
 ```bash
-export AUTHOWL_SECRET_KEY=sk_test_<region>_<project-id>_<random>
+export AUTHOWL_SECRET_KEY=sk_test_[<region>_]<project-id>_<random>
 ```
 
 Always run `--dry-run` first. `--project` must match the project encoded in the

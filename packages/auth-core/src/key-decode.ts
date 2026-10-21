@@ -29,8 +29,8 @@ export function decodePublishableKey(key: string): DecodedPublishableKey {
     throw new Error('publishableKey is malformed; expected pk_(live|test)_[<region>_]<uuid>_<base62>');
   }
   return {
-    prefix: `pk_${m.env}` as DecodedPublishableKey['prefix'],
-    env: m.env as DecodedPublishableKey['env'],
+    prefix: `pk_${m.env}`,
+    env: m.env,
     projectId: m.projectId,
     region: m.region,
   };

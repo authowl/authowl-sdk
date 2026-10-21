@@ -94,6 +94,14 @@
       }
     },
     {
+      "name": "36 hex characters without hyphens",
+      "key": "pk_live_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
       "name": "a non-uuid project id",
       "key": "pk_live_not-a-uuid_A1b2C3d4E5f6G7h8I9j0",
       "expect": {
@@ -128,6 +136,17 @@
     {
       "name": "region live",
       "key": "pk_live_eu-de_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_live",
+        "env": "live",
+        "region": "eu-de",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
+      }
+    },
+    {
+      "name": "uppercase region",
+      "key": "pk_live_EU-DE_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
       "expect": {
         "ok": true,
         "prefix": "pk_live",
@@ -248,7 +267,7 @@
       }
     },
     {
-      "name": "invalid region K",
+      "name": "invalid region kelvin-sign",
       "key": "pk_live_K_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
       "expect": {
         "ok": false,

@@ -220,7 +220,6 @@ func TestConformanceSessionCookieName(t *testing.T) {
 		Cases []struct {
 			Name      string `json:"name"`
 			ProjectID string `json:"projectId"`
-			Region    string `json:"region"`
 			Secure    *bool  `json:"secure"`
 			Expect    string `json:"expect"`
 		} `json:"cases"`

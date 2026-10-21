@@ -30,6 +30,7 @@ type PublishableKey struct {
 	Prefix    string
 	Env       Environment
 	ProjectID string
+	// Region is "" for a legacy four-part key.
 	Region    string
 }
 
