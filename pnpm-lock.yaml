@@ -336,8 +336,8 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
       stream-json:
-        specifier: 3.6.0
-        version: 3.6.0
+        specifier: 3.7.0
+        version: 3.7.0
     devDependencies:
       '@types/node':
         specifier: 22.20.0
@@ -2985,6 +2985,11 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
+  acorn@8.19.0:
+    resolution: {integrity: sha512-oJlA3XiRm7Cyk6qFD2Jn8ak9B7jSy0qy00ADO3+8dpT0LSjFihQYv4C02LFCSYJV3Q37xYwwRy5m+IpIiUzqWw==}
+    engines: {node: '>=0.4.0'}
+    hasBin: true
+
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
@@ -5085,12 +5090,11 @@ packages:
     resolution: {integrity: sha512-uyQK/mx5QjHun80FLJTfaWE7JtwfRMKBLkMne6udYOmvH0CawotVa7TfgYHzAnpphn4+TweIx1QKMnRIbipmUg==}
     engines: {node: '>= 0.10.0'}
 
-  stream-chain@4.2.5:
-    resolution: {integrity: sha512-Wtyq3bNE3ggLR0v2vftqvuhltym3WbZAkZpfIrkr5F/6vpeUmWmwTgXa16zD87gpahwJ/Qulq3zVfUlgIc0J2A==}
-    engines: {node: '>=22'}
+  stream-chain@4.2.6:
+    resolution: {integrity: sha512-1zeJ8CrtJfmiba26ui8jXkq/xLRFvhzkdH02D5QLO9Cnovgeb28IJxg88DdraWnjnkbOol/++uIAybJbJhk7ig==}
 
-  stream-json@3.6.0:
-    resolution: {integrity: sha512-NiJdqxKyau579z/E8vfqcjWfSDWxW/AT99javFXdPXF147Z5za85LRXSHEmSX9TKOakB7gaIccfD0fOIctb7KQ==}
+  stream-json@3.7.0:
+    resolution: {integrity: sha512-rCSBdcBP/bPk6T8QFcxAj1MSzAuc5i49cYW6IE7sYObNEPccBJIUiL6fU9c9BWt40aJK0siVynLX7lWaW8alXw==}
 
   string-width@4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
@@ -8238,6 +8242,8 @@ snapshots:
 
   acorn@8.18.0: {}
 
+  acorn@8.19.0: {}
+
   agent-base@7.1.4: {}
 
   agent-cli-detector@0.1.6: {}
@@ -10703,11 +10709,11 @@ snapshots:
 
   stream-buffers@2.2.0: {}
 
-  stream-chain@4.2.5: {}
+  stream-chain@4.2.6: {}
 
-  stream-json@3.6.0:
+  stream-json@3.7.0:
     dependencies:
-      stream-chain: 4.2.5
+      stream-chain: 4.2.6
 
   string-width@4.2.3:
     dependencies:
@@ -10792,7 +10798,7 @@ snapshots:
   terser@5.51.2:
     dependencies:
       '@jridgewell/source-map': 0.3.11
-      acorn: 8.18.0
+      acorn: 8.19.0
       commander: 2.20.3
       source-map-support: 0.5.21
 
