@@ -21,3 +21,4 @@ DOM and rendering contract changes for the migration guide:
 - Social buttons, tabs and method switches are disabled while any method is pending. Back and Change email remain enabled.
 - The email field is hidden on the Passkey tab, while conditional mediation remains armed.
 - The passkey tab shows a compact info panel and the email-code tab shows a short helper line below the email field.
+- When branding shows the app name, the form heading names it ("Sign in to {app}", "Create your {app} account") and the header shows only the mark beside the heading, with the environment label at the inline end. `.ba-branding` is `display: contents` inside `.ba-auth-header`, and `.ba-branding-name` is hidden there.

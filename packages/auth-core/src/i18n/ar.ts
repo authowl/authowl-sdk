@@ -66,6 +66,7 @@ export const ar: Record<keyof typeof en, string> = {
   'signIn.tab.passkey': 'مفتاح المرور',
   'signIn.lastUsed': 'آخر استخدام',
   'signIn.title': 'تسجيل الدخول',
+  'signIn.titleWithApp': 'تسجيل الدخول إلى {app}',
   'signIn.forgotTitle': 'إعادة تعيين كلمة المرور',
   'signIn.submit': 'تسجيل الدخول',
   'signIn.submitPending': 'جارٍ تسجيل الدخول…',
@@ -77,6 +78,7 @@ export const ar: Record<keyof typeof en, string> = {
   'signIn.empty.none': 'لا توجد طرق تسجيل دخول مفعّلة لهذا التطبيق.',
 
   'signUp.title': 'إنشاء حساب',
+  'signUp.titleWithApp': 'أنشئ حسابك في {app}',
   'signUp.submit': 'إنشاء حساب',
   'signUp.submitPending': 'جارٍ الإنشاء…',
   'signUp.nameLabel': 'الاسم',

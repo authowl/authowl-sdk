@@ -66,6 +66,7 @@ export const en = {
   'signIn.tab.passkey': 'Passkey',
   'signIn.lastUsed': 'Last used',
   'signIn.title': 'Sign in',
+  'signIn.titleWithApp': 'Sign in to {app}',
   'signIn.forgotTitle': 'Reset your password',
   'signIn.submit': 'Sign in',
   'signIn.submitPending': 'Signing in…',
@@ -77,6 +78,7 @@ export const en = {
   'signIn.empty.none': 'No sign-in methods are enabled for this app.',
 
   'signUp.title': 'Create account',
+  'signUp.titleWithApp': 'Create your {app} account',
   'signUp.submit': 'Create account',
   'signUp.submitPending': 'Creating…',
   'signUp.nameLabel': 'Name',

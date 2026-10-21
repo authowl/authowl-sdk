@@ -23,6 +23,9 @@ function storybookProject(locale: 'en' | 'ar', theme: 'light' | 'dark', viewport
       'import.meta.env.AUTHOWL_SCREENSHOTS': JSON.stringify(process.env.AUTHOWL_SCREENSHOTS ?? '0'),
       'import.meta.env.AUTHOWL_STORY_LOCALE': JSON.stringify(locale),
       'import.meta.env.AUTHOWL_STORY_THEME': JSON.stringify(theme),
+      // Vitest's browser.viewport does not reach the capture frame (every
+      // project renders 960x720), so phone projects resize the frame themselves.
+      'import.meta.env.AUTHOWL_STORY_VIEWPORT': JSON.stringify(viewport.width <= 480 ? `${viewport.width}x${viewport.height}` : ''),
     },
     optimizeDeps: {
       include: ['react/jsx-dev-runtime'],
@@ -34,7 +37,6 @@ function storybookProject(locale: 'en' | 'ar', theme: 'light' | 'dark', viewport
     ],
     test: {
       name: projectName,
-      ...(viewport.width <= 480 ? { include: ['stories/SignIn.stories.tsx', 'stories/SignUp.stories.tsx'] } : {}),
       browser: {
         enabled: true,
         headless: true,

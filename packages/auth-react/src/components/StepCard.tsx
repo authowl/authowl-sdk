@@ -22,9 +22,9 @@ export function StepCard({ lock, step, kind, stepRef, showBranding, showBadge, c
   const slot = useSlot();
   const t = useT();
   const { config } = usePublicConfig();
-  const branded = showBranding && Boolean(config?.branding?.logoUrl
-    || config?.branding?.showAppName !== false && config?.branding?.appName?.trim()
-    || config?.environmentType);
+  // The design names the app in the heading ("Sign in to Acme"); the header
+  // then shows only the mark, so the name is never printed twice.
+  const app = showBranding && config?.branding?.showAppName !== false ? config?.branding?.appName?.trim() : '';
   const bare = step === 'error' || step === 'waitlist';
   const decorated = !bare && step !== 'loading';
   const branding = showBranding ? <AuthOwlBranding /> : null;
@@ -35,9 +35,9 @@ export function StepCard({ lock, step, kind, stepRef, showBranding, showBadge, c
         data-testid={bare ? undefined : `${kind.toLowerCase()}-${STEP_ID[step] ?? step}`}
         aria-busy={step === 'loading' || step === 'mfa-confirming' || undefined}>
         {step === 'form' ? (
-          <header className={slot('ba-auth-header')} data-branded={branded || undefined}>
+          <header className={slot('ba-auth-header')}>
             {branding}
-            {title}
+            {app ? <h2 className={slot('ba-title')}>{t(`${kind}.titleWithApp`, { app })}</h2> : title}
             <p className={slot('ba-subtitle')}>{t(`${kind}.subtitle`)}</p>
           </header>
         ) : decorated && branding}

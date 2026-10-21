@@ -268,9 +268,9 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // The new ceiling retains about 0.84kb of explicit regression headroom.
 // AO-58(c) authentication cards and accessible method tabs (2026-10-21)
 // raises React 83->85.5. Same-machine slice-b baseline: 82.16kb; this slice:
-// 84.98kb (+2.82kb): post-mount method hints, localized copy, the card-wide
+// 85.03kb (+2.87kb): post-mount method hints, localized copy, the card-wide
 // counted pending lock with back-forward-cache unlock, step focus handoff and
-// the passkey/email-code helper panels from review. The ceiling keeps 0.52kb
+// the passkey/email-code helper panels from review. The ceiling keeps 0.47kb
 // of headroom. Core is 25.80kb, within its 26kb cap.
 const BUDGETS = [
   {

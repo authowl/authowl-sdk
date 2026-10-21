@@ -9,6 +9,8 @@ if (configuredThreshold.trim() === '' || !Number.isFinite(threshold) || threshol
 
 /** Storybook invokes preview.afterEach after play, before tearing down the story. */
 export async function captureStory(storyId: string) {
+  const [width, height] = (import.meta.env.AUTHOWL_STORY_VIEWPORT ?? '').split('x').map(Number);
+  if (width && height) await page.viewport(width, height);
   const style = document.createElement('style');
   style.textContent = `
     *, *::before, *::after {

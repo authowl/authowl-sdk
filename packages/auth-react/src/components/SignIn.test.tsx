@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
     socialProviders: [] as string[],
     sso: true,
     badge: false,
+    branding: undefined as { appName?: string; showAppName?: boolean } | undefined,
     authentication: undefined as {
       email: { signUp: boolean; signIn: Array<'password' | 'magic_link' | 'email_otp'> };
       phone: { signUp: boolean; signIn: boolean };
@@ -129,6 +130,7 @@ describe('SignIn under required MFA', () => {
     mocks.needsMfaEnrollment = false;
     mocks.sessionListeners.clear();
     mocks.configError = false;
+    mocks.config.branding = undefined;
     mocks.configLoading = false;
     mocks.needsMfaEnrollment = false;
     mocks.getSession.mockResolvedValue({
@@ -616,6 +618,16 @@ describe('SignIn "Continue with SSO"', () => {
     const form = screen.getByTestId('signin-form');
     expect(form).not.toBe(previous);
     expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'signIn.title' }));
+  });
+
+  it('names the app in the heading unless branding hides the name', () => {
+    mocks.config.branding = { appName: 'Acme' };
+    const view = render(<SignIn />);
+    expect(screen.getByRole('heading', { name: 'signIn.titleWithApp' })).toBeTruthy();
+    view.unmount();
+    mocks.config.branding = { appName: 'Acme', showAppName: false };
+    render(<SignIn />);
+    expect(screen.getByRole('heading', { name: 'signIn.title' })).toBeTruthy();
   });
 
   it('does not take focus when the form first appears after config loads', () => {

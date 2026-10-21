@@ -413,16 +413,17 @@
 
 :where(.authowl-root) .ao-name-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 
-:where(.authowl-root) .ao-auth-header { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 12px; row-gap: 2px; align-items: center; }
-:where(.authowl-root .ao-auth-header) > .ao-branding { grid-row: 1 / 3; max-width: 80px; flex-direction: column; gap: 4px; }
-:where(.authowl-root .ao-auth-header) .ao-branding-identity { flex-direction: column; gap: 2px; max-width: 100%; }
-:where(.authowl-root .ao-auth-header) .ao-branding-name { max-width: 100%; font-size: 10px; }
+/* Mark | heading and subtitle | environment. Empty auto tracks collapse, and
+   spacing lives on the items, so an unbranded header has no stray offset. */
+:where(.authowl-root) .ao-auth-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 2px; align-items: center; }
+:where(.authowl-root .ao-auth-header) > .ao-branding { display: contents; }
+:where(.authowl-root .ao-auth-header) :is(.ao-branding-identity, .ao-branding-link) { grid-column: 1; grid-row: 1 / 3; margin-inline-end: 12px; }
+:where(.authowl-root .ao-auth-header) .ao-branding-name { display: none; }
 :where(.authowl-root .ao-auth-header) .ao-branding-logo { max-width: 80px; height: 36px; }
 :where(.authowl-root .ao-auth-header) .ao-branding-fallback { width: 36px; height: 36px; flex-basis: 36px; }
-:where(.authowl-root .ao-auth-header) .ao-environment { font-size: 9px; padding: 2px 4px; }
-:where(.authowl-root .ao-auth-header) > :is(.ao-title, .ao-subtitle) { grid-column: 1; margin: 0; }
-:where(.authowl-root) .ao-auth-header:where([data-branded]) { grid-template-columns: auto minmax(0, 1fr); }
-:where(.authowl-root .ao-auth-header[data-branded]) > :is(.ao-title, .ao-subtitle) { grid-column: 2; }
+:where(.authowl-root .ao-auth-header) .ao-environment { grid-column: 3; grid-row: 1; align-self: start; margin-inline-start: 8px; }
+:where(.authowl-root .ao-auth-header) > :is(.ao-title, .ao-subtitle) { grid-column: 2; margin: 0; }
+:where(.authowl-root .ao-auth-header) > .ao-subtitle { grid-column: 2 / 4; }
 
 :where(.authowl-root) .ao-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 :where(.authowl-root .ao-label-row) .ao-link-button { font-size: 12px; }
