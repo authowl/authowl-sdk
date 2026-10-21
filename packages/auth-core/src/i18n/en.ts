@@ -303,6 +303,13 @@ export const en = {
   'consent.acceptSubmit': 'I agree',
   'consent.error.acceptFailed': 'Could not record your acceptance. Please try again.',
 
+  'userProfile.group.security': 'Security',
+  'userProfile.group.profile.description': 'Your personal details and email address.',
+  'userProfile.group.security.description': 'How you sign in and stay protected.',
+  'userProfile.group.connections.description': 'The accounts you use to sign in.',
+  'userProfile.group.privacy.description': 'Your data, privacy choices and account deletion.',
+  'userProfile.edit': 'Edit',
+  'userProfile.manage': 'Manage',
   'userProfile.title': 'Manage account',
   'userProfile.description': 'Update your profile and account security.',
   'userProfile.close': 'Close account settings',

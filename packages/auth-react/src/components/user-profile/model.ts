@@ -15,6 +15,24 @@ export const USER_PROFILE_SECTIONS = [
 
 export type UserProfileSection = (typeof USER_PROFILE_SECTIONS)[number];
 
+/** Navigation order and section order within each account page. */
+export const USER_PROFILE_GROUPS = [
+  { id: 'profile', sections: ['profile', 'email'] },
+  { id: 'security', sections: ['password', 'passkeys', 'mfa', 'recovery', 'sessions'] },
+  { id: 'connections', sections: ['social'] },
+  { id: 'privacy', sections: ['privacy', 'danger'] },
+] as const satisfies readonly { id: string; sections: readonly UserProfileSection[] }[];
+
+export type UserProfileGroup = (typeof USER_PROFILE_GROUPS)[number]['id'];
+
+export function userProfileGroupsFor(sections: readonly UserProfileSection[]) {
+  return USER_PROFILE_GROUPS.map((group) => ({
+    id: group.id,
+    sections: group.sections.filter((section) => sections.includes(section)),
+  })).filter((group) => group.sections.length > 0);
+}
+
+
 export type UserProfileCapabilities = {
   password: boolean;
   passkeys: boolean;

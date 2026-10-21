@@ -133,3 +133,38 @@ A complete code submits automatically; pending actions lock entry, and a failed
 value does not auto-retry until edited. Backup codes retain a plain text input
 and manual submission. MFA's other-factor link buttons are now pill chips,
 styled through `factor-chip`, in the `factor-options` section.
+
+
+UserProfile now has four navigation groups: Profile (profile and email), Security
+(password, passkeys, MFA, recovery and sessions), Connected accounts (social),
+and Privacy (privacy rights and account deletion). Unavailable sections and empty
+groups are omitted. `section`, `defaultSection` and `onSectionChange` still use
+the ten existing section identifiers. Every `#authowl-profile-<section>` URL
+selects its group and focuses that section heading. Navigation writes the first
+available section hash in the selected group.
+
+DOM changes in the unreleased React major: `.ao-profile-nav-item` is now an anchor
+with `aria-current="page"`; it replaces the old per-section buttons. The 184px
+sidebar starts with `.ao-profile-identity`, containing an image or initials, name
+and email. At container widths of 640px or less, the identity is hidden and links
+form a horizontally scrollable row. The content carries `data-group` as well as
+the existing `data-section`, and contains all available sections of that group.
+Group changes remount `.ao-profile-content.ao-step` for the token-based entrance;
+changing the section within the same group preserves open forms.
+
+Section summaries use `profile-section-title`, `profile-row`, `profile-icon`,
+`profile-icon-svg`, `profile-row-copy`, `profile-row-title`, `profile-row-meta`,
+`profile-row-button` and `profile-row-body` slots. Edit/Manage opens the existing
+workflow inline; closing the summary unmounts the workflow and clears its local
+inputs. Session and social-account actions remain on their individual rows.
+Forms and their security gates retain their existing classes and test IDs. Host
+selectors that assume a directly visible form or one section per page must be
+updated. Additional slots are `profile-identity`, `profile-identity-copy`,
+`profile-avatar`, `profile-group-heading`, `profile-group-title` and
+`profile-group-subtitle`. All slots emit both `ao-` and `ba-` classes.
+
+Only UserProfile's SDK-owned modal becomes a bottom sheet at viewport widths of
+480px or less. The `.ao-profile-modal` surface has full width, top corner radii,
+a 92dvh maximum height, internal scrolling and safe-area padding. The
+`profile-sheet-handle` slot is decorative and visible only on phones. Larger
+viewports keep the centered dialog. Inline page layout belongs to the host.

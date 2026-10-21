@@ -26,6 +26,7 @@ export function UserProfileModal({
       testId="user-profile-modal"
       onClose={onClose}
     >
+        <span className={slot('ba-profile-sheet-handle')} aria-hidden="true" />
         <div className={slot('ba-profile-modal-header')}>
           <span>
             {branding}

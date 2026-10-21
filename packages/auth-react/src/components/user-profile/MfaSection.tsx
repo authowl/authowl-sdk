@@ -1,4 +1,5 @@
 'use client';
+import { ProfileSectionFrame } from './ProfileSectionFrame';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useMFA, usePublicConfig, useSession, useUser } from '../../hooks';
@@ -11,6 +12,18 @@ import { FormError } from '../FormError';
 import { resolveProjectCapabilities } from '../../project-capabilities';
 
 export function MfaSection() {
+  const t = useT();
+  const { user } = useUser();
+  const { config } = usePublicConfig();
+  const required = resolveProjectCapabilities(config).mfaRequired;
+  return (
+    <ProfileSectionFrame section="mfa" title={t('userProfile.mfa.title')} meta={user?.twoFactorEnabled ? (required ? t('userProfile.mfa.requiredActive') : t('userProfile.mfa.active')) : (required ? t('userProfile.mfa.requiredDescription') : t('userProfile.mfa.description'))}>
+      <MfaSectionContent />
+    </ProfileSectionFrame>
+  );
+}
+
+function MfaSectionContent() {
   const slot = useSlot();
   const t = useT();
   const { user } = useUser();
@@ -20,25 +33,16 @@ export function MfaSection() {
   const { pending, error, stepUpRequired, run, resume, cancel } = useStepUpAction();
   const [password, setPassword] = React.useState('');
   const [showDisable, setShowDisable] = React.useState(false);
-  const titleId = React.useId();
   const required = resolveProjectCapabilities(config).mfaRequired;
 
   if (!user?.twoFactorEnabled) {
     return (
-      <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
-        <header className={slot('ba-profile-section-header')}>
-          <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.mfa.title')}</h2>
-          <p className={slot('ba-muted')}>
-            {required
-              ? t('userProfile.mfa.requiredDescription')
-              : t('userProfile.mfa.description')}
-          </p>
-        </header>
+      <>
         <MFAEnrollment
           title={null}
           onEnrolled={() => session.refetch({ query: { disableCookieCache: true } })}
         />
-      </section>
+      </>
     );
   }
 
@@ -67,13 +71,7 @@ export function MfaSection() {
   };
 
   return (
-    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
-      <header className={slot('ba-profile-section-header')}>
-        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.mfa.title')}</h2>
-        <p className={slot('ba-muted')}>
-          {required ? t('userProfile.mfa.requiredActive') : t('userProfile.mfa.active')}
-        </p>
-      </header>
+    <>
       <div className={slot('ba-profile-status')} role="status">
         <strong>{t('userProfile.mfa.enabled')}</strong>
         <span>{t('userProfile.mfa.authenticator')}</span>
@@ -132,6 +130,6 @@ export function MfaSection() {
           </span>
         </form>
       )}
-    </section>
+    </>
   );
 }

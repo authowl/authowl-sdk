@@ -278,10 +278,17 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // Arabic-Indic digits, failed-code replacement, factor chips, card locking,
 // hook-owned success feedback and a mounted status live region.
 // Core remains 25.80kb. The ceiling keeps 0.56kb of regression headroom.
+// AO-58(e) grouped account pages and compact summary rows (2026-10-21)
+// raises React 88->89.5. Same-machine slice-d baseline: 87.44kb; this slice:
+// 88.95kb (+1.51kb) for capability-filtered groups, section-hash focus routing,
+// identity navigation, shared row disclosure and icons, and localized copy.
+// Existing security workflows remain mounted only while their row is open.
+// CSS-only container navigation and phone-sheet geometry add no runtime tokens
+// dependency. Core remains 25.80kb. The ceiling keeps 0.55kb of headroom.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 88,
+    maxGzipKb: 89.5,
     label: '@authowl/react (provider + hooks + components)',
   },
   {

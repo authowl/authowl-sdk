@@ -1,4 +1,5 @@
 'use client';
+import { ProfileIcon } from './ProfileSectionFrame';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useSession } from '../../hooks';
@@ -40,10 +41,9 @@ export function SessionsSection() {
   };
 
   return (
-    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
+    <section className={slot('ba-profile-section')} aria-labelledby={titleId} data-profile-section="sessions">
       <header className={slot('ba-profile-section-header')}>
-        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.sessions.title')}</h2>
-        <p className={slot('ba-muted')}>{t('userProfile.sessions.description')}</p>
+        <h2 id={titleId} tabIndex={-1} className={slot('ba-profile-section-title')}>{t('userProfile.sessions.title')}</h2>
       </header>
       {resource.data === null ? (
         resource.loading
@@ -55,14 +55,15 @@ export function SessionsSection() {
             const label = session.userAgent?.trim() || t('userProfile.sessions.unknownDevice');
             return (
               <li className={slot('ba-profile-list-item')} key={session.id}>
-                <span>
+                <ProfileIcon section="sessions" />
+                <span className={slot('ba-profile-row-copy')}>
                   <strong>{label}</strong>
                   <small>
                     {session.id === currentId && <em>{t('userProfile.sessions.current')}</em>}
                     {formatSessionTime(session.updatedAt, locale)}
                   </small>
                 </span>
-                <button className={slot('ba-link-button ba-danger')} type="button" disabled={mutation.pending} onClick={() => revoke(session.id, label)}>
+                <button className={slot('ba-profile-row-button')} type="button" disabled={mutation.pending} onClick={() => revoke(session.id, label)}>
                   {t('userProfile.sessions.revoke')}
                 </button>
               </li>

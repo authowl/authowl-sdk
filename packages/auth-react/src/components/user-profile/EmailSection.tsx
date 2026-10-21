@@ -1,4 +1,5 @@
 'use client';
+import { ProfileSectionFrame } from './ProfileSectionFrame';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useUser } from '../../hooks';
@@ -8,6 +9,16 @@ import { Busy } from '../Spinner';
 import { FormError } from '../FormError';
 
 export function EmailSection({ allowChange }: { allowChange: boolean }) {
+  const t = useT();
+  const { user } = useUser();
+  return (
+    <ProfileSectionFrame section="email" title={t('userProfile.email.title')} meta={!user?.email ? t('userProfile.email.unavailable') : <><Bidi>{user.email}</Bidi>{!allowChange && <span data-testid="email-change-disabled"> · {t('userProfile.email.changeDisabled')}</span>}</>} action={t('userProfile.edit')}>
+      {user?.email && allowChange ? <EmailSectionContent /> : null}
+    </ProfileSectionFrame>
+  );
+}
+
+function EmailSectionContent() {
   const slot = useSlot();
   const t = useT();
   const account = useAccount();
@@ -15,16 +26,8 @@ export function EmailSection({ allowChange }: { allowChange: boolean }) {
   const { pending, error, run } = useSubmitAction();
   const [newEmail, setNewEmail] = React.useState('');
   const [sent, setSent] = React.useState(false);
-  const titleId = React.useId();
 
-  if (!user?.email) {
-    return (
-      <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
-        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.email.title')}</h2>
-        <p className={slot('ba-muted')}>{t('userProfile.email.unavailable')}</p>
-      </section>
-    );
-  }
+  if (!user?.email) return null;
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -45,20 +48,13 @@ export function EmailSection({ allowChange }: { allowChange: boolean }) {
   };
 
   return (
-    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
-      <header className={slot('ba-profile-section-header')}>
-        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.email.title')}</h2>
-        <p className={slot('ba-muted')}>{t('userProfile.email.description')}</p>
-      </header>
+    <>
+      <p className={slot('ba-muted')}>{t('userProfile.email.description')}</p>
       <p className={slot('ba-profile-current')}>
         <span>{t('userProfile.email.current')}</span>
         <strong><Bidi>{user.email}</Bidi></strong>
       </p>
-      {!allowChange ? (
-        <p className={slot('ba-muted')} data-testid="email-change-disabled">
-          {t('userProfile.email.changeDisabled')}
-        </p>
-      ) : <form method="post" className={slot('ba-fields')} onSubmit={submit}>
+      <form method="post" className={slot('ba-fields')} onSubmit={submit}>
         <label className={slot('ba-label')}>
           {t('userProfile.email.newLabel')}
           <input
@@ -80,7 +76,7 @@ export function EmailSection({ allowChange }: { allowChange: boolean }) {
         >
           <Busy busy={pending} label={t('common.sending')}>{t('userProfile.email.submit')}</Busy>
         </button>
-      </form>}
-    </section>
+      </form>
+    </>
   );
 }

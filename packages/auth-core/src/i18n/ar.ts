@@ -301,6 +301,13 @@ export const ar: Record<keyof typeof en, string> = {
   'consent.acceptSubmit': 'أوافق',
   'consent.error.acceptFailed': 'تعذر تسجيل موافقتك. يرجى المحاولة مرة أخرى.',
 
+  'userProfile.group.security': 'الأمان',
+  'userProfile.group.profile.description': 'بياناتك الشخصية وعنوان بريدك الإلكتروني.',
+  'userProfile.group.security.description': 'طرق تسجيل الدخول وحماية حسابك.',
+  'userProfile.group.connections.description': 'الحسابات التي تستخدمها لتسجيل الدخول.',
+  'userProfile.group.privacy.description': 'بياناتك وخيارات الخصوصية وحذف الحساب.',
+  'userProfile.edit': 'تعديل',
+  'userProfile.manage': 'إدارة',
   'userProfile.title': 'إدارة الحساب',
   'userProfile.description': 'حدّث ملفك الشخصي وإعدادات أمان الحساب.',
   'userProfile.close': 'إغلاق إعدادات الحساب',

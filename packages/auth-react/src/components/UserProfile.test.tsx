@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthActionResult } from '@authowl/core';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => {
   const user = {
@@ -137,6 +137,13 @@ vi.mock('../i18n', () => ({
 
 import { UserButton } from './UserButton';
 import { UserProfile } from './UserProfile';
+import { USER_PROFILE_GROUPS, type UserProfileSection } from './user-profile/model';
+
+function openRow(section: UserProfileSection) {
+  const heading = screen.getByRole('heading', { level: 2, name: `userProfile.${section === 'danger' ? 'delete' : section}.title` });
+  fireEvent.click(within(heading.closest('section')!).getByRole('button', { expanded: false }));
+}
+
 
 describe('UserProfile', () => {
   beforeEach(() => {
@@ -159,6 +166,7 @@ describe('UserProfile', () => {
       authentication: undefined,
       userModel: undefined,
       mfa: undefined,
+      privacy: undefined,
     });
   });
 
@@ -170,11 +178,13 @@ describe('UserProfile', () => {
   it('deep-links between account sections and submits profile changes', async () => {
     render(<UserProfile />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'userProfile.nav.email' }));
-    expect(window.location.hash).toBe('#authowl-profile-email');
+    fireEvent.click(screen.getByRole('link', { name: 'userProfile.group.security' }));
+    expect(window.location.hash).toBe('#authowl-profile-password');
+    fireEvent.click(screen.getByRole('link', { name: 'userProfile.nav.profile' }));
+    expect(window.location.hash).toBe('#authowl-profile-profile');
     expect(screen.getByRole('heading', { name: 'userProfile.email.title' })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'userProfile.nav.profile' }));
+    openRow('profile');
     fireEvent.change(screen.getByLabelText('signUp.nameLabel'), { target: { value: 'Mona Ali' } });
     fireEvent.click(screen.getByRole('button', { name: 'userProfile.save' }));
 
@@ -183,6 +193,62 @@ describe('UserProfile', () => {
       image: null,
     }));
     expect(mocks.refetch).toHaveBeenCalled();
+  });
+
+  it.each(USER_PROFILE_GROUPS.flatMap((group) => group.sections.map((section) => ({ group: group.id, section }))))(
+    'opens the old $section hash in $group and focuses its heading', async ({ group, section }) => {
+      mocks.user.twoFactorEnabled = true;
+      // The privacy center itself stays lazy until its row is opened.
+      Object.assign(mocks.config, { privacy: {} });
+      window.history.replaceState(null, '', `#authowl-profile-${section}`);
+      const { container } = render(<UserProfile />);
+      await waitFor(() => {
+        expect(container.querySelector('[data-group]')?.getAttribute('data-group')).toBe(group);
+        expect(document.activeElement?.closest('[data-profile-section]')?.getAttribute('data-profile-section')).toBe(section);
+      });
+      expect(window.location.hash).toBe(`#authowl-profile-${section}`);
+      expect(container.querySelectorAll('nav a[aria-current="page"]')).toHaveLength(1);
+    },
+  );
+
+  it('handles hashchange within a group without remounting an open workflow', async () => {
+    render(<UserProfile />);
+    openRow('profile');
+    const name = screen.getByLabelText('signUp.nameLabel');
+    fireEvent.change(name, { target: { value: 'Draft name' } });
+    window.history.replaceState(null, '', '#authowl-profile-email');
+    fireEvent(window, new HashChangeEvent('hashchange'));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'userProfile.email.title' })));
+    expect(screen.getByLabelText('signUp.nameLabel')).toBe(name);
+    expect(name).toHaveProperty('value', 'Draft name');
+  });
+
+  it('hides unavailable groups and navigates to the first available security section', () => {
+    Object.assign(mocks.config, { socialProviders: [], privacy: undefined, accountDeletion: false, enabledMethods: [], twoFactor: false });
+    render(<UserProfile />);
+    expect(screen.getAllByRole('link')).toHaveLength(2);
+    const security = screen.getByRole('link', { name: 'userProfile.group.security' });
+    expect(security.getAttribute('href')).toBe('#authowl-profile-sessions');
+    fireEvent.click(security);
+    expect(window.location.hash).toBe('#authowl-profile-sessions');
+    expect(screen.queryByRole('heading', { name: 'userProfile.password.title' })).toBeNull();
+  });
+
+  it('drops the parked weakening action and password when its row is collapsed', async () => {
+    mocks.user.twoFactorEnabled = true;
+    mocks.mfa.disable.mockResolvedValueOnce({ data: null, error: { code: 'SECOND_FACTOR_REQUIRED', status: 403 } });
+    render(<UserProfile defaultSection="mfa" />);
+    openRow('mfa');
+    fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
+    fireEvent.change(screen.getByLabelText('common.passwordLabel'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replaceConfirm' }));
+    await screen.findByLabelText('mfa.challenge.totpLabel');
+    fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.title: common.cancel' }));
+    expect(screen.queryByLabelText('common.passwordLabel')).toBeNull();
+    openRow('mfa');
+    fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
+    expect(screen.getByLabelText('common.passwordLabel')).toHaveProperty('value', '');
+    expect(mocks.mfa.disable).toHaveBeenCalledOnce();
   });
 
   it('opens from UserButton and restores focus after modal close', async () => {
@@ -216,6 +282,28 @@ describe('UserProfile', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('keeps the phone sheet in the modal surface with trapped focus and Escape', () => {
+    const onClose = vi.fn();
+    const width = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 });
+    try {
+      render(<UserProfile mode="modal" onClose={onClose} />);
+      const dialog = screen.getByRole('dialog');
+      expect(dialog.classList.contains('ao-profile-modal')).toBe(true);
+      expect(dialog.querySelector('.ao-profile-sheet-handle')?.getAttribute('aria-hidden')).toBe('true');
+      const close = screen.getByRole('button', { name: 'userProfile.close' });
+      close.focus();
+      fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+      expect(document.activeElement).toBe(within(screen.getByRole('heading', { name: 'userProfile.email.title' }).closest('section')!).getByRole('button'));
+      fireEvent.keyDown(document, { key: 'Tab' });
+      expect(document.activeElement).toBe(close);
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onClose).toHaveBeenCalledOnce();
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+    }
+  });
+
   it('does not describe a failed initial resource load as an empty account', async () => {
     mocks.account.listSocialAccounts.mockRejectedValueOnce(new Error('network unavailable'));
     render(<UserProfile defaultSection="social" />);
@@ -227,6 +315,7 @@ describe('UserProfile', () => {
   it('drives passkey removal through a named confirmation', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<UserProfile defaultSection="passkeys" />);
+    openRow('passkeys');
 
     fireEvent.click(await screen.findByRole('button', { name: 'passkeys.remove' }));
 
@@ -237,6 +326,7 @@ describe('UserProfile', () => {
   it('explains required MFA replacement and disables the factor after password confirmation', async () => {
     mocks.user.twoFactorEnabled = true;
     render(<UserProfile defaultSection="mfa" />);
+    openRow('mfa');
 
     expect(screen.getByText('userProfile.mfa.requiredActive')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
@@ -262,6 +352,7 @@ describe('UserProfile', () => {
         .mockResolvedValueOnce({ data: { status: true }, error: null });
       mocks.mfa.verifyTotp.mockResolvedValue({ data: { token: 'session-token' }, error: null });
       render(<UserProfile defaultSection="mfa" />);
+    openRow('mfa');
 
       fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
@@ -293,6 +384,7 @@ describe('UserProfile', () => {
         error: { code: 'INVALID_CODE', status: 401 },
       });
       render(<UserProfile defaultSection="mfa" />);
+    openRow('mfa');
 
       fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
@@ -311,6 +403,7 @@ describe('UserProfile', () => {
       mocks.user.twoFactorEnabled = true;
       mocks.mfa.disable.mockResolvedValueOnce(gated);
       render(<UserProfile defaultSection="mfa" />);
+    openRow('mfa');
 
       fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
@@ -334,6 +427,7 @@ describe('UserProfile', () => {
         .mockResolvedValueOnce({ data: { backupCodes: ['code-9'] }, error: null });
       mocks.mfa.verifyBackupCode.mockResolvedValue({ data: { token: 'session-token' }, error: null });
       render(<UserProfile defaultSection="recovery" />);
+    openRow('recovery');
 
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
         target: { value: 'password-1' },
@@ -356,6 +450,7 @@ describe('UserProfile', () => {
       mocks.user.twoFactorEnabled = true;
       mocks.mfa.regenerateBackupCodes.mockResolvedValueOnce(gated);
       render(<UserProfile defaultSection="recovery" />);
+    openRow('recovery');
 
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
         target: { value: 'password-1' },
@@ -374,8 +469,9 @@ describe('UserProfile', () => {
     mocks.user.twoFactorEnabled = true;
     const onDeleted = vi.fn();
     render(<UserProfile defaultSection="danger" onDeleted={onDeleted} />);
+    openRow('danger');
 
-    expect(screen.getByRole('button', { name: 'userProfile.nav.recovery' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'userProfile.group.security' })).toBeTruthy();
     const confirmation = screen.getByRole('textbox');
     expect(screen.getByRole('button', { name: 'userProfile.delete.submit' })).toHaveProperty('disabled', true);
     fireEvent.change(confirmation, { target: { value: 'mona@example.test' } });
@@ -389,6 +485,7 @@ describe('UserProfile', () => {
     mocks.user.email = null;
     mocks.user.phoneNumber = '01000000000';
     render(<UserProfile defaultSection="danger" />);
+    openRow('danger');
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '01000000000' } });
     fireEvent.click(screen.getByRole('button', { name: 'userProfile.delete.submit' }));
@@ -400,6 +497,7 @@ describe('UserProfile', () => {
     mocks.user.twoFactorEnabled = true;
     mocks.user.emailVerified = false;
     render(<UserProfile defaultSection="recovery" />);
+    openRow('recovery');
 
     expect(screen.getByText('userProfile.recovery.emailUnavailable')).toBeTruthy();
     expect(screen.queryByText('userProfile.recovery.emailDescription')).toBeNull();
@@ -416,9 +514,22 @@ describe('UserProfile', () => {
       },
     });
     render(<UserProfile defaultSection="passkeys" />);
+    openRow('passkeys');
 
     expect(await screen.findByRole('button', { name: 'passkeys.remove' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'passkeys.add' })).toBeNull();
+  });
+
+  it('opens the email row inline and preserves its verification request', async () => {
+    render(<UserProfile defaultSection="email" />);
+    expect(screen.queryByLabelText('userProfile.email.newLabel')).toBeNull();
+    openRow('email');
+    fireEvent.change(screen.getByLabelText('userProfile.email.newLabel'), { target: { value: 'new@example.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'userProfile.email.submit' }));
+    await waitFor(() => expect(mocks.account.changeEmail).toHaveBeenCalledWith({
+      newEmail: 'new@example.test', callbackURL: window.location.href,
+    }));
+    expect(screen.getByRole('status').textContent).toContain('userProfile.email.sent');
   });
 
   it('shows current email but removes the change form when policy forbids changes', () => {
@@ -432,7 +543,7 @@ describe('UserProfile', () => {
     });
     render(<UserProfile defaultSection="email" />);
 
-    expect(screen.getByText('mona@example.test')).toBeTruthy();
+    expect(screen.getAllByText('mona@example.test').length).toBeGreaterThan(0);
     expect(screen.getByTestId('email-change-disabled')).toBeTruthy();
     expect(screen.queryByLabelText('userProfile.email.newLabel')).toBeNull();
   });
@@ -457,6 +568,7 @@ describe('UserProfile', () => {
       },
     });
     render(<UserProfile />);
+    openRow('profile');
 
     fireEvent.change(screen.getByLabelText('signUp.firstNameLabel'), {
       target: { value: 'Mariam' },

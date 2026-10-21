@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  USER_PROFILE_GROUPS,
+  USER_PROFILE_SECTIONS,
+  userProfileGroupsFor,
   formatSessionTime,
   sortSessionsByRecency,
   userProfileSectionsFor,
@@ -12,6 +15,32 @@ describe('UserProfile model', () => {
     expect(userProfileSectionFromHash(userProfileSectionHash('sessions'))).toBe('sessions');
     expect(userProfileSectionFromHash('#authowl-profile-unknown')).toBeNull();
     expect(userProfileSectionFromHash('#other')).toBeNull();
+  });
+
+  it('owns all ten sections exactly once in the approved group order', () => {
+    expect(USER_PROFILE_GROUPS).toEqual([
+      { id: 'profile', sections: ['profile', 'email'] },
+      { id: 'security', sections: ['password', 'passkeys', 'mfa', 'recovery', 'sessions'] },
+      { id: 'connections', sections: ['social'] },
+      { id: 'privacy', sections: ['privacy', 'danger'] },
+    ]);
+    const sections = USER_PROFILE_GROUPS.flatMap((group) => [...group.sections]);
+    expect([...sections].sort()).toEqual([...USER_PROFILE_SECTIONS].sort());
+    expect(new Set(sections).size).toBe(10);
+  });
+
+  it('filters unavailable sections and hides empty groups', () => {
+    expect(userProfileGroupsFor(['email', 'sessions', 'danger'])).toEqual([
+      { id: 'profile', sections: ['email'] },
+      { id: 'security', sections: ['sessions'] },
+      { id: 'privacy', sections: ['danger'] },
+    ]);
+    expect(userProfileGroupsFor([])).toEqual([]);
+  });
+
+  it.each(USER_PROFILE_SECTIONS)('preserves the legacy %s hash', (section) => {
+    expect(userProfileSectionFromHash(`#authowl-profile-${section}`)).toBe(section);
+    expect(userProfileSectionHash(section)).toBe(`#authowl-profile-${section}`);
   });
 
   it('derives security sections from server capabilities and enrollment state', () => {

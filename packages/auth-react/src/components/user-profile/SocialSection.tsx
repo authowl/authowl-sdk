@@ -1,4 +1,5 @@
 'use client';
+import { ProfileIcon } from './ProfileSectionFrame';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, usePublicConfig } from '../../hooks';
@@ -54,10 +55,9 @@ export function SocialSection() {
   };
 
   return (
-    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
+    <section className={slot('ba-profile-section')} aria-labelledby={titleId} data-profile-section="social">
       <header className={slot('ba-profile-section-header')}>
-        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.social.title')}</h2>
-        <p className={slot('ba-muted')}>{t('userProfile.social.description')}</p>
+        <h2 id={titleId} tabIndex={-1} className={slot('ba-profile-section-title')}>{t('userProfile.social.title')}</h2>
       </header>
       {resource.data === null ? (
         resource.loading
@@ -67,7 +67,8 @@ export function SocialSection() {
         <ul className={slot('ba-profile-list')}>
           {linked.map((item) => (
             <li className={slot('ba-profile-list-item')} key={item.id}>
-              <span>
+              <ProfileIcon section="social" />
+              <span className={slot('ba-profile-row-copy')}>
                 <strong>{providerLabel(item.providerId)}</strong>
                 <small>
                   {item.canUnlink
@@ -76,7 +77,7 @@ export function SocialSection() {
                 </small>
               </span>
               <button
-                className={slot('ba-link-button ba-danger')}
+                className={slot('ba-profile-row-button')}
                 type="button"
                 disabled={mutation.pending || !item.canUnlink}
                 onClick={() => unlink(
@@ -93,14 +94,20 @@ export function SocialSection() {
         </ul>
       )}
       {available.length > 0 && (
-        <div className={slot('ba-profile-provider-actions')}>
-          <p className={slot('ba-profile-subtitle')}>{t('userProfile.social.add')}</p>
+        <ul className={slot('ba-profile-list')}>
           {available.map((provider) => (
-            <button key={provider} type="button" className={slot('ba-button ba-button-secondary')} disabled={mutation.pending} onClick={() => link(provider)}>
-              {t('userProfile.social.connectProvider', { provider: providerLabel(provider) })}
-            </button>
+            <li key={provider} className={slot('ba-profile-list-item')}>
+              <ProfileIcon section="social" />
+              <span className={slot('ba-profile-row-copy')}>
+                <strong className={slot('ba-profile-row-title')}>{providerLabel(provider)}</strong>
+                <small className={slot('ba-profile-row-meta')}>{t('userProfile.social.add')}</small>
+              </span>
+              <button type="button" className={slot('ba-profile-row-button')} disabled={mutation.pending} onClick={() => link(provider)}>
+                {t('userProfile.social.connectProvider', { provider: providerLabel(provider) })}
+              </button>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
       {resource.error && (
         <div className={slot('ba-profile-inline-error')}>

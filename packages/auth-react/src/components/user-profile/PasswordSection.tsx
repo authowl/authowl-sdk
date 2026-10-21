@@ -1,4 +1,5 @@
 'use client';
+import { ProfileSectionFrame } from './ProfileSectionFrame';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, usePublicConfig } from '../../hooks';
@@ -9,6 +10,15 @@ import { Busy } from '../Spinner';
 import { FormError } from '../FormError';
 
 export function PasswordSection() {
+  const t = useT();
+  return (
+    <ProfileSectionFrame section="password" title={t('userProfile.password.title')} meta={t('userProfile.password.description')} action={t('userProfile.password.submit')}>
+      <PasswordSectionContent />
+    </ProfileSectionFrame>
+  );
+}
+
+function PasswordSectionContent() {
   const slot = useSlot();
   const t = useT();
   const account = useAccount();
@@ -19,7 +29,6 @@ export function PasswordSection() {
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [saved, setSaved] = React.useState(false);
-  const titleId = React.useId();
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -47,11 +56,7 @@ export function PasswordSection() {
   };
 
   return (
-    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
-      <header className={slot('ba-profile-section-header')}>
-        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.password.title')}</h2>
-        <p className={slot('ba-muted')}>{t('userProfile.password.description')}</p>
-      </header>
+    <>
       <form method="post" className={slot('ba-fields')} onSubmit={submit}>
         <label className={slot('ba-label')}>
           {t('userProfile.password.currentLabel')}
@@ -76,6 +81,6 @@ export function PasswordSection() {
           <Busy busy={pending} label={t('common.working')}>{t('userProfile.password.submit')}</Busy>
         </button>
       </form>
-    </section>
+    </>
   );
 }

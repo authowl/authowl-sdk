@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import React from 'react';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { UserProfile, type UserProfileSection } from '@authowl/react';
 import { expectStoryMatrix } from './matrix';
 
@@ -32,6 +32,8 @@ function sectionStory(section: UserProfileSection): Story {
 }
 
 export const Profile = sectionStory('profile');
+export const Security = sectionStory('password');
+export const ConnectedAccounts = sectionStory('social');
 export const Email = sectionStory('email');
 export const Password = sectionStory('password');
 export const SocialConnections = sectionStory('social');
@@ -60,6 +62,7 @@ export const Modal: Story = {
     const canvas = within(canvasElement);
     const dialog = await canvas.findByRole('dialog');
     const containingBlock = canvas.getByTestId('modal-containing-block');
+    await canvas.findByRole('navigation');
     const bounds = dialog.getBoundingClientRect();
     const layout = dialog.querySelector<HTMLElement>('.ba-profile-layout');
     const navigation = dialog.querySelector<HTMLElement>('.ba-profile-nav');
@@ -68,8 +71,12 @@ export const Modal: Story = {
     expect(bounds.bottom).toBeLessThanOrEqual(window.innerHeight);
     expect(layout).not.toBeNull();
     expect(navigation).not.toBeNull();
-    expect(Math.abs(navigation!.getBoundingClientRect().height - layout!.getBoundingClientRect().height))
-      .toBeLessThanOrEqual(1);
+    if (bounds.width > 640) {
+      expect(Math.abs(navigation!.getBoundingClientRect().height - layout!.getBoundingClientRect().height)).toBeLessThanOrEqual(1);
+    } else {
+      expect(getComputedStyle(navigation!).flexDirection).toBe('row');
+      expect(getComputedStyle(dialog.querySelector('.ao-profile-identity')!).display).toBe('none');
+    }
   },
 };
 
@@ -81,4 +88,45 @@ export const WhiteBrandBoundary: Story = {
 export const BlackBrandBoundary: Story = {
   ...sectionStory('passkeys'),
   parameters: { authowl: { primaryColor: '#000000' } },
+};
+
+// Runs in all locale/theme projects and in the 390px phone project.
+export const PhoneSheet: Story = {
+  args: { mode: 'modal', section: 'password', onClose: () => undefined },
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    const dialog = await within(canvasElement).findByRole('dialog');
+    await within(dialog).findByRole('navigation');
+    const style = getComputedStyle(dialog);
+    const bounds = dialog.getBoundingClientRect();
+    if (window.innerWidth <= 480) {
+      expect(Math.abs(bounds.width - window.innerWidth)).toBeLessThanOrEqual(1);
+      expect(Math.abs(bounds.bottom - window.innerHeight)).toBeLessThanOrEqual(1);
+      expect(bounds.height).toBeLessThanOrEqual(window.innerHeight * 0.92 + 1);
+      expect(style.overflowY).toBe('auto');
+      expect(style.borderEndStartRadius).toBe('0px');
+      expect(parseFloat(style.borderStartStartRadius)).toBeGreaterThan(0);
+      expect(getComputedStyle(dialog.querySelector('.ao-profile-sheet-handle')!).display).toBe('block');
+    } else {
+      expect(Math.abs(bounds.top + bounds.height / 2 - window.innerHeight / 2)).toBeLessThanOrEqual(1);
+      expect(getComputedStyle(dialog.querySelector('.ao-profile-sheet-handle')!).display).toBe('none');
+    }
+  },
+};
+
+export const NarrowContainer: Story = {
+  ...sectionStory('password'),
+  render: (args) => <div style={{ width: 420, maxWidth: '100%', margin: '0 auto' }}><UserProfile {...args} /></div>,
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    const nav = await within(canvasElement).findByRole('navigation');
+    expect(getComputedStyle(nav).flexDirection).toBe('row');
+    expect(getComputedStyle(nav).overflowX).toBe('auto');
+    expect(getComputedStyle(nav.querySelector('.ao-profile-identity')!).display).toBe('none');
+    const links = within(nav).getAllByRole('link');
+    expect(links).toHaveLength(4);
+    links[0]!.focus();
+    await userEvent.tab();
+    expect(links[1]).toHaveFocus();
+  },
 };

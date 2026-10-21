@@ -1,4 +1,5 @@
 'use client';
+import { ProfileSectionFrame } from './ProfileSectionFrame';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useSession, useUser } from '../../hooks';
@@ -7,7 +8,17 @@ import { useSubmitAction } from '../use-submit-action';
 import { Busy } from '../Spinner';
 import { FormError } from '../FormError';
 
-export function ProfileSection({
+export function ProfileSection({ firstLastName, usernameEnabled, legacyNameField }: { firstLastName: boolean; usernameEnabled: boolean; legacyNameField: boolean }) {
+  const t = useT();
+  const { user } = useUser();
+  return (
+    <ProfileSectionFrame section="profile" title={t('userProfile.profile.title')} meta={user?.name || t('userProfile.profile.description')} action={t('userProfile.edit')}>
+      <ProfileSectionContent firstLastName={firstLastName} usernameEnabled={usernameEnabled} legacyNameField={legacyNameField} />
+    </ProfileSectionFrame>
+  );
+}
+
+function ProfileSectionContent({
   firstLastName,
   usernameEnabled,
   legacyNameField,
@@ -30,7 +41,6 @@ export function ProfileSection({
   );
   const [image, setImage] = React.useState(user?.image ?? '');
   const [saved, setSaved] = React.useState(false);
-  const titleId = React.useId();
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,13 +68,7 @@ export function ProfileSection({
   };
 
   return (
-    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
-      <header className={slot('ba-profile-section-header')}>
-        <h2 id={titleId} className={slot('ba-title')}>
-          {t('userProfile.profile.title')}
-        </h2>
-        <p className={slot('ba-muted')}>{t('userProfile.profile.description')}</p>
-      </header>
+    <>
       <form method="post" className={slot('ba-fields')} onSubmit={submit}>
         {legacyNameField && (
           <label className={slot('ba-label')}>
@@ -132,6 +136,6 @@ export function ProfileSection({
           <Busy busy={pending} label={t('common.working')}>{t('userProfile.save')}</Busy>
         </button>
       </form>
-    </section>
+    </>
   );
 }
