@@ -1,4 +1,15 @@
-# React appearance migration (AO-58b)
+# React appearance migration
+
+## Upgrading to 1.0
+
+- Import `@authowl/react/styles.css` with `layer(components)` in Tailwind hosts.
+- Map `--ba-*` overrides to `appearance.variables` where supported, using the
+  token mapping below for lower-level overrides.
+- Check custom CSS against the DOM-contract changes listed below, including
+  method tabs, code cells and grouped UserProfile rows.
+- Opt into `appearance.layout.mobileSheet` if you want phone auth sheets.
+- Keep existing catalog overrides: deprecated keys remain present through 1.0
+  and will only be removed in a later major.
 
 Import the single generated stylesheet. It ships without a layer. Tailwind hosts
 should import it in their components layer so utility classes in `elements` win:
@@ -12,6 +23,7 @@ should import it in their components layer so utility classes in `elements` win:
   appearance={{
     theme: 'inherit',
     brand: 'billow',
+    layout: { mobileSheet: true },
     variables: {
       colorPrimary: '#0EA5A4',
       colorBackground: '#ffffff',
@@ -62,11 +74,12 @@ attribute is root-scoped now. Set it through `appearance.theme`, or use host
 `ElementSlot` and `ELEMENT_SLOTS` are type-only slot definitions, with no runtime table. Each suffix is the
 class name: `elements.input` appends classes after `ao-input ba-input`.
 `slot('input', elements)` is also exported. Existing forms now carry `ao-card
-ba-card` on their existing block box. This slice retains their current width,
-padding, flex gaps and radii; it does not introduce the later card geometry.
+ba-card` on their existing block box. The 1.0 auth surface adds compact card
+geometry and method tabs.
 Use `elements.card` to style a host shell. `controlHeight` accepts `2rem` for
-compact hosts and sets border-box sizing on inputs. All geometry defaults remain
-unchanged unless the host supplies an override.
+compact hosts and sets border-box sizing on inputs. Auth cards use 400px width
+and 28px padding on desktop, with 48px controls and 16px input text at viewport
+widths of 480px or less.
 
 Legacy classes and variable overrides remain supported for one major. The SDK
 stylesheet declares no `--ba-*` variables or `.ba-*` selectors; its declarations
@@ -185,9 +198,41 @@ updated. Additional slots are `profile-identity`, `profile-identity-copy`,
 `profile-pill-success` and `profile-icon-success`. All slots emit both `ao-` and
 `ba-` classes.
 
-Only UserProfile's SDK-owned modal becomes a bottom sheet at viewport widths of
+UserProfile's SDK-owned modal always becomes a bottom sheet at viewport widths of
 480px or less (previously 680px). The `.ao-profile-modal` surface has full width,
 top corner radii,
 a 92dvh maximum height, contained overscroll, no bottom border, internal scrolling
 and safe-area padding. The `profile-sheet-handle` slot is decorative and visible only on phones. Larger
 viewports keep the centered dialog. Inline page layout belongs to the host.
+
+## Opt-in phone auth sheet
+
+`appearance.layout?: { mobileSheet?: boolean }` defaults to off. Set
+`appearance={{ layout: { mobileSheet: true } }}` when the host wants SignIn,
+SignUp and their card steps to dock to the viewport bottom at widths of 480px
+or less. The provider emits `data-authowl-layout="sheet"` only when enabled;
+omitting it or setting false preserves existing SSR markup and inline layout.
+Above 480px the card layout stays the same. UserProfileModal keeps its own
+sheet independently of this option.
+
+Phone auth sheets have full width, top corners using `--ao-radius-xl`, square
+bottom corners, no bottom border, and bottom padding that includes
+`env(safe-area-inset-bottom)`. They scroll internally up to `92dvh` with contained
+overscroll. Controls remain 48px tall and inputs use 16px text. The decorative,
+aria-hidden `auth-sheet-handle` slot emits `ao-` and `ba-` classes and is visible
+only on phones. The `auth-sheet` slot identifies the opted-in shell across all
+steps, including configuration errors and waitlist. The SDK does not add a
+backdrop or manage the host page layout.
+
+## Auth DOM contract in 1.0
+
+- SignIn alternate action buttons become method tabs. Phone sign-in uses a
+  secondary link-style button; the Passkey tab has a filled primary action and
+  hides the email field. The initial tab follows the last-used method after mount.
+- Social buttons show provider names, with localized Continue with or Sign up
+  with accessible names. Method switches and social buttons lock while pending.
+- Cards use `auth-card` and `auth-header` slots with a subtitle. App branding
+  moves beside the heading; branding uses `display: contents` inside that header
+  and its duplicate app name is hidden. Steps remount the card subtree.
+- Card spinners use three dots with pseudo-elements. CodeInput, two-factor and
+  grouped UserProfile changes and their slots are listed above.

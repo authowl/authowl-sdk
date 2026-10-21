@@ -23,6 +23,8 @@ export type ELEMENT_SLOTS = [
   'passkey-info',
   'name-row',
   'auth-card',
+  'auth-sheet',
+  'auth-sheet-handle',
   'step',
   'method-tabs',
   'method-tab',

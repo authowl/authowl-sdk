@@ -77,7 +77,7 @@ type Ctx = {
   locale: Locale;
 };
 
-const Context = React.createContext<Ctx | null>(null);
+export const AuthOwlContext = React.createContext<Ctx | null>(null);
 
 export type AuthOwlProviderProps = AuthConfig & {
   appearance?: Appearance;
@@ -218,7 +218,7 @@ export function AuthOwlProvider({
   );
 
   return (
-    <Context.Provider value={ctxValue}>
+    <AuthOwlContext.Provider value={ctxValue}>
       {/* display:contents keeps the wrapper out of layout while still scoping
           the theme custom-properties + data attribute to the subtree. The RAW
           theme goes in the attribute (light | dark | system | inherit) so it is identical
@@ -230,6 +230,7 @@ export function AuthOwlProvider({
         className="authowl-root"
         data-authowl-theme={merged.theme}
         data-authowl-brand={merged.brand}
+        data-authowl-layout={appearance?.layout?.mobileSheet === true ? 'sheet' : undefined}
         data-authowl-control-height={merged.style['--ao-control-height'] ? '' : undefined}
         // Not read by our CSS (RTL keys off [dir]) - a deliberate hook for
         // HOST stylesheets to target per-locale, like data-authowl-theme.
@@ -243,12 +244,12 @@ export function AuthOwlProvider({
         {invitationPrompt ? <InvitationPrompt /> : null}
         </ElementsContext.Provider>
       </div>
-    </Context.Provider>
+    </AuthOwlContext.Provider>
   );
 }
 
 export function useAuthOwlContext(): Ctx {
-  const v = React.useContext(Context);
+  const v = React.useContext(AuthOwlContext);
   if (!v) {
     throw new Error('AuthOwl hooks must be used inside <AuthOwlProvider>');
   }

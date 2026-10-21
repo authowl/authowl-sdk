@@ -3,6 +3,7 @@ import * as React from 'react';
 import { useSlot } from '../elements';
 import { useT } from '../i18n';
 import { usePublicConfig } from '../hooks';
+import { AuthOwlContext } from '../provider';
 import { AuthCardLock } from './AuthCardLock';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { AuthOwlBadge } from './AuthOwlBadge';
@@ -22,6 +23,7 @@ export function StepCard({ lock, step, kind, stepRef, showBranding, showBadge, c
   const slot = useSlot();
   const t = useT();
   const { config } = usePublicConfig();
+  const mobileSheet = React.useContext(AuthOwlContext)?.appearance?.layout?.mobileSheet === true;
   // The design names the app in the heading ("Sign in to Acme"); the header
   // then shows only the mark, so the name is never printed twice.
   const app = showBranding && config?.branding?.showAppName !== false ? config?.branding?.appName?.trim() : '';
@@ -31,9 +33,10 @@ export function StepCard({ lock, step, kind, stepRef, showBranding, showBadge, c
   const title = <h2 className={slot('ba-title')}>{t(`${kind}.title`)}</h2>;
   return (
     <AuthCardLock.Provider value={lock}>
-      <div ref={stepRef} className={slot(bare ? 'ba-step' : 'ba-form ba-card ba-auth-card ba-step')}
+      <div ref={stepRef} className={slot(`${bare ? 'ba-step' : 'ba-form ba-card ba-auth-card ba-step'}${mobileSheet ? ' ba-auth-sheet' : ''}`)}
         data-testid={bare ? undefined : `${kind.toLowerCase()}-${STEP_ID[step] ?? step}`}
         aria-busy={step === 'loading' || step === 'mfa-confirming' || undefined}>
+        {mobileSheet && <span className={slot('ba-auth-sheet-handle')} aria-hidden="true" />}
         {step === 'form' ? (
           <header className={slot('ba-auth-header')}>
             {branding}

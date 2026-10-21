@@ -6,6 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthOwlProvider } from './provider';
 import { usePublicConfig, useSession } from './hooks';
 import { makePublicConfig } from './test-fixtures';
+import type { Appearance } from './appearance';
+import { SignIn } from './components/SignIn';
+import { SignUp } from './components/SignUp';
+import { StepCard } from './components/StepCard';
 
 const PK = 'pk_live_11111111-1111-1111-1111-111111111111_abcdefghij0123456789';
 const API_URL = 'https://auth.example.com';
@@ -14,6 +18,54 @@ const API_URL = 'https://auth.example.com';
 const fetchNever = (() => new Promise<Response>(() => {})) as unknown as typeof fetch;
 
 afterEach(cleanup);
+
+it.each([
+  [undefined, null],
+  [{}, null],
+  [{ layout: {} }, null],
+  [{ layout: { mobileSheet: false } }, null],
+  [{ layout: { mobileSheet: true } }, 'sheet'],
+] satisfies [Appearance | undefined, string | null][])('emits the phone layout only when opted in: %j', (appearance, layout) => {
+  const node = <AuthOwlProvider publishableKey={PK} apiUrl={API_URL} fetch={fetchNever}
+    locale="en" appearance={appearance}><span>auth</span></AuthOwlProvider>;
+  const html = renderToString(node);
+  const { container } = render(node);
+  expect(container.querySelector('.authowl-root')?.getAttribute('data-authowl-layout')).toBe(layout);
+  if (layout) {
+    expect(html).toContain('data-authowl-layout="sheet"');
+  } else {
+    expect(html).toBe('<div class="authowl-root" data-authowl-theme="inherit" data-authowl-brand="authowl" data-authowl-locale="en" dir="ltr" style="display:contents"><span>auth</span></div>');
+  }
+});
+
+it.each([{ name: 'SignIn', Component: SignIn }, { name: 'SignUp', Component: SignUp }])(
+  'preserves $name SSR markup when the phone sheet is off', ({ Component }) => {
+    const markup = (appearance?: Appearance) => renderToString(
+      <AuthOwlProvider publishableKey={PK} apiUrl={API_URL} fetch={fetchNever} appearance={appearance}>
+        <Component showBranding={false} showBadge={false} />
+      </AuthOwlProvider>,
+    );
+    const baseline = markup();
+    expect(baseline).not.toContain('auth-sheet-handle');
+    expect(markup({ layout: {} })).toBe(baseline);
+    expect(markup({ layout: { mobileSheet: false } })).toBe(baseline);
+    expect(markup({ layout: { mobileSheet: true } })).toContain('class="ao-auth-sheet-handle ba-auth-sheet-handle" aria-hidden="true"');
+  },
+);
+
+it.each(['form', 'forgot', 'otp-code', 'mfa', 'error', 'waitlist'])(
+  'keeps the opt-in sheet shell and decorative handle on the %s step', (step) => {
+    const html = renderToString(
+      <AuthOwlProvider publishableKey={PK} apiUrl={API_URL} fetch={fetchNever}
+        appearance={{ layout: { mobileSheet: true }, elements: { 'auth-sheet-handle': 'host-handle' } }}>
+        <StepCard lock={{ locked: false, setPending: () => undefined }} step={step} kind="signIn"
+          stepRef={null} showBranding={false} showBadge={false}>Step content</StepCard>
+      </AuthOwlProvider>,
+    );
+    expect(html).toContain('ao-auth-sheet ba-auth-sheet');
+    expect(html).toContain('class="ao-auth-sheet-handle ba-auth-sheet-handle host-handle" aria-hidden="true"');
+  },
+);
 
 describe('AuthOwlProvider brand ramp emission', () => {
   it('carries --ba-primary + the derived --ba-rt-* bridge vars on the wrapper style', () => {
