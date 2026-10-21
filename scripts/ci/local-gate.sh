@@ -278,7 +278,8 @@ run_step() {
   printf 'result.%s=passed\n' "$name" >>"$completed_file"
 }
 
-# Vitest 4 toMatchScreenshot writes comparison output to .vitest-attachments,
+# Vitest 4 toMatchScreenshot writes <name>-actual-<browser>-<platform>.png and
+# <name>-diff-<browser>-<platform>.png under .vitest-attachments,
 # independently of resolveScreenshotPath (which controls reference baselines).
 # The Docker /workspace bind mount survives container removal until cleanup.
 export_screenshot_failures() (
@@ -292,7 +293,7 @@ export_screenshot_failures() (
   done < <(
     find . -type d -name node_modules -prune -o \
       -type f -path '*/.vitest-attachments/*' \
-      \( -name '*-actual.png' -o -name '*-diff.png' \) -print0
+      \( -name '*-actual-*.png' -o -name '*-diff-*.png' \) -print0
   )
 )
 
