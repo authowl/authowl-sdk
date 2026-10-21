@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useUser, useSignOut } from '../hooks';
 import { useT } from '../i18n';
 import { UserProfile } from './UserProfile';
+import { Avatar } from './Avatar';
 import { AuthOwlBadge } from './AuthOwlBadge';
 
 export function UserButton() {
@@ -13,12 +14,10 @@ export function UserButton() {
   const { signOut } = useSignOut();
   const [open, setOpen] = React.useState(false);
   const [profileOpen, setProfileOpen] = React.useState(false);
-  const [failedImage, setFailedImage] = React.useState<string | null>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   if (!isLoaded || !user) return null;
   const identity = user.email ?? user.phoneNumber ?? user.name ?? '?';
-  const image = user.image ?? null;
 
   return (
     <div className={slot('ba-user-button')} data-testid="user-button">
@@ -28,17 +27,7 @@ export function UserButton() {
         aria-label={t('userButton.openMenuAria')}
         onClick={() => setOpen((v) => !v)}
       >
-        {image && failedImage !== image ? (
-          <img
-            className={slot('ba-avatar')}
-            src={image}
-            alt=""
-            referrerPolicy="no-referrer"
-            onError={() => setFailedImage(image)}
-          />
-        ) : (
-          <span className={slot('ba-avatar ba-avatar-fallback')}>{identity[0]?.toUpperCase()}</span>
-        )}
+        <Avatar name={user.name} email={user.email} image={user.image} />
       </button>
       {open && (
         <div className={slot('ba-menu')}>

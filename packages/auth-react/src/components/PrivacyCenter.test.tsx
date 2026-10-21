@@ -77,6 +77,13 @@ afterEach(() => {
 });
 
 describe('PrivacyCenter', () => {
+  it('lets the containing profile row own its title and description', async () => {
+    render(<PrivacyCenter title={null} />);
+    await screen.findByRole('switch', { name: 'Product research' });
+    expect(screen.queryByRole('heading', { name: 'privacy.title' })).toBeNull();
+    expect(screen.queryByText('privacy.description')).toBeNull();
+  });
+
   it('withdraws a granted purpose against the exact current notice', async () => {
     render(<PrivacyCenter />);
     const toggle = await screen.findByRole('switch', { name: 'Product research' });

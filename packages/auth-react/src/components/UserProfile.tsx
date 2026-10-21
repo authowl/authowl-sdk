@@ -2,23 +2,16 @@
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { usePublicConfig, useUser } from '../hooks';
-import { useT, type MessageKey } from '../i18n';
-import { EmailSection } from './user-profile/EmailSection';
-import { DeleteAccountSection } from './user-profile/DeleteAccountSection';
-import { MfaSection } from './user-profile/MfaSection';
-import { PasswordSection } from './user-profile/PasswordSection';
-import { PasskeysSection } from './user-profile/PasskeysSection';
-import { ProfileSection } from './user-profile/ProfileSection';
-import { RecoverySection } from './user-profile/RecoverySection';
-import { SessionsSection } from './user-profile/SessionsSection';
-import { SocialSection } from './user-profile/SocialSection';
+import { useT } from '../i18n';
 import { UserProfileModal } from './user-profile/UserProfileModal';
-import { PrivacyCenter } from './PrivacyCenter';
+import { UserProfileBody } from './user-profile/UserProfileBody';
 import { AuthOwlBadge } from './AuthOwlBadge';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { resolveProjectCapabilities } from '../project-capabilities';
 import {
   userProfileSectionsFor,
+  userProfileGroupsFor,
+  USER_PROFILE_GROUPS,
   userProfileSectionFromHash,
   userProfileSectionHash,
   type UserProfileSection,
@@ -50,25 +43,6 @@ export type UserProfileProps = UserProfileSharedProps & (
   }
 );
 
-const SECTION_KEYS: Record<UserProfileSection, MessageKey> = {
-  profile: 'userProfile.nav.profile',
-  email: 'userProfile.nav.email',
-  password: 'userProfile.nav.password',
-  social: 'userProfile.nav.social',
-  sessions: 'userProfile.nav.sessions',
-  passkeys: 'userProfile.nav.passkeys',
-  mfa: 'userProfile.nav.mfa',
-  recovery: 'userProfile.nav.recovery',
-  privacy: 'userProfile.nav.privacy',
-  danger: 'userProfile.nav.danger',
-};
-
-function initialSection(fallback?: UserProfileSection): UserProfileSection {
-  if (fallback) return fallback;
-  if (typeof window === 'undefined') return 'profile';
-  return userProfileSectionFromHash(window.location.hash) ?? 'profile';
-}
-
 export function UserProfile(props: UserProfileProps = {}) {
   const slot = useSlot();
   const {
@@ -82,8 +56,15 @@ export function UserProfile(props: UserProfileProps = {}) {
   const t = useT();
   const { user, isLoaded, isSignedIn } = useUser();
   const { config } = usePublicConfig();
-  const [internalSection, setInternalSection] = React.useState(() => initialSection(defaultSection));
+  const [internalSection, setInternalSection] = React.useState<UserProfileSection>(defaultSection ?? 'profile');
   const active = section ?? internalSection;
+  const [requested, setRequested] = React.useState<{ section: UserProfileSection } | undefined>(() => {
+    const initial = section ?? defaultSection;
+    return initial ? { section: initial } : undefined;
+  });
+  const [closeVersion, setCloseVersion] = React.useState(0);
+  const previousSection = React.useRef(section);
+  const [focusSection, setFocusSection] = React.useState<{ section: UserProfileSection } | null>(null);
   const capabilities = resolveProjectCapabilities(config);
   const passwordEnabled = config !== null && capabilities.passwordSignIn;
   const passkeysEnabled = capabilities.passkeySignIn || capabilities.passkeyAdd;
@@ -105,20 +86,53 @@ export function UserProfile(props: UserProfileProps = {}) {
     [deletionEnabled, mfaEnabled, passkeysEnabled, passwordEnabled, privacyEnabled, recoveryEnabled, socialEnabled],
   );
 
+  // Capture the incoming URL exactly once, including while config loads.
+  const readHash = React.useRef(false);
   React.useEffect(() => {
-    if (section || mode !== 'page') return;
+    if (readHash.current) return;
+    readHash.current = true;
+    if (section !== undefined || defaultSection !== undefined) return;
+    const next = userProfileSectionFromHash(window.location.hash);
+    if (next) {
+      setInternalSection(next);
+      setRequested({ section: next });
+      if (mode === 'page') setFocusSection({ section: next });
+    }
+  }, [defaultSection, mode, section]);
+
+  React.useEffect(() => {
+    if (mode !== 'page' || section !== undefined) return;
     const onHashChange = () => {
       const next = userProfileSectionFromHash(window.location.hash);
-      if (next && sections.includes(next)) setInternalSection(next);
+      if (next && sections.includes(next)) {
+        setInternalSection(next);
+        setRequested({ section: next });
+        setFocusSection({ section: next });
+      }
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, [mode, section, sections]);
 
-  const visibleActive = sections.includes(active) ? active : 'profile';
+  const activeGroup = USER_PROFILE_GROUPS.find((group) => group.sections.some((item) => item === active));
+  const availableGroups = userProfileGroupsFor(sections);
+  const visibleActive = sections.includes(active) ? active
+    : (availableGroups.find((group) => group.id === activeGroup?.id) ?? availableGroups[0])!.sections[0];
+
+  React.useEffect(() => {
+    if (previousSection.current === section) return;
+    previousSection.current = section;
+    setRequested(undefined);
+    setCloseVersion((version) => version + 1);
+    setFocusSection({ section: visibleActive });
+  }, [section, visibleActive]);
+
   const select = (next: UserProfileSection) => {
     if (section === undefined) setInternalSection(next);
+    setRequested(undefined);
+    setCloseVersion((version) => version + 1);
     onSectionChange?.(next);
+    setFocusSection({ section: next });
     if (mode === 'page' && typeof window !== 'undefined') {
       window.history.replaceState(null, '', userProfileSectionHash(next));
     }
@@ -134,6 +148,9 @@ export function UserProfile(props: UserProfileProps = {}) {
     <UserProfileBody
       key={user.id}
       active={visibleActive}
+      mode={mode}
+      disclosure={{ requested, closeVersion }}
+      focusSection={focusSection}
       sections={sections}
       onSelect={select}
       onDeleted={onDeleted}
@@ -154,67 +171,11 @@ export function UserProfile(props: UserProfileProps = {}) {
 
   return (
     <article className={slot('ba-profile ba-profile-page')} data-testid="user-profile">
-      <header className={slot('ba-profile-heading')}>
-        {showBranding ? <AuthOwlBranding /> : null}
-        <h1>{t('userProfile.title')}</h1>
-        <p>{t('userProfile.description')}</p>
-      </header>
+      {showBranding && <header className={slot('ba-profile-heading')}><AuthOwlBranding /></header>}
       {content}
       <footer className={slot('ba-profile-modal-footer')}>
         <AuthOwlBadge />
       </footer>
     </article>
-  );
-}
-
-function UserProfileBody({
-  active,
-  sections,
-  onSelect,
-  onDeleted,
-  capabilities,
-}: {
-  active: UserProfileSection;
-  sections: readonly UserProfileSection[];
-  onSelect: (section: UserProfileSection) => void;
-  onDeleted?: () => void;
-  capabilities: ReturnType<typeof resolveProjectCapabilities>;
-}) {
-  const slot = useSlot();
-  const t = useT();
-  return (
-    <div className={slot('ba-profile-layout')}>
-      <nav className={slot('ba-profile-nav')} aria-label={t('userProfile.nav.aria')}>
-        {sections.map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={slot('ba-profile-nav-item')}
-            aria-current={active === item ? 'page' : undefined}
-            onClick={() => onSelect(item)}
-          >
-            {t(SECTION_KEYS[item])}
-          </button>
-        ))}
-      </nav>
-      <div className={slot('ba-profile-content')} data-section={active}>
-        {active === 'profile' && (
-          <ProfileSection
-            firstLastName={capabilities.firstLastName}
-            usernameEnabled={capabilities.collectUsername}
-            legacyNameField={capabilities.legacyNameField}
-          />
-        )}
-        {active === 'email' && <EmailSection allowChange={capabilities.emailChange} />}
-        {active === 'password' && <PasswordSection />}
-        {active === 'social' && <SocialSection />}
-        {active === 'sessions' && <SessionsSection />}
-        {active === 'passkeys' && <PasskeysSection allowAdd={capabilities.passkeyAdd} />}
-        {active === 'mfa' && <MfaSection />}
-        {active === 'recovery' && <RecoverySection />}
-        {active === 'privacy' && <PrivacyCenter />}
-        {active === 'danger' && <DeleteAccountSection onDeleted={onDeleted} />}
-      </div>
-    </div>
   );
 }

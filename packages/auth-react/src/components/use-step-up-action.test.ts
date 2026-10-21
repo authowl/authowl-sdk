@@ -43,6 +43,28 @@ describe('useStepUpAction', () => {
     expect(onSuccess).toHaveBeenCalledOnce();
   });
 
+  it('invalidates old verification callbacks after cancel and a new parked attempt', async () => {
+    const action = vi.fn().mockResolvedValue(gated);
+    const { result } = renderHook(() => useStepUpAction());
+    await act(async () => { await result.current.run(action, { failure: 'failed' }); });
+    const staleResume = result.current.resume;
+    act(() => result.current.cancel());
+    await act(async () => { await result.current.run(action, { failure: 'failed' }); });
+    act(() => staleResume());
+    expect(action).toHaveBeenCalledTimes(2);
+    expect(result.current.stepUpRequired).toBe(true);
+  });
+
+  it('invalidates verification callbacks on unmount', async () => {
+    const action = vi.fn().mockResolvedValue(gated);
+    const { result, unmount } = renderHook(() => useStepUpAction());
+    await act(async () => { await result.current.run(action, { failure: 'failed' }); });
+    const resume = result.current.resume;
+    unmount();
+    act(() => resume());
+    expect(action).toHaveBeenCalledOnce();
+  });
+
   it('surfaces every other failure as an ordinary message', async () => {
     const { result } = renderHook(() => useStepUpAction());
 

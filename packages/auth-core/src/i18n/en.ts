@@ -46,6 +46,7 @@ export const en = {
   'common.working': 'Working…',
   'common.loading': 'Loading…',
   'common.continue': 'Continue',
+  'common.close': 'Close',
   'common.cancel': 'Cancel',
   'common.error.tryAgain': 'We could not complete this request. Please try again.',
   'common.error.passwordTooShort': 'Password must be at least {min} characters.',
@@ -303,24 +304,37 @@ export const en = {
   'consent.acceptSubmit': 'I agree',
   'consent.error.acceptFailed': 'Could not record your acceptance. Please try again.',
 
+  'userProfile.group.security': 'Security',
+  'userProfile.group.profile.description': 'Your personal details and email address.',
+  'userProfile.group.security.description': 'How you sign in and stay protected.',
+  'userProfile.group.connections.description': 'The accounts you use to sign in.',
+  'userProfile.group.privacy.description': 'Your data and privacy rights.',
+  'userProfile.edit': 'Edit',
+  'userProfile.manage': 'Manage',
   'userProfile.title': 'Manage account',
   'userProfile.description': 'Update your profile and account security.',
   'userProfile.close': 'Close account settings',
   'userProfile.signedOut': 'Sign in to manage your account.',
   'userProfile.save': 'Save changes',
   'userProfile.retry': 'Try again',
-  // Deprecated: superseded by `common.cancel` on the profile and MFA surfaces.
-  // Kept because `MessageKey` is published API and removing a key is breaking.
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.cancel': 'Cancel',
   'userProfile.nav.aria': 'Account settings',
   'userProfile.nav.profile': 'Profile',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.email': 'Email',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.password': 'Password',
   'userProfile.nav.social': 'Connected accounts',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.sessions': 'Sessions',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.passkeys': 'Passkeys',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.mfa': 'Two-factor',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.recovery': 'Recovery',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.danger': 'Delete account',
   'userProfile.profile.title': 'Profile',
   'userProfile.profile.description': 'Choose how your name and avatar appear.',
@@ -343,6 +357,7 @@ export const en = {
   'userProfile.password.saved': 'Your password has been changed.',
   'userProfile.password.error': 'Could not change your password.',
   'userProfile.social.title': 'Connected accounts',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.social.description': 'Manage the social accounts you can use to sign in.',
   'userProfile.social.connected': 'Connected',
   'userProfile.social.disconnect': 'Disconnect',
@@ -354,9 +369,10 @@ export const en = {
   'userProfile.social.loadError': 'Could not load connected accounts.',
   'userProfile.social.linkError': 'Could not connect that account.',
   'userProfile.social.unlinkError': 'Could not disconnect that account.',
-  'userProfile.sessions.title': 'Active sessions',
+  'userProfile.sessions.title': 'Where you are signed in',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.sessions.description': 'Review the devices that are signed in to your account.',
-  'userProfile.sessions.current': 'Current device · ',
+  'userProfile.sessions.current': 'This device',
   'userProfile.sessions.unknownDevice': 'Unknown device',
   'userProfile.sessions.revoke': 'Revoke',
   'userProfile.sessions.revokeOthers': 'Revoke all other sessions',

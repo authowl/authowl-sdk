@@ -133,3 +133,61 @@ A complete code submits automatically; pending actions lock entry, and a failed
 value does not auto-retry until edited. Backup codes retain a plain text input
 and manual submission. MFA's other-factor link buttons are now pill chips,
 styled through `factor-chip`, in the `factor-options` section.
+
+
+UserProfile now has four navigation groups: Profile (profile and email), Security
+(password, passkeys, MFA, recovery and sessions), Connected accounts (social),
+and Privacy (privacy rights and account deletion). Unavailable sections and empty
+groups are omitted. `section`, `defaultSection` and `onSectionChange` still use
+the ten existing section identifiers. Every `#authowl-profile-<section>` URL
+selects its group, opens the requested row and focuses that section heading. Navigation writes the first
+available section hash in the selected group.
+
+DOM changes in the unreleased React major: `.ao-profile-nav-item` is now an anchor
+with `aria-current="page"`; it replaces the old per-section buttons. The 184px
+sidebar starts with `.ao-profile-identity`, containing the shared Avatar, name
+and email when present. Avatar now uses one first grapheme of the trimmed name,
+then email, then a neutral glyph. UserButton uses the same Avatar. Provider images
+use `referrerPolicy="no-referrer"` and fall back on load failure. At container
+widths of 640px or less, the identity is hidden and links form a horizontally
+scrollable row. The content carries `data-group` as well as
+the existing `data-section`, and contains all available sections of that group.
+Group changes remount `.ao-profile-content.ao-step` for the token-based entrance;
+hash changes within the same group preserve other open forms. Initial `section`
+and `defaultSection` requests open the requested row. Nav clicks and later
+controlled `section` changes land collapsed; controlled changes focus the new
+section heading without moving focus on the first render.
+
+Section summaries use their focusable h2 as the row title; the former duplicate
+uppercase heading is removed. Sessions and Social retain uppercase list headings.
+The modal group title is h2 so only the dialog title remains h1. Page mode no
+longer renders the global h1 and description; hosts needing that introduction
+should supply it. The active group retains its own title and subtitle.
+
+Section summaries use `profile-section-title` for lists, `profile-row`, `profile-icon`,
+`profile-icon-svg`, `profile-row-copy`, `profile-row-title`, `profile-row-meta`,
+`profile-row-button` and `profile-row-body` slots. Edit/Manage opens the existing
+workflow inline; closing the summary unmounts the workflow and clears its local
+inputs, cancels parked step-up actions and invalidates late verification callbacks.
+The open-state action now reads Close (`common.close`), while confirmation forms
+keep their Cancel actions. Session and social row buttons now use
+`profile-row-button`. The former `profile-list-item`, `profile-row-copy` descendant
+rules, `profile-provider-actions`, `profile-subtitle` and
+`profile-danger-zone` CSS are removed. Delete account uses the shared row instead
+of the former danger-zone wrapper. The PrivacyCenter mounts only when its row
+opens, so its requests begin on demand. It receives `title={null}` because the
+row owns its title and description; standalone PrivacyCenter keeps its header.
+Forms and their security gates retain their existing classes and test IDs. Host
+selectors that assume a directly visible form or one section per page must be
+updated. Additional slots are `profile-identity`, `profile-identity-copy`,
+`profile-avatar`, `profile-group-heading`, `profile-group-title`,
+`profile-group-subtitle`, `profile-row-heading`, `profile-pill`,
+`profile-pill-success` and `profile-icon-success`. All slots emit both `ao-` and
+`ba-` classes.
+
+Only UserProfile's SDK-owned modal becomes a bottom sheet at viewport widths of
+480px or less (previously 680px). The `.ao-profile-modal` surface has full width,
+top corner radii,
+a 92dvh maximum height, contained overscroll, no bottom border, internal scrolling
+and safe-area padding. The `profile-sheet-handle` slot is decorative and visible only on phones. Larger
+viewports keep the centered dialog. Inline page layout belongs to the host.

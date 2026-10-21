@@ -37,7 +37,7 @@
 :where(.authowl-root) .ao-consent-centered { align-items: center; min-height: 20px; }
 :where(.authowl-root) .ao-checkbox-control { position: relative; display: inline-grid; width: 16px; height: 16px; flex: 0 0 16px; margin-block-start: 1px; place-items: center; }
 :where(.authowl-root) .ao-checkbox { position: absolute; inset: 0; z-index: 1; width: 16px; height: 16px; margin: 0; opacity: 0; cursor: pointer; }
-:where(.authowl-root) .ao-checkbox-visual { display: grid; width: 16px; height: 16px; box-sizing: border-box; place-items: center; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 3px; background: var(--ba-surface, var(--ao-surface)); transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
+:where(.authowl-root) .ao-checkbox-visual { display: grid; width: 16px; height: 16px; box-sizing: border-box; place-items: center; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 3px; background: var(--ba-surface, var(--ao-surface)); transition: background-color var(--ao-duration-fast) ease, border-color var(--ao-duration-fast) ease, box-shadow var(--ao-duration-fast) ease; }
 :where(.authowl-root) .ao-checkbox-check { width: 5px; height: 9px; margin-top: -2px; border-right: 2px solid var(--ba-accent-fg, var(--ao-accent-fg)); border-bottom: 2px solid var(--ba-accent-fg, var(--ao-accent-fg)); opacity: 0; transform: rotate(45deg); }
 :where(.authowl-root) .ao-checkbox:checked + .ao-checkbox-visual { border-color: var(--ba-accent-solid, var(--ao-accent-solid)); background: var(--ba-accent-solid, var(--ao-accent-solid)); }
 :where(.authowl-root) .ao-checkbox:checked + .ao-checkbox-visual .ao-checkbox-check { opacity: 1; }
@@ -77,7 +77,9 @@
 :where(.authowl-root) .ao-branding-align-left { align-items: flex-start; text-align: left; }
 :where(.authowl-root) .ao-branding-align-center { align-items: center; text-align: center; }
 :where(.authowl-root) .ao-branding-align-right { align-items: flex-end; text-align: right; }
-:where(.authowl-root) .ao-profile-heading .ao-branding, :where(.authowl-root) .ao-profile-modal-header .ao-branding { margin-bottom: 16px; }
+:where(.authowl-root .ao-profile-modal-header) .ao-branding { margin-bottom: 16px; }
+/* Page mode carries only the brand: one row, identity at inline-start and the environment at inline-end. */
+:where(.authowl-root .ao-profile-heading) .ao-branding { margin: 0; flex-direction: row; align-items: center; justify-content: space-between; }
 
 /* "Secured by AuthOwl" attribution (free plan; hidden on paid, or forced on
    via the showBadge prop). A small owl mark + wordmark, like other embeddable
@@ -141,30 +143,31 @@
 :where(.authowl-root) .ao-menu-item:hover { background: var(--ba-hover, var(--ao-hover)); }
 
 /* UserProfile account settings */
-:where(.authowl-root) .ao-profile { color: var(--ba-fg, var(--ao-fg)); background: var(--ba-surface, var(--ao-surface)); border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 14px; font-size: 14px; }
+:where(.authowl-root) .ao-profile { box-sizing: border-box; color: var(--ba-fg, var(--ao-fg)); background: var(--ba-surface, var(--ao-surface)); border: 1px solid var(--ao-line); border-radius: var(--ao-radius-xl); font-size: 14px; container: ao-profile / inline-size; contain-intrinsic-inline-size: 920px; }
 :where(.authowl-root) .ao-profile-page { width: min(100%, 920px); margin-inline: auto; overflow: hidden; }
-:where(.authowl-root) :is(.ao-profile-heading, .ao-profile-modal-header) { padding: 24px 28px; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
-:where(.authowl-root) .ao-profile-heading h1, :where(.authowl-root) .ao-profile-modal-header h1 { margin: 0; font-size: 22px; line-height: 1.25; }
-:where(.authowl-root) .ao-profile-heading p, :where(.authowl-root) .ao-profile-modal-header p { margin: 6px 0 0; color: var(--ba-muted, var(--ao-muted)); }
+:where(.authowl-root :is(.ao-profile-heading, .ao-profile-modal-header)) { padding: 24px 28px; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
+:where(.authowl-root .ao-profile-heading) { padding-block: 16px; }
+:where(.authowl-root) .ao-profile-modal-header h1 { margin: 0; font-size: 22px; line-height: 1.25; }
+:where(.authowl-root) .ao-profile-modal-header p { margin: 6px 0 0; color: var(--ba-muted, var(--ao-muted)); }
 /* No min-height. A grid row already sizes to its tallest column, which here is
    the nav, so the panel is exactly as tall as it needs to be. The 460px floor it
    replaces was there to stop the modal resizing between tabs, but the shortest
    tab - Profile, an avatar field and a button - is the one most people open
    first, and it left roughly 200px of empty white below the content, reading as
    a broken panel rather than a stable one. */
-:where(.authowl-root) .ao-profile-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); }
-:where(.authowl-root) .ao-profile-nav { display: flex; flex-direction: column; gap: 4px; padding: 18px 12px; border-inline-end: 1px solid var(--ba-divider, var(--ao-divider)); background: color-mix(in srgb, var(--ba-hover, var(--ao-hover)) 55%, var(--ba-surface, var(--ao-surface))); }
-:where(.authowl-root) .ao-profile-nav-item { width: 100%; min-height: var(--ao-control-height, 40px); padding: 9px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--ba-muted, var(--ao-muted)); cursor: pointer; font: inherit; font-weight: 500; text-align: start; }
-:where(.authowl-root) .ao-profile-nav-item:hover { color: var(--ba-fg, var(--ao-fg)); background: var(--ba-hover, var(--ao-hover)); }
-:where(.authowl-root) .ao-profile-nav-item[aria-current='page'] { color: var(--ba-fg, var(--ao-fg)); background: var(--ba-surface, var(--ao-surface)); box-shadow: 0 0 0 1px var(--ba-border, var(--ao-border)); }
-:where(.authowl-root) .ao-profile-content { min-width: 0; padding: 28px; }
-:where(.authowl-root) .ao-profile-section { max-width: 560px; }
-:where(.authowl-root) .ao-profile-section-header { margin-bottom: 22px; }
-:where(.authowl-root) .ao-profile-section-header .ao-title { font-size: 20px; }
-:where(.authowl-root) .ao-profile-section-header .ao-muted { margin-top: 6px; line-height: 1.55; }
-:where(.authowl-root) .ao-profile-section .ao-fields { max-width: 440px; gap: 16px; }
-:where(.authowl-root) .ao-profile-section .ao-label { gap: 7px; font-size: 13px; font-weight: 500; }
-:where(.authowl-root) .ao-profile-section .ao-input { min-height: var(--ao-control-height, 42px); box-sizing: border-box; width: 100%; }
+:where(.authowl-root) .ao-profile-layout { display: grid; grid-template-columns: 184px minmax(0, 1fr); }
+:where(.authowl-root) .ao-profile-nav { display: flex; flex-direction: column; gap: 4px; padding: 16px 12px; border-inline-end: 1px solid var(--ao-line); background: color-mix(in srgb, var(--ao-inset) 40%, var(--ao-surface)); }
+:where(.authowl-root) .ao-profile-nav-item { background: none; border: 0; cursor: pointer; display: flex; align-items: center; gap: 8px; box-sizing: border-box; height: 32px; padding: 0 10px; border-radius: 8px; color: var(--ao-fg-muted); font: inherit; font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; transition: background var(--ao-duration-fast) var(--ao-ease-standard), color var(--ao-duration-fast) var(--ao-ease-standard); }
+:where(.authowl-root) .ao-profile-nav-item:where(:hover) { color: var(--ba-fg, var(--ao-fg)); background: var(--ba-hover, var(--ao-hover)); }
+:where(.authowl-root) .ao-profile-nav-item:where([aria-current='page']) { color: var(--ba-fg, var(--ao-fg)); background: var(--ao-inset); }
+:where(.authowl-root) .ao-profile-content { min-width: 0; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+:where(.authowl-root) .ao-profile-section { min-width: 0; }
+:where(.authowl-root) .ao-profile-section-header { margin-bottom: 4px; }
+:where(.authowl-root .ao-profile-section-header) .ao-title { font-size: 20px; }
+:where(.authowl-root .ao-profile-section-header) .ao-muted { margin-top: 6px; line-height: 1.55; }
+:where(.authowl-root .ao-profile-section) .ao-fields { max-width: 440px; gap: 16px; }
+:where(.authowl-root .ao-profile-section) .ao-label { gap: 7px; font-size: 13px; font-weight: 500; }
+:where(.authowl-root .ao-profile-section) .ao-input { min-height: var(--ao-control-height, 42px); box-sizing: border-box; width: 100%; }
 :where(.authowl-root) .ao-profile-section input[type='email'], :where(.authowl-root) .ao-profile-section input[inputmode='url'] { direction: ltr; text-align: left; }
 
 /* Privacy center: consent controls, rights intake, request history, notices. */
@@ -181,8 +184,8 @@
 :where(.authowl-root) .ao-privacy-center-choice strong { color: var(--ba-fg, var(--ao-fg)); font-size: 13px; }
 :where(.authowl-root) .ao-privacy-center-choice small { color: var(--ba-muted, var(--ao-muted)); font-size: 11px; line-height: 1.5; }
 :where(.authowl-root) .ao-privacy-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; min-width: 70px; border: 0; padding: 0; background: none; color: var(--ba-muted, var(--ao-muted)); cursor: pointer; }
-:where(.authowl-root) .ao-privacy-toggle > span { position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--ba-border, var(--ao-border)); transition: background-color 150ms ease; }
-:where(.authowl-root) .ao-privacy-toggle > span::after { content: ''; position: absolute; inset-block-start: 3px; inset-inline-start: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--ba-surface, var(--ao-surface)); box-shadow: 0 1px 3px var(--ao-shadow-toggle-ink); transition: transform 150ms ease; }
+:where(.authowl-root) .ao-privacy-toggle > span { position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--ba-border, var(--ao-border)); transition: background-color var(--ao-duration-fast) ease; }
+:where(.authowl-root) .ao-privacy-toggle > span::after { content: ''; position: absolute; inset-block-start: 3px; inset-inline-start: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--ba-surface, var(--ao-surface)); box-shadow: 0 1px 3px var(--ao-shadow-toggle-ink); transition: transform var(--ao-duration-fast) ease; }
 :where(.authowl-root) .ao-privacy-toggle[aria-checked='true'] > span { background: var(--ba-accent-solid, var(--ao-accent-solid)); }
 :where(.authowl-root) .ao-privacy-toggle[aria-checked='true'] > span::after { transform: translateX(14px); }
 :where(.authowl-root)[dir='rtl'] .ao-privacy-toggle[aria-checked='true'] > span::after { transform: translateX(-14px); }
@@ -207,19 +210,11 @@
   :where(.authowl-root) .ao-privacy-center-choice { align-items: flex-start; }
 }
 :where(.authowl-root) .ao-profile-submit { align-self: flex-start; min-width: 132px; }
-:where(.authowl-root) .ao-profile-list + .ao-profile-submit { margin-top: 20px; }
+:where(.authowl-root .ao-profile-list) + .ao-profile-submit { margin-top: 20px; }
 :where(.authowl-root) .ao-profile-current { display: flex; flex-direction: column; gap: 5px; margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 8px; }
 :where(.authowl-root) .ao-profile-current span { color: var(--ba-muted, var(--ao-muted)); font-size: 12px; }
-:where(.authowl-root) .ao-profile-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 9px; overflow: hidden; }
-:where(.authowl-root) .ao-profile-list-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 12px 14px; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
-:where(.authowl-root) .ao-profile-list-item:last-child { border-bottom: 0; }
-:where(.authowl-root) .ao-profile-list-item > span { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-:where(.authowl-root) .ao-profile-list-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-:where(.authowl-root) .ao-profile-list-item small { display: flex; flex-wrap: wrap; color: var(--ba-muted, var(--ao-muted)); font-size: 11px; }
-:where(.authowl-root) .ao-profile-list-item small em { color: var(--ba-success, var(--ao-success)); font-style: normal; font-weight: 600; }
+:where(.authowl-root) .ao-profile-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 :where(.authowl-root) .ao-profile-list-skeleton { display: flex; flex-direction: column; gap: 8px; }
-:where(.authowl-root) .ao-profile-provider-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
-:where(.authowl-root) .ao-profile-provider-actions .ao-profile-subtitle { width: 100%; margin: 0 0 2px; font-weight: 600; }
 :where(.authowl-root) :is(.ao-inline-error, .ao-profile-inline-error) { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 :where(.authowl-root) .ao-profile-status { display: flex; flex-direction: column; gap: 5px; margin-bottom: 20px; padding: 14px 16px; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 8px; background: var(--ba-hover, var(--ao-hover)); }
 :where(.authowl-root) .ao-profile-status span { color: var(--ba-muted, var(--ao-muted)); font-size: 12px; }
@@ -228,7 +223,6 @@
 :where(.authowl-root) .ao-profile-recovery-card { display: flex; flex-direction: column; gap: 7px; margin-bottom: 24px; padding: 14px 16px; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 8px; }
 :where(.authowl-root) .ao-profile-recovery-card p { margin: 0; color: var(--ba-muted, var(--ao-muted)); line-height: 1.5; }
 :where(.authowl-root) .ao-profile-recovery-card bdi { direction: ltr; text-align: left; font-weight: 600; }
-:where(.authowl-root) .ao-profile-danger-zone { padding: 18px; border: 1px solid color-mix(in srgb, var(--ao-danger-solid) 45%, var(--ba-border, var(--ao-border))); border-radius: 10px; }
 :where(.authowl-root) .ao-profile-delete-warning { margin: 0; color: var(--ba-fg, var(--ao-fg)); line-height: 1.55; }
 /* Fixed-palette destructive action - override the brand-derived hairline the
    base .ao-button now carries with a matching red-toned one. */
@@ -240,7 +234,7 @@
 :where(.authowl-root) .ao-profile-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; position: sticky; top: 0; z-index: 2; background: var(--ba-surface, var(--ao-surface)); }
 :where(.authowl-root) .ao-profile-close { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: 50%; background: var(--ba-surface, var(--ao-surface)); color: var(--ba-fg, var(--ao-fg)); cursor: pointer; }
 :where(.authowl-root) .ao-profile-close svg { width: 16px; height: 16px; display: block; }
-:where(.authowl-root) .ao-profile-close:hover { background: var(--ba-hover, var(--ao-hover)); }
+:where(.authowl-root) .ao-profile-close:where(:hover) { background: var(--ba-hover, var(--ao-hover)); }
 :where(.authowl-root) .ao-profile-modal-footer { display: flex; justify-content: center; padding: 14px 28px; border-top: 1px solid var(--ba-divider, var(--ao-divider)); }
 :where(.authowl-root) .ao-menu-badge { display: flex; justify-content: center; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--ba-divider, var(--ao-divider)); }
 :where(.authowl-root) .ao-menu-badge .ao-badge { margin-top: 4px; }
@@ -250,7 +244,7 @@
    than duplicating the plan check at three call sites: React emits a genuinely empty
    element when the child returns null, so this tracks the badge's own visibility
    automatically and still honours its `force` prop. */
-:where(.authowl-root) .ao-profile-modal-footer:empty, :where(.authowl-root) .ao-menu-badge:empty { display: none; }
+:where(.authowl-root) .ao-profile-modal-footer:where(:empty), :where(.authowl-root) .ao-menu-badge:empty { display: none; }
 
 /* Organization lifecycle */
 :where(.authowl-root) .ao-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
@@ -322,15 +316,6 @@
 :where(.authowl-root) .ao-organization-delete { border-color: color-mix(in srgb, var(--ao-danger-solid) 45%, var(--ba-border, var(--ao-border))); }
 
 @media (max-width: 680px) {
-  :where(.authowl-root) .ao-profile-overlay { align-items: end; padding: 0; }
-  :where(.authowl-root) .ao-profile-modal { width: 100%; max-height: 94dvh; border-radius: 16px 16px 0 0; border-bottom: 0; }
-  :where(.authowl-root) :is(.ao-profile-heading, .ao-profile-modal-header) { padding: 20px; }
-  :where(.authowl-root) .ao-profile-layout { display: block; }
-  :where(.authowl-root) .ao-profile-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px 14px; border-inline-end: 0; border-bottom: 1px solid var(--ba-divider, var(--ao-divider)); }
-  :where(.authowl-root) .ao-profile-nav-item { width: 100%; min-width: 0; }
-  :where(.authowl-root) .ao-profile-content { padding: 22px 20px 28px; }
-  :where(.authowl-root) .ao-profile-list-item { align-items: flex-start; }
-  :where(.authowl-root) .ao-profile-list-item .ao-link-button { padding-block: 5px; }
   :where(.authowl-root) .ao-organization-overlay { align-items: end; padding: 0; }
   :where(.authowl-root) .ao-organization-modal { width: 100%; max-height: 94dvh; border-radius: 16px 16px 0 0; border-bottom: 0; }
   :where(.authowl-root) .ao-organization-modal-header { padding: 16px 18px; }
@@ -356,8 +341,12 @@
 .authowl-root[dir='rtl'] .ao-form, .authowl-root[dir='rtl'] .ao-menu, .authowl-root[dir='rtl'] .ao-input, .authowl-root[dir='rtl'] .ao-button, :where(.authowl-root[dir='rtl']) .ao-social-button, .authowl-root[dir='rtl'] .ao-link-button, .authowl-root[dir='rtl'] .ao-organization-switcher-trigger, .authowl-root[dir='rtl'] .ao-organization-menu-item {
   font-family: var(--ao-font-family, 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif);
 }
-.authowl-root[dir='rtl'] .ao-profile, .authowl-root[dir='rtl'] .ao-profile button, .authowl-root[dir='rtl'] .ao-profile input {
+:where(.authowl-root[dir='rtl']) .ao-profile, :where(.authowl-root)[dir='rtl'] .ao-profile button, :where(.authowl-root)[dir='rtl'] .ao-profile input {
   font-family: var(--ao-font-family, 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif);
+}
+
+@media (max-width: 640px) {
+  :where(.authowl-root .ao-organization-profile-layout) .ao-profile-nav-item { width: 100%; min-width: 0; height: auto; min-height: 32px; white-space: normal; overflow-wrap: anywhere; }
 }
 
 :where(.authowl-root) .ao-organization-invite-results { margin-block: 16px; }
@@ -432,7 +421,7 @@
 :where(.authowl-root .ao-label-row) .ao-link-button { font-size: 12px; }
 :where(.authowl-root) .ao-method-help { margin: 0; font-size: 12px; line-height: 16px; color: var(--ao-muted); }
 :where(.authowl-root) .ao-passkey-info { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 10px; background: var(--ao-inset); color: var(--ao-fg); font-size: 13px; }
-:where(.authowl-root .ao-passkey-info) strong { font-weight: 500; }
+:where(.authowl-root) .ao-passkey-info strong { font-weight: 500; }
 
 /* A single mobile-autofill input covers the six decorative cells. */
 :where(.authowl-root) .ao-code-input { display: block; position: relative; direction: ltr; width: 100%; }
@@ -460,7 +449,7 @@
 :where(.authowl-root) .ao-factor-header { display: flex; flex-direction: column; gap: 2px; }
 :where(.authowl-root .ao-factor-header) .ao-title { margin: 0; font-size: 18px; line-height: 24px; letter-spacing: -.01em; }
 :where(.authowl-root) .ao-factor-subtitle { margin: 0; font-size: 13px; line-height: 18px; color: var(--ao-fg-muted); }
-:where(.authowl-root .ao-factor-subtitle) strong { color: var(--ao-fg); font-weight: 500; }
+:where(.authowl-root) .ao-factor-subtitle strong { color: var(--ao-fg); font-weight: 500; }
 :where(.authowl-root) .ao-factor-options { display: flex; flex-direction: column; gap: 8px; border-block-start: 1px solid var(--ao-line); padding-block-start: 16px; color: var(--ao-fg-faint); font-size: 12px; }
 :where(.authowl-root) .ao-factor-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 :where(.authowl-root) .ao-factor-chip { height: 30px; padding: 0 12px; border: 1px solid var(--ao-line); border-radius: 999px; background: var(--ao-surface); color: var(--ao-fg-muted); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
@@ -470,3 +459,48 @@
 :where(.authowl-root) .ao-factor-trust { font-size: 12px; color: var(--ao-fg-muted); }
 @keyframes ao-pop { 0% { transform: scale(.92); opacity: .4; } 60% { transform: scale(1.04); } 100% { transform: none; opacity: 1; } }
 @keyframes ao-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+/* Account summary rows and navigation respond to their own surface width. */
+:where(.authowl-root) .ao-profile-identity { display: flex; align-items: center; gap: 10px; padding: 4px 6px 14px; }
+:where(.authowl-root) .ao-profile-avatar { width: 32px; height: 32px; flex: none; border-radius: 50%; object-fit: cover; display: flex; align-items: center; justify-content: center; background: var(--ao-brand); color: var(--ao-on-brand); font-size: 13px; font-weight: 600; }
+:where(.authowl-root) .ao-profile-identity-copy { display: flex; flex-direction: column; min-width: 0; font-size: 13px; }
+:where(.authowl-root) .ao-profile-identity-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:where(.authowl-root) .ao-profile-identity-copy small { color: var(--ao-fg-faint); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:where(.authowl-root) .ao-profile-group-heading { display: flex; flex-direction: column; gap: 2px; }
+:where(.authowl-root) .ao-profile-group-title { margin: 0; font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
+:where(.authowl-root) .ao-profile-group-subtitle { margin: 0; font-size: 13px; color: var(--ao-fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:where(.authowl-root) .ao-profile-section-title { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--ao-fg-faint); text-transform: uppercase; letter-spacing: 0.04em; scroll-margin-block: 100px; }
+/* A group's rows are contiguous, as in the design; a list section (its own uppercase heading) starts a new block. */
+:where(.authowl-root) .ao-profile-sections { display: flex; flex-direction: column; }
+:where(.authowl-root .ao-profile-sections) > .ao-profile-section-list:where(:not(:first-child)) { margin-block-start: 20px; }
+:where(.authowl-root) .ao-profile-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--ao-line); }
+:where(.authowl-root) .ao-profile-icon { width: 32px; height: 32px; flex: none; border-radius: 8px; background: var(--ao-inset); color: var(--ao-fg-muted); display: flex; align-items: center; justify-content: center; }
+:where(.authowl-root) .ao-profile-icon-svg { width: 15px; height: 15px; }
+:where(.authowl-root) .ao-profile-row-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; overflow-wrap: anywhere; }
+:where(.authowl-root) .ao-profile-row-title { margin: 0; scroll-margin-block: 100px; font-size: 13px; font-weight: 500; }
+:where(.authowl-root) .ao-profile-row-meta { display: block; font-size: 12px; color: var(--ao-fg-muted); white-space: normal; line-height: 1.5; }
+:where(.authowl-root) .ao-profile-row-button { box-sizing: border-box; flex: none; height: 30px; padding: 0 12px; border: 1px solid var(--ao-line-strong); border-radius: 8px; background: var(--ao-surface); font: inherit; font-size: 12px; font-weight: 500; color: var(--ao-fg); cursor: pointer; white-space: nowrap; transition: background var(--ao-duration-fast) var(--ao-ease-standard); }
+:where(.authowl-root) .ao-profile-row-button:where(:hover) { background: var(--ao-inset); }
+:where(.authowl-root) :is(.ao-profile-row-button, .ao-profile-nav-item):where(:focus-visible) { outline: 2px solid var(--ao-brand-text); outline-offset: 2px; }
+/* Section headings take focus only for deep links and announcements; they are not interactive, so no ring. */
+:where(.authowl-root) :is(.ao-profile-section-title, .ao-profile-row-title):where([tabindex="-1"]:focus) { outline: none; }
+:where(.authowl-root) .ao-profile-row-button:where(:disabled) { opacity: 0.5; cursor: default; }
+:where(.authowl-root) .ao-profile-row-body { padding-block: 12px; }
+:where(.authowl-root) .ao-profile-sheet-handle { display: none; }
+@container ao-profile (max-width: 640px) {
+  :where(.authowl-root) .ao-profile-layout { display: flex; flex-direction: column; }
+  :where(.authowl-root) .ao-profile-identity { display: none; }
+  :where(.authowl-root) .ao-profile-nav { flex-direction: row; overflow-x: auto; padding: 10px 14px; border-inline-end: 0; border-bottom: 1px solid var(--ao-line); }
+  :where(.authowl-root) .ao-profile-nav-item { flex: none; }
+  :where(.authowl-root) .ao-profile-content { padding: 24px 20px; }
+}
+@media (max-width: 480px) {
+  :where(.authowl-root) .ao-profile-overlay { align-items: end; padding: 0; }
+  :where(.authowl-root) .ao-profile-modal { overscroll-behavior: contain; border-bottom: 0; width: 100%; box-sizing: border-box; max-height: 92dvh; overflow-y: auto; border-start-start-radius: var(--ao-radius-xl); border-start-end-radius: var(--ao-radius-xl); border-end-start-radius: 0; border-end-end-radius: 0; padding-block-end: env(safe-area-inset-bottom, 0px); padding-inline-start: env(safe-area-inset-left, 0px); padding-inline-end: env(safe-area-inset-right, 0px); }
+  :where(.authowl-root) .ao-profile-modal-header { padding: 20px; }
+  :where(.authowl-root) .ao-profile-sheet-handle { display: block; width: 36px; height: 4px; margin: 12px auto 0; border-radius: var(--ao-radius-xl); background: var(--ao-line-strong); }
+}
+
+:where(.authowl-root) .ao-profile-row-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+:where(.authowl-root) .ao-profile-pill { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 999px; background: var(--ao-inset); color: var(--ao-fg-muted); font-size: 11px; font-weight: 500; white-space: nowrap; }
+:where(.authowl-root) .ao-profile-pill-success { background: var(--ao-success-soft); color: var(--ao-success); }
+:where(.authowl-root) .ao-profile-icon-success { background: var(--ao-success-soft); color: var(--ao-success); }

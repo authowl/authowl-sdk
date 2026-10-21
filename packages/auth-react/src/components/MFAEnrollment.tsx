@@ -11,6 +11,7 @@ import { QrCode } from './QrCode';
 import { CodeInput, CodeSuccess } from './CodeInput';
 import { useAuthCardPending } from './AuthCardLock';
 import { FormError } from './FormError';
+import { useBackupCodesCloseGuard } from './BackupCodesCloseGuard';
 
 export type MFAEnrollmentProps = {
   /** Called once the factor is verified and active. */
@@ -63,6 +64,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
     currentUserId: userId,
   });
   const activeSetup = stale ? null : setup;
+  useBackupCodesCloseGuard(activeSetup !== null && !done);
   React.useEffect(() => {
     if (stale) {
       setSetup(null);

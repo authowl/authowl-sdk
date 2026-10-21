@@ -46,6 +46,7 @@ export const ar: Record<keyof typeof en, string> = {
   'common.working': 'جارٍ التنفيذ…',
   'common.loading': 'جارٍ التحميل…',
   'common.continue': 'متابعة',
+  'common.close': 'إغلاق',
   'common.cancel': 'إلغاء',
   'common.error.tryAgain': 'تعذر إكمال الطلب. حاول مرة أخرى.',
   'common.error.passwordTooShort': 'يجب ألا تقل كلمة المرور عن {min} أحرف.',
@@ -301,23 +302,37 @@ export const ar: Record<keyof typeof en, string> = {
   'consent.acceptSubmit': 'أوافق',
   'consent.error.acceptFailed': 'تعذر تسجيل موافقتك. يرجى المحاولة مرة أخرى.',
 
+  'userProfile.group.security': 'الأمان',
+  'userProfile.group.profile.description': 'بياناتك الشخصية وعنوان بريدك الإلكتروني.',
+  'userProfile.group.security.description': 'طرق تسجيل الدخول وحماية حسابك.',
+  'userProfile.group.connections.description': 'الحسابات التي تستخدمها لتسجيل الدخول.',
+  'userProfile.group.privacy.description': 'بياناتك وحقوق الخصوصية.',
+  'userProfile.edit': 'تعديل',
+  'userProfile.manage': 'إدارة',
   'userProfile.title': 'إدارة الحساب',
   'userProfile.description': 'حدّث ملفك الشخصي وإعدادات أمان الحساب.',
   'userProfile.close': 'إغلاق إعدادات الحساب',
   'userProfile.signedOut': 'سجّل الدخول لإدارة حسابك.',
   'userProfile.save': 'حفظ التغييرات',
   'userProfile.retry': 'حاول مرة أخرى',
-  // Deprecated: superseded by `common.cancel`.
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.cancel': 'إلغاء',
   'userProfile.nav.aria': 'إعدادات الحساب',
   'userProfile.nav.profile': 'الملف الشخصي',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.email': 'البريد الإلكتروني',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.password': 'كلمة المرور',
   'userProfile.nav.social': 'الحسابات المرتبطة',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.sessions': 'الجلسات',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.passkeys': 'مفاتيح المرور',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.mfa': 'المصادقة الثنائية',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.recovery': 'الاسترداد',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.nav.danger': 'حذف الحساب',
   'userProfile.profile.title': 'الملف الشخصي',
   'userProfile.profile.description': 'اختر طريقة ظهور اسمك وصورتك.',
@@ -340,6 +355,7 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.password.saved': 'تم تغيير كلمة المرور.',
   'userProfile.password.error': 'تعذر تغيير كلمة المرور.',
   'userProfile.social.title': 'الحسابات المرتبطة',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.social.description': 'أدر الحسابات الاجتماعية التي يمكنك استخدامها لتسجيل الدخول.',
   'userProfile.social.connected': 'مرتبط',
   'userProfile.social.disconnect': 'إلغاء الربط',
@@ -351,9 +367,10 @@ export const ar: Record<keyof typeof en, string> = {
   'userProfile.social.loadError': 'تعذر تحميل الحسابات المرتبطة.',
   'userProfile.social.linkError': 'تعذر ربط هذا الحساب.',
   'userProfile.social.unlinkError': 'تعذر إلغاء ربط هذا الحساب.',
-  'userProfile.sessions.title': 'الجلسات النشطة',
+  'userProfile.sessions.title': 'الأجهزة التي سجلت الدخول منها',
+  // Unused; kept for override compatibility until the 1.0 major.
   'userProfile.sessions.description': 'راجع الأجهزة المسجّل دخولها إلى حسابك.',
-  'userProfile.sessions.current': 'الجهاز الحالي · ',
+  'userProfile.sessions.current': 'هذا الجهاز',
   'userProfile.sessions.unknownDevice': 'جهاز غير معروف',
   'userProfile.sessions.revoke': 'إلغاء الجلسة',
   'userProfile.sessions.revokeOthers': 'إلغاء كل الجلسات الأخرى',

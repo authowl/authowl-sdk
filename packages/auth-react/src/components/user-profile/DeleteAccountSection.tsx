@@ -1,4 +1,5 @@
 'use client';
+import { ProfileSectionDisclosure } from './ProfileSectionShell';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useSession, useUser } from '../../hooks';
@@ -8,6 +9,14 @@ import { Busy } from '../Spinner';
 import { FormError } from '../FormError';
 
 export function DeleteAccountSection({ onDeleted }: { onDeleted?: () => void }) {
+  return (
+    <ProfileSectionDisclosure section="danger">
+      <DeleteAccountSectionContent onDeleted={onDeleted} />
+    </ProfileSectionDisclosure>
+  );
+}
+
+function DeleteAccountSectionContent({ onDeleted }: { onDeleted?: () => void }) {
   const slot = useSlot();
   const t = useT();
   const account = useAccount();
@@ -15,7 +24,6 @@ export function DeleteAccountSection({ onDeleted }: { onDeleted?: () => void }) 
   const { user } = useUser();
   const { pending, error, run } = useSubmitAction();
   const [confirmation, setConfirmation] = React.useState('');
-  const titleId = React.useId();
   const identifier = user?.email ?? user?.phoneNumber ?? user?.id ?? '';
   const confirmed = identifier.length > 0
     && confirmation.trim().toLowerCase() === identifier.toLowerCase();
@@ -36,11 +44,7 @@ export function DeleteAccountSection({ onDeleted }: { onDeleted?: () => void }) 
   };
 
   return (
-    <section className={slot('ba-profile-section ba-profile-danger-zone')} aria-labelledby={titleId}>
-      <header className={slot('ba-profile-section-header')}>
-        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.delete.title')}</h2>
-        <p className={slot('ba-muted')}>{t('userProfile.delete.description')}</p>
-      </header>
+    <>
       <form method="post" className={slot('ba-fields')} onSubmit={submit}>
         <p className={slot('ba-profile-delete-warning')}>
           {t('userProfile.delete.warning', { identifier })}
@@ -68,6 +72,6 @@ export function DeleteAccountSection({ onDeleted }: { onDeleted?: () => void }) 
           <Busy busy={pending} label={t('common.working')}>{t('userProfile.delete.submit')}</Busy>
         </button>
       </form>
-    </section>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
+import { ProfileRow, ProfileSectionShell } from './ProfileSectionShell';
 import { useSlot } from '../../elements';
-import * as React from 'react';
 import { useAccount, usePublicConfig } from '../../hooks';
 import { useT } from '../../i18n';
 import { useSubmitAction } from '../use-submit-action';
@@ -17,7 +17,6 @@ export function SocialSection() {
   const account = useAccount();
   const { config } = usePublicConfig();
   const mutation = useSubmitAction();
-  const titleId = React.useId();
   const resource = useAccountResource(
     () => account.listSocialAccounts(),
     t('userProfile.social.loadError'),
@@ -54,11 +53,7 @@ export function SocialSection() {
   };
 
   return (
-    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
-      <header className={slot('ba-profile-section-header')}>
-        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.social.title')}</h2>
-        <p className={slot('ba-muted')}>{t('userProfile.social.description')}</p>
-      </header>
+    <ProfileSectionShell section="social" title={t('userProfile.social.title')} list>
       {resource.data === null ? (
         resource.loading
           ? <div className={slot('ba-profile-list-skeleton')} aria-busy="true"><div className={slot('ba-skeleton')} /></div>
@@ -66,41 +61,29 @@ export function SocialSection() {
       ) : (
         <ul className={slot('ba-profile-list')}>
           {linked.map((item) => (
-            <li className={slot('ba-profile-list-item')} key={item.id}>
-              <span>
-                <strong>{providerLabel(item.providerId)}</strong>
-                <small>
-                  {item.canUnlink
-                    ? t('userProfile.social.connected')
-                    : t('userProfile.social.lastMethod')}
-                </small>
-              </span>
-              <button
-                className={slot('ba-link-button ba-danger')}
-                type="button"
-                disabled={mutation.pending || !item.canUnlink}
-                onClick={() => unlink(
-                  item.providerId,
-                  item.accountId,
-                  providerLabel(item.providerId),
-                )}
-              >
-                {t('userProfile.social.disconnect')}
-              </button>
+            <li key={item.id}>
+              <ProfileRow section="social" title={providerLabel(item.providerId)}
+                meta={t(item.canUnlink ? 'userProfile.social.connected' : 'userProfile.social.lastMethod')}
+                action={<button className={slot('ba-profile-row-button')} type="button" disabled={mutation.pending || !item.canUnlink}
+                  onClick={() => unlink(item.providerId, item.accountId, providerLabel(item.providerId))}>
+                  {t('userProfile.social.disconnect')}
+                </button>} />
             </li>
           ))}
           {linked.length === 0 && <li className={slot('ba-muted')}>{t('userProfile.social.empty')}</li>}
         </ul>
       )}
       {available.length > 0 && (
-        <div className={slot('ba-profile-provider-actions')}>
-          <p className={slot('ba-profile-subtitle')}>{t('userProfile.social.add')}</p>
+        <ul className={slot('ba-profile-list')}>
           {available.map((provider) => (
-            <button key={provider} type="button" className={slot('ba-button ba-button-secondary')} disabled={mutation.pending} onClick={() => link(provider)}>
-              {t('userProfile.social.connectProvider', { provider: providerLabel(provider) })}
-            </button>
+            <li key={provider}>
+              <ProfileRow section="social" title={providerLabel(provider)} meta={t('userProfile.social.add')}
+                action={<button type="button" className={slot('ba-profile-row-button')} disabled={mutation.pending} onClick={() => link(provider)}>
+                  {t('userProfile.social.connectProvider', { provider: providerLabel(provider) })}
+                </button>} />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
       {resource.error && (
         <div className={slot('ba-profile-inline-error')}>
@@ -109,6 +92,6 @@ export function SocialSection() {
         </div>
       )}
       <FormError>{mutation.error}</FormError>
-    </section>
+    </ProfileSectionShell>
   );
 }

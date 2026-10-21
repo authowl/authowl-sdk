@@ -50,7 +50,7 @@ for project in \
   storybook-en-light-mobile; do
   printf 'storybook-browser-check: %s\n' "$project"
   while IFS= read -r story; do
-    if [[ "$project" == *-mobile && "$story" != stories/SignIn.stories.tsx && "$story" != stories/SignUp.stories.tsx && "$story" != stories/MFAChallenge.stories.tsx ]]; then
+    if [[ "$project" == *-mobile && "$story" != stories/SignIn.stories.tsx && "$story" != stories/SignUp.stories.tsx && "$story" != stories/UserProfile.stories.tsx && "$story" != stories/MFAChallenge.stories.tsx ]]; then
       continue
     fi
     run_story "$project" "$story" "$@"

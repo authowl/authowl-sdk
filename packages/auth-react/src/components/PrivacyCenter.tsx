@@ -10,6 +10,8 @@ const PrivacyCenterContent = React.lazy(async () => {
 });
 
 export type PrivacyCenterProps = {
+  /** Optional heading; pass null when the containing row owns the title. */
+  title?: string | null;
   /** Optional class name on the privacy-center section. */
   className?: string;
 };

@@ -133,19 +133,27 @@ export function useStepUpAction(): UseStepUpActionResult {
     [run, park],
   );
 
+  // A verification callback belongs to the prompt generation that rendered it.
+  const resumeEpoch = epoch.current;
   const resume = React.useCallback(() => {
+    if (resumeEpoch !== epoch.current) return;
     // Consumed BEFORE the replay, synchronously, so a second call in the same
     // tick finds nothing. Never a blind re-send.
     const send = attempt.current;
     park(null);
     void send?.();
-  }, [park]);
+  }, [park, resumeEpoch]);
 
   const cancel = React.useCallback(() => {
     epoch.current += 1;
     park(null);
     setError(null);
   }, [park, setError]);
+
+  React.useEffect(() => () => {
+    epoch.current += 1;
+    attempt.current = null;
+  }, []);
 
   return { pending, succeeded, error, setError, stepUpRequired, run: guardedRun, resume, cancel };
 }
