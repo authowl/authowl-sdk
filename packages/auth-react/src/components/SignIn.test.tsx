@@ -95,6 +95,8 @@ vi.mock('../hooks', () => ({
   useMFA: () => ({ verifyTotp: vi.fn(), verifyBackupCode: vi.fn(), sendOtp: mocks.sendMfaOtp, verifyOtp: vi.fn() }),
 }));
 
+vi.mock('../provider', () => ({ useAuthOwlContext: () => ({ mobileSheet: false }) }));
+
 vi.mock('../i18n', () => ({
   Bidi: ({ children }: { children: React.ReactNode }) => <bdi>{children}</bdi>,
   richMessage: (message: string, slots: Record<string, React.ReactNode>) => <>{message}{slots.email}</>,

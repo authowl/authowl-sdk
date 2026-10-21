@@ -26,6 +26,17 @@ export const Default: Story = {
   },
 };
 
+export const PhoneSheet: Story = {
+  parameters: { authowl: { mobileSheet: true } },
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    const form = await within(canvasElement).findByTestId('signin-form');
+    await expect(form.closest('.authowl-root')).toHaveAttribute('data-authowl-layout', 'sheet');
+    await expect(form.querySelector('.ao-auth-sheet-handle')).toHaveAttribute('aria-hidden', 'true');
+    await expect(getComputedStyle(form).position).toBe(import.meta.env.AUTHOWL_STORY_VIEWPORT ? 'fixed' : 'static');
+  },
+};
+
 export const ConfigurationUnavailable: Story = {
   parameters: { authowl: { signedIn: false, configUnavailable: true } },
   play: async ({ canvasElement }) => {

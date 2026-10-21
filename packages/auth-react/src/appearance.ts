@@ -15,6 +15,17 @@ export type Appearance = {
   brand?: 'authowl' | 'billow' | 'hitsend';
   variables?: AppearanceVariables;
   elements?: Elements;
+  /** Host-controlled layout options. Omitted options preserve the inline layout. */
+  layout?: {
+    /**
+     * Dock SignIn, SignUp and their card steps to the viewport bottom at widths
+     * of 480px or less, with a decorative handle, safe-area padding and internal
+     * scrolling. Defaults to false. Has no effect above 480px or on UserProfileModal.
+     * Embedded invitation forms (AcceptApplicationInvitation,
+     * AcceptOrganizationInvitation) always stay inline.
+     */
+    mobileSheet?: boolean;
+  };
   /** @deprecated Use variables.colorPrimary. Removed in 2.0. */
   primaryColor?: string;
 };

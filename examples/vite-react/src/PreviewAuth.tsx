@@ -249,7 +249,7 @@ function createPreviewFetch({
   };
 }
 
-export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, signInMethod, mfaEnrollment = false, wrongPassword = false, invalidCode = false, codePending = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; signInMethod?: PreviewSignInMethod; mfaEnrollment?: boolean; wrongPassword?: boolean; invalidCode?: boolean; codePending?: boolean; children: React.ReactNode }) {
+export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, signInMethod, mfaEnrollment = false, wrongPassword = false, invalidCode = false, codePending = false, mobileSheet = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; signInMethod?: PreviewSignInMethod; mfaEnrollment?: boolean; wrongPassword?: boolean; invalidCode?: boolean; codePending?: boolean; mobileSheet?: boolean; children: React.ReactNode }) {
   const previewFetch = React.useMemo(
     () => createPreviewFetch({
       signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled,
@@ -263,7 +263,7 @@ export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = f
       apiUrl="https://auth.preview.test"
       fetch={previewFetch}
       locale={locale}
-      appearance={{ theme: dark ? 'dark' : 'light', primaryColor }}
+      appearance={{ theme: dark ? 'dark' : 'light', primaryColor, layout: { mobileSheet } }}
     >
       {children}
     </AuthOwlProvider>

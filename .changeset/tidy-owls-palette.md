@@ -10,5 +10,7 @@ inherit. The default silently changes from light to inherit, following a host
 Keep dual ao-/ba- classes and legacy variable reads for migration, plus inline
 --ba-primary. Deprecate primaryColor in favour of variables.colorPrimary. Legacy
 compatibility is scheduled for removal in 2.0. Fix error text contrast using the
-danger token. Geometry defaults are unchanged. Tailwind hosts should import
+danger token. The 1.0 surface also changes auth-card geometry, code entry and
+grouped profile layouts; review the migration guide for host CSS updates.
+Tailwind hosts should import
 @authowl/react/styles.css in layer(components). See docs/react-appearance-migration.md.

@@ -65,6 +65,7 @@ const preview: Preview = {
           privacyEnabled={privacyEnabled}
           passkeyRelyingPartyId={passkeyRelyingPartyId}
           primaryColor={primaryColor}
+          mobileSheet={context.parameters.authowl?.mobileSheet === true}
           signInMethod={context.parameters.authowl?.signInMethod}
           wrongPassword={context.parameters.authowl?.wrongPassword === true}
           invalidCode={context.parameters.authowl?.invalidCode === true}

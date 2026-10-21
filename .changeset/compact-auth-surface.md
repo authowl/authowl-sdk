@@ -13,7 +13,7 @@ DOM and rendering contract changes for the migration guide:
 - A new `.ba-subtitle` renders under the title.
 - The exported `useLastUsedSignInMethod` returns null on the first render and resolves after mount.
 - The passkey tab uses a filled primary button.
-- At widths of 480px or less, controls grow to 48px and inputs use 16px text. Nothing changes the host page layout.
+- At widths of 480px or less, controls grow to 48px and inputs use 16px text. The host page layout is unchanged unless appearance.layout.mobileSheet is enabled.
 
 - Inside a card, `.ba-spinner` renders as three dots built from `::before` and `::after`. Host CSS targeting `.ba-spinner` affects these dots. Under reduced motion the spinner is static rather than slowed.
 - The default tab follows the last-used method after mount.

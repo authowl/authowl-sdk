@@ -102,6 +102,8 @@ vi.mock('../hooks', () => ({
   }),
 }));
 
+vi.mock('../provider', () => ({ useAuthOwlContext: () => ({ mobileSheet: false }) }));
+
 vi.mock('../i18n', () => ({
   Bidi: ({ children }: { children: React.ReactNode }) => <bdi>{children}</bdi>,
   richMessage: (message: string) => message,
