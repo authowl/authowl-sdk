@@ -1,4 +1,5 @@
 'use client';
+import { useStepFocus } from './use-step-focus';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { usePasswordReset } from '../hooks';
@@ -33,9 +34,11 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
   const [email, setEmail] = React.useState('');
   const [sent, setSent] = React.useState(false);
 
+  const { stepRef } = useStepFocus(sent ? 'sent' : 'request');
+
   if (sent) {
     return (
-      <div className={slot('ba-fields')} data-testid="forgot-sent">
+      <div key="forgot-sent" ref={stepRef} role="status" className={slot('ba-fields ba-step')} data-testid="forgot-sent">
         <p className={slot('ba-muted')}>
           {richMessage(t('forgotPassword.sent'), { email: <Bidi>{email}</Bidi> })}
         </p>
@@ -50,6 +53,7 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
 
   return (
     <form
+      key="forgot-request"
       method="post"
       className={slot('ba-fields')}
       data-testid="forgot-form"

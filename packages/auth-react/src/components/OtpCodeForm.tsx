@@ -62,7 +62,7 @@ export function OtpCodeForm({
       <button className={slot('ba-button')} type="submit" disabled={pending} aria-busy={pending || undefined}>
         <Busy busy={pending} label={t('common.verifying')}>{t('emailOtp.verifySubmit')}</Busy>
       </button>
-      <button type="button" className={slot('ba-link-button')} onClick={onChangeEmail}>
+      <button type="button" className={slot('ba-link-button')} disabled={pending} onClick={onChangeEmail}>
         {t('emailOtp.changeEmail')}
       </button>
     </form>

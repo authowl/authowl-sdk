@@ -254,7 +254,11 @@ describe('SignUp passwordless passkey flow', () => {
       }),
     );
 
-    expect(await screen.findByTestId('signup-passkey-step')).toBeTruthy();
+    const offer = await screen.findByTestId('signup-passkey-step');
+    const heading = screen.getByRole('heading', { name: 'signUp.passkeyTitle' });
+    expect(document.activeElement).toBe(heading);
+    expect(heading.tabIndex).toBe(-1);
+    expect(heading.closest('[role=status]')).toBe(offer);
     fireEvent.click(screen.getByRole('button', { name: 'signUp.passkeySubmit' }));
     await waitFor(() => expect(mocks.addPasskey).toHaveBeenCalledTimes(1));
     expect(onSignedUp).toHaveBeenCalledTimes(1);

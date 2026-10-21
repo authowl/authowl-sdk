@@ -75,7 +75,8 @@ export const PasskeyOnly: Story = {
   ...methodStory('passkey'),
   play: async ({ canvasElement }) => {
     await expectStoryMatrix(canvasElement);
-    await within(canvasElement).findByTestId('passkey-button');
+    const form = await within(canvasElement).findByTestId('signin-form');
+    await expect(form.querySelector('button[type="submit"]')).toHaveClass('ba-button');
   },
 };
 export const PhoneOnly = methodStory('phone_otp');

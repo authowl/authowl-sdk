@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { uninstrumentedUserEvent as userEvent } from 'storybook/test';
 
 const mocks = vi.hoisted(() => ({
   pendingMfaEnrollment: false,
@@ -46,8 +47,12 @@ const mocks = vi.hoisted(() => ({
     }> => ({ data: { redirect: true, url: 'https://idp.test/auth' }, error: null }),
   ),
   signInSocial: vi.fn(async () => ({ data: { redirect: true }, error: null })),
+  signIn: vi.fn<() => Promise<{ data: { twoFactorRedirect?: boolean } | null; error: null }>>(async () => ({ data: {}, error: null })),
+  signInMagicLink: vi.fn(async () => ({ data: null, error: null })),
+  signInPasskey: vi.fn<() => Promise<{ data: object | null; error: { code: string } | null }>>(async () => ({ data: {}, error: null })),
   serverError: vi.fn((_error: unknown, fallback: string) => fallback),
   configError: false,
+  configLoading: false,
   retryPublicConfig: vi.fn(),
   // What the uncached confirmation read returns. `pendingMfaEnrollment: true`
   // is the genuine required-MFA hold; false is the stale-cookie case.
@@ -68,19 +73,21 @@ vi.mock('../hooks', () => ({
   useUser: () => ({ needsMfaEnrollment: mocks.needsMfaEnrollment }),
   usePublicConfig: () => ({
     config: mocks.config,
-    isLoading: false,
+    isLoading: mocks.configLoading,
     isError: mocks.configError,
     retry: mocks.retryPublicConfig,
   }),
   useSignIn: () => ({
     signInSocial: mocks.signInSocial,
-    signIn: vi.fn(),
+    signIn: mocks.signIn,
     signInUsername: mocks.signInUsername,
-    signInMagicLink: vi.fn(),
+    signInMagicLink: mocks.signInMagicLink,
+    signInPasskey: mocks.signInPasskey,
     sendEmailOtp: vi.fn(),
     signInEmailOtp: vi.fn(),
     signInSso: mocks.signInSso,
   }),
+  useMFA: () => ({ verifyTotp: vi.fn(), verifyBackupCode: vi.fn(), sendOtp: vi.fn(), verifyOtp: vi.fn() }),
 }));
 
 vi.mock('../i18n', () => ({
@@ -107,11 +114,13 @@ import { finishSignIn } from './finish-sign-in';
 describe('SignIn under required MFA', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(finishSignIn).mockImplementation(async () => undefined);
     mocks.client.handoff = undefined;
     mocks.pendingMfaEnrollment = false;
     mocks.needsMfaEnrollment = false;
     mocks.sessionListeners.clear();
     mocks.configError = false;
+    mocks.configLoading = false;
     mocks.needsMfaEnrollment = false;
     mocks.getSession.mockResolvedValue({
       data: { session: { pendingMfaEnrollment: true } },
@@ -382,21 +391,165 @@ describe('SignIn "Continue with SSO"', () => {
     expect(button.getAttribute('aria-busy')).toBe('true');
   });
 
-  it('spins only the pressed button, not the idle alternates', async () => {
-    // Switching to SSO dispatches the shared form through the active method.
-    Object.assign(mocks.config, { enabledMethods: ['password', 'sso'] });
+  it('locks method changes during a password request and marks only its submit busy', async () => {
+    Object.assign(mocks.config, { enabledMethods: ['password', 'magic_link', 'sso'], socialProviders: ['google'] });
+    let resolve!: (result: { data: object; error: null }) => void;
+    mocks.signIn.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
     const { container } = render(<SignIn />);
-
     fireEvent.change(screen.getByLabelText('common.emailLabel'), {
       target: { value: 'user@acme.test' },
     });
-    fireEvent.click(screen.getByRole('tab', { name: 'signIn.tab.sso' }));
-    fireEvent.click(screen.getByRole('button', { name: 'sso.continueWith' }));
+    fireEvent.change(screen.getByLabelText('common.passwordLabel', { selector: 'input' }), { target: { value: 'password-1' } });
+    const submit = screen.getByRole('button', { name: 'signIn.submit' });
+    fireEvent.click(submit);
+    const other = screen.getByRole('tab', { name: 'signIn.tab.emailLink' });
+    expect(other.getAttribute('aria-disabled')).toBe('true');
+    expect(other.hasAttribute('disabled')).toBe(false);
+    fireEvent.click(other);
+    fireEvent.keyDown(other, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { selected: true }).textContent).toBe('common.passwordLabel');
+    expect([...container.querySelectorAll('[aria-busy="true"]')]).toEqual([submit]);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'social.continueWith' }).disabled).toBe(true);
+    expect(screen.queryByText('sso.redirecting')).toBeNull();
+    resolve({ data: {}, error: null });
+    await waitFor(() => expect(finishSignIn).toHaveBeenCalledOnce());
+    await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(other.hasAttribute('aria-disabled')).toBe(false);
+  });
 
-    await waitFor(() => expect(mocks.signInSso).toHaveBeenCalled());
-    // Exactly one spinner (the SSO button); the password submit stays idle.
-    await waitFor(() => expect(container.querySelectorAll('.ba-spinner')).toHaveLength(1));
-    expect(screen.getByRole('tab', { name: 'common.passwordLabel' }).getAttribute('aria-busy')).toBeNull();
+  it('locks tabs and social during the primary passkey ceremony', async () => {
+    Object.assign(mocks.config, { enabledMethods: ['password', 'passkey', 'sso'], socialProviders: ['google'] });
+    let resolve!: (result: { data: object; error: null }) => void;
+    mocks.signInPasskey.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+    const { container } = render(<SignIn />);
+    fireEvent.click(screen.getByRole('tab', { name: 'signIn.tab.passkey' }));
+    const submit = screen.getByRole('button', { name: 'passkey.signInButton' });
+    expect(submit.classList.contains('ao-button')).toBe(true);
+    fireEvent.click(submit);
+    expect(mocks.signInPasskey).toHaveBeenCalledOnce();
+    const other = screen.getByRole('tab', { name: 'common.passwordLabel' });
+    fireEvent.click(other);
+    fireEvent.keyDown(other, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { selected: true }).textContent).toBe('signIn.tab.passkey');
+    expect(other.getAttribute('aria-disabled')).toBe('true');
+    expect([...container.querySelectorAll('[aria-busy="true"]')]).toEqual([submit]);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'social.continueWith' }).disabled).toBe(true);
+    expect(screen.queryByText('sso.redirecting')).toBeNull();
+    resolve({ data: {}, error: null });
+    await waitFor(() => expect(finishSignIn).toHaveBeenCalledOnce());
+    await waitFor(() => expect(submit.hasAttribute('aria-busy')).toBe(false));
+  });
+
+  it('allows implicit Enter submission from an invalid partial email only on passkey', async () => {
+    mocks.config.enabledMethods = ['password', 'passkey'];
+    render(<SignIn />);
+    const email = screen.getByLabelText<HTMLInputElement>('common.emailLabel');
+    expect(email.form!.noValidate).toBe(false);
+    fireEvent.click(screen.getByRole('tab', { name: 'signIn.tab.passkey' }));
+    fireEvent.change(email, { target: { value: 'partial@' } });
+    expect(email.checkValidity()).toBe(false);
+    expect(email.form!.noValidate).toBe(true);
+    email.focus();
+    await userEvent.keyboard('{Enter}');
+    await waitFor(() => expect(mocks.signInPasskey).toHaveBeenCalledOnce());
+  });
+
+  it('locks every alternative during social sign-in and unlocks after a failure', async () => {
+    mocks.config.socialProviders = ['google'];
+    mocks.config.authentication = {
+      email: { signUp: true, signIn: ['password', 'magic_link'] },
+      phone: { signUp: true, signIn: true },
+      password: { signUp: true, add: true },
+      passkey: { signIn: true, add: true },
+      username: { collectOnSignUp: true, signIn: true },
+    };
+    let reject!: (error: Error) => void;
+    mocks.signInSocial.mockReturnValueOnce(new Promise((_, fail) => { reject = fail; }));
+    const { container } = render(<SignIn resetPasswordUrl="/reset" />);
+    const social = screen.getByRole('button', { name: 'social.continueWith' });
+    fireEvent.click(social);
+    expect([...container.querySelectorAll('[aria-busy="true"]')]).toEqual([social]);
+    for (const name of ['signIn.submit', 'signIn.forgotLink', 'signIn.useUsername', 'phoneOtp.usePhone']) {
+      expect(screen.getByRole<HTMLButtonElement>('button', { name }).disabled).toBe(true);
+    }
+    const other = screen.getByRole('tab', { name: 'signIn.tab.passkey' });
+    fireEvent.click(other);
+    fireEvent.keyDown(other, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { selected: true }).textContent).toBe('common.passwordLabel');
+    reject(new Error('start failed'));
+    await screen.findByText('social.error.startFailed');
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'signIn.submit' }).disabled).toBe(false);
+    expect(other.hasAttribute('aria-disabled')).toBe(false);
+  });
+
+  it.each(['cancelled', 'failed'] as const)('handles a %s passkey ceremony without finishing sign-in', async (outcome) => {
+    mocks.config.enabledMethods = ['password', 'passkey'];
+    mocks.signInPasskey.mockResolvedValueOnce({ data: null, error: outcome === 'failed' ? { code: 'X' } : null });
+    render(<SignIn />);
+    fireEvent.click(screen.getByRole('tab', { name: 'signIn.tab.passkey' }));
+    fireEvent.click(screen.getByRole('button', { name: 'passkey.signInButton' }));
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'passkey.signInButton' }).disabled).toBe(false));
+    expect(finishSignIn).not.toHaveBeenCalled();
+    if (outcome === 'failed') expect(screen.getByRole('alert').textContent).toBe('passkey.error.signInFailed');
+    else expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('does not take focus when the form first appears after config loads', () => {
+    mocks.config.enabledMethods = ['password', 'magic_link'];
+    mocks.configLoading = true;
+    const outside = document.createElement('input');
+    document.body.append(outside);
+    outside.focus();
+    const view = render(<SignIn />);
+    expect(screen.getByTestId('signin-loading')).toBeTruthy();
+    mocks.configLoading = false;
+    view.rerender(<SignIn />);
+    expect(screen.getByTestId('signin-form')).toBeTruthy();
+    expect(document.activeElement).toBe(outside);
+    outside.remove();
+  });
+
+  it('focuses and announces magic-link confirmation, then restores its opener on Back', async () => {
+    mocks.config.enabledMethods = ['password', 'magic_link'];
+    render(<SignIn />);
+    expect(document.activeElement).toBe(document.body);
+    fireEvent.click(screen.getByRole('tab', { name: 'signIn.tab.emailLink' }));
+    fireEvent.change(screen.getByLabelText('common.emailLabel'), { target: { value: 'user@acme.test' } });
+    const submit = screen.getByRole('button', { name: 'magicLink.submit' });
+    submit.focus();
+    fireEvent.click(submit);
+    const confirmation = await screen.findByTestId('signin-magic-sent');
+    const heading = screen.getByRole('heading', { name: 'signIn.title' });
+    expect(document.activeElement).toBe(heading);
+    expect(heading.tabIndex).toBe(-1);
+    expect(heading.closest('[role=status]')).toBe(confirmation);
+    fireEvent.click(screen.getByRole('button', { name: /forgotPassword.backToSignIn/ }));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'magicLink.submit' }));
+  });
+
+  it('returns focus to the shared email after implicit email-link submission', async () => {
+    mocks.config.enabledMethods = ['magic_link'];
+    render(<SignIn />);
+    await userEvent.type(screen.getByLabelText('common.emailLabel'), 'user@acme.test{Enter}');
+    await screen.findByTestId('signin-magic-sent');
+    fireEvent.click(screen.getByRole('button', { name: /forgotPassword.backToSignIn/ }));
+    expect(document.activeElement).toBe(screen.getByLabelText('common.emailLabel'));
+  });
+
+  it('remounts the MFA challenge shell with the entrance class and focuses its heading', async () => {
+    mocks.config.enabledMethods = ['password'];
+    mocks.signIn.mockResolvedValueOnce({ data: { twoFactorRedirect: true }, error: null });
+    render(<SignIn />);
+    const previous = screen.getByTestId('signin-form');
+    fireEvent.change(screen.getByLabelText('common.emailLabel'), { target: { value: 'user@acme.test' } });
+    fireEvent.change(screen.getByLabelText('common.passwordLabel'), { target: { value: 'password-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'signIn.submit' }));
+    const challenge = await screen.findByTestId('signin-mfa');
+    expect(challenge).not.toBe(previous);
+    expect(previous.isConnected).toBe(false);
+    expect(challenge.classList.contains('ao-step')).toBe(true);
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'mfa.challenge.title' }));
   });
 
   it('maps a bare 404 from the SSO endpoint to the "no connection" message', async () => {

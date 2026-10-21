@@ -12,6 +12,7 @@ export async function captureStory(storyId: string) {
   const style = document.createElement('style');
   style.textContent = `
     *, *::before, *::after {
+      transition: none !important;
       caret-color: transparent !important;
     }
   `;

@@ -29,6 +29,10 @@ export type SocialButtonsProps = {
   providers: string[];
   /** Where to send the browser after the OAuth round-trip. */
   callbackURL?: string;
+  /** Lock social entry while another explicit sign-in is pending. */
+  disabled?: boolean;
+  /** Lets an enclosing sign-in surface lock its other methods. */
+  onPendingChange?: (pending: boolean) => void;
 };
 
 /**
@@ -36,7 +40,7 @@ export type SocialButtonsProps = {
  * A social sign-in also creates the account on first use, so this is shared by
  * both <SignIn/> and <SignUp/>.
  */
-export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
+export function SocialButtons({ providers, callbackURL, disabled = false, onPendingChange }: SocialButtonsProps) {
   const slot = useSlot();
   const t = useT();
   const toServerError = useServerError();
@@ -65,18 +69,20 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
   if (providers.length === 0) return null;
 
   return (
-    <div className={slot('ba-social')}>
+    <div className={slot('ba-social')} style={{ gridTemplateColumns: `repeat(${Math.min(providers.length, 3)}, minmax(0,1fr))` }}>
       {providers.map((provider) => (
         <button
           key={provider}
           type="button"
           aria-label={pending === provider ? t('social.redirecting') : t('social.continueWith', { provider: label(provider) })}
           className={slot('ba-social-button')}
-          disabled={pending !== null}
+          disabled={disabled || pending !== null}
           aria-busy={pending === provider || undefined}
           onClick={async () => {
+            if (disabled || pending !== null) return;
             setError(null);
             setPending(provider);
+            onPendingChange?.(true);
             try {
               // OAuth leaves the application, so a zero-config drop-in must
               // remember where to return. Consumers can still override it for
@@ -97,6 +103,7 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
               if (res?.error) {
                 setError(toServerError(res.error, t('social.error.startFailed')));
                 setPending(null);
+                onPendingChange?.(false);
               } else {
                 // Park only after the redirect start succeeds. A user who
                 // bounces off consent has not signed in; promotion waits for a
@@ -106,6 +113,7 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
             } catch {
               setError(t('social.error.startFailed'));
               setPending(null);
+              onPendingChange?.(false);
             }
           }}
         >

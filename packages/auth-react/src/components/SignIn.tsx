@@ -13,7 +13,7 @@ import { usePasskeyAutofill } from './passkey-autofill';
 import { useSignInMethodRecorder, useLastUsedSignInMethod } from '../last-used-method';
 import { MethodTabs } from './MethodTabs';
 import { SocialButtons } from './SocialButtons';
-import { PasskeyButton } from './PasskeyButton';
+import { useStepFocus } from './use-step-focus';
 import { ForgotPassword } from './ForgotPassword';
 import { OtpCodeForm } from './OtpCodeForm';
 import { MFAChallenge } from './MFAChallenge';
@@ -63,6 +63,7 @@ export function SignIn({
     sendEmailOtp,
     signInEmailOtp,
     signInSso,
+    signInPasskey,
   } = useSignIn();
   const { config, isLoading, isError } = usePublicConfig();
   const { pending, error, setError, run } = useSubmitAction();
@@ -76,9 +77,6 @@ export function SignIn({
   const [view, setView] = React.useState<'sign-in' | 'forgot' | 'otp-code' | 'magic-sent' | 'phone'>(
     'sign-in',
   );
-  // Which action is in flight, so the busy label ("Signing in…"/"Sending…") lands
-  // on the button the user pressed - `pending` alone is shared across methods.
-  const [, setInFlight] = React.useState<SignInPrimary>(null);
   // A 2FA-enrolled user's password sign-in is withheld behind a second-factor
   // challenge (server returns `twoFactorRedirect`, no session), so we swap to the
   // challenge instead of finishing. AuthOwl only enrols TOTP factors (the server
@@ -86,11 +84,16 @@ export function SignIn({
   // factor is always TOTP; <MFAChallenge> covers it and offers backup codes as a
   // universal fallback.
   const [challenge, setChallenge] = React.useState(false);
+  const [socialPending, setSocialPending] = React.useState(false);
+  const locked = pending || socialPending;
   // Hook, so it must run unconditionally - the early returns below are all after it.
   // 'clear' on an unknown answer: a sign-in form must never be replaced by an
   // enrolment screen it cannot leave. See useConfirmedMfaPending.
   const mfaEnrolment = useConfirmedMfaPending('clear');
-  const emailRef = React.useRef<HTMLInputElement>(null);
+  const step = isLoading || isError || mfaEnrolment === 'confirming' ? null
+    : mfaEnrolment === 'pending' ? 'mfa-enrolment' : challenge ? 'mfa-challenge' : view;
+  const { stepRef, rememberOpener, restoreFocus } = useStepFocus(step);
+  const back = () => { restoreFocus(); setView('sign-in'); };
   const recordSignInMethod = useSignInMethodRecorder();
   const onPasskeySignedIn = React.useCallback(() => {
     recordSignInMethod('passkey');
@@ -124,9 +127,9 @@ export function SignIn({
     const method = lastUsed === 'magic-link' ? 'magic' : lastUsed === 'email-otp' ? 'otp'
       : lastUsed === 'username' ? 'password' : lastUsed;
     if (method === 'password' || method === 'magic' || method === 'otp' || method === 'sso' || method === 'passkey') {
-      setSelected(method);
+      if (!locked) setSelected((current) => current ?? method);
     }
-  }, [lastUsed]);
+  }, [lastUsed, locked]);
 
   // Passkey conditional autofill (progressive enhancement): armed on the single
   // shared email input whenever passkey is enabled and an email field exists.
@@ -141,7 +144,7 @@ export function SignIn({
 
   if (isLoading) {
     return (
-      <div key={view} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-loading" aria-busy="true">
+      <div key="signin-loading" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-loading" aria-busy="true">
         <div className={slot('ba-skeleton')} />
         <div className={slot('ba-skeleton')} />
       </div>
@@ -149,7 +152,11 @@ export function SignIn({
   }
 
   if (isError) {
-    return <PublicConfigError showBadge={showBadge} showBranding={showBranding} />;
+    return (
+      <div key="signin-error" ref={stepRef} className={slot('ba-step')}>
+        <PublicConfigError showBadge={showBadge} showBranding={showBranding} />
+      </div>
+    );
   }
 
   // Required-MFA enrolment, the OTHER way a password sign-in can succeed without
@@ -166,7 +173,7 @@ export function SignIn({
   // none.
   if (mfaEnrolment !== 'clear') {
     return (
-      <div key={view} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-mfa-enrolment" aria-busy={mfaEnrolment === 'confirming'}>
+      <div key="signin-mfa-enrolment" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-mfa-enrolment" aria-busy={mfaEnrolment === 'confirming'}>
         {branding}
         {mfaEnrolment === 'pending' ? <MfaEnrollmentStep /> : <div className={slot('ba-skeleton')} />}
         {badge}
@@ -178,7 +185,7 @@ export function SignIn({
   // the session, so finish exactly as a direct sign-in would.
   if (challenge) {
     return (
-      <div key={view} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-mfa">
+      <div key="signin-mfa" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-mfa">
         {branding}
         <MFAChallenge onVerified={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })} />
         {badge}
@@ -189,10 +196,10 @@ export function SignIn({
   // Inline "forgot password" step: only reachable when a reset page is configured.
   if (view === 'forgot' && resetPasswordUrl) {
     return (
-      <div key={view} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-forgot">
+      <div key="signin-forgot" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-forgot">
         {branding}
-        <h2 className={slot('ba-title')}>{t('signIn.forgotTitle')}</h2>
-        <ForgotPassword resetPasswordUrl={resetPasswordUrl} onBack={() => setView('sign-in')} />
+        <h2 tabIndex={-1} className={slot('ba-title')}>{t('signIn.forgotTitle')}</h2>
+        <ForgotPassword resetPasswordUrl={resetPasswordUrl} onBack={back} />
         {badge}
       </div>
     );
@@ -201,9 +208,9 @@ export function SignIn({
   // Email-OTP second stage: verify the emailed code (shares the captured email).
   if (view === 'otp-code') {
     return (
-      <div key={view} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-otp-code">
+      <div key="signin-otp-code" ref={stepRef} role="status" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-otp-code">
         {branding}
-        <h2 className={slot('ba-title')}>{t('signIn.title')}</h2>
+        <h2 tabIndex={-1} className={slot('ba-title')}>{t('signIn.title')}</h2>
         <OtpCodeForm
           email={email}
           code={otp}
@@ -225,7 +232,7 @@ export function SignIn({
           onChangeEmail={() => {
             setOtp('');
             setError(null);
-            setView('sign-in');
+            back();
           }}
         />
         {badge}
@@ -237,11 +244,11 @@ export function SignIn({
   // this is a terminal message with a way back.
   if (view === 'magic-sent') {
     return (
-      <div key={view} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-magic-sent">
+      <div key="signin-magic-sent" ref={stepRef} role="status" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-magic-sent">
         {branding}
-        <h2 className={slot('ba-title')}>{t('signIn.title')}</h2>
+        <h2 tabIndex={-1} className={slot('ba-title')}>{t('signIn.title')}</h2>
         <p className={slot('ba-muted')}>{t('magicLink.sent')}</p>
-        <button type="button" className={slot('ba-link-button')} onClick={() => setView('sign-in')}>
+        <button type="button" className={slot('ba-link-button')} onClick={back}>
           <span className={slot('ba-icon-back')} aria-hidden="true">←</span> {t('forgotPassword.backToSignIn')}
         </button>
         {badge}
@@ -251,18 +258,17 @@ export function SignIn({
 
   if (view === 'phone') {
     return (
-      <div key={view} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-phone">
+      <div key="signin-phone" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-phone">
         {branding}
         <PhoneOTP
           redirectTo={redirectTo}
           onSignedIn={onPhoneOtpSignedIn}
-          onBack={() => setView('sign-in')}
+          onBack={back}
           onMfaPasswordRequired={() => {
             setSelected('password');
             setCredentialMode('email');
             setView('sign-in');
             setError(t('serverError.TWO_FACTOR_REQUIRED'));
-            requestAnimationFrame(() => emailRef.current?.focus());
           }}
         />
         {badge}
@@ -275,75 +281,68 @@ export function SignIn({
   const showDivider =
     plan.social.length > 0 && (hasCredentialForm || plan.passkey || plan.phoneOtp);
 
-  // One `run` per action, tagged so the busy label targets the pressed button.
-  const start = (key: Exclude<SignInPrimary, null>, action: () => void) => {
-    setInFlight(key);
-    action();
-  };
   const doPassword = () =>
-    start('password', () =>
-      void run(() => authChallenge.run(
-        AUTH_CHALLENGE_ACTIONS.signIn,
-        (options) => credentialMode === 'username'
-          ? signInUsername({ username, password }, options)
-          : signIn({ email, password }, options),
-      ), {
-        failure: t('signIn.error.failed'),
-        onSuccess: (res) => {
-          // `signIn.email` resolves to EmailAuthData | TwoFactorRedirectData; for
-          // a 2FA-enrolled user the session is withheld and `data` is the redirect
-          // member - swap to the challenge instead of finishing.
-          const data = res.data;
-          // Password was right even when the session is withheld for a second
-          // factor. That factor is not an alternative sign-in method.
-          recordSignInMethod(credentialMode === 'username' ? 'username' : 'password');
-          if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
-            setChallenge(true);
-          } else {
-            return finishSignIn({ sessionStore, redirectTo, onSignedIn });
-          }
-        },
-      }),
-    );
+    void run(() => authChallenge.run(
+      AUTH_CHALLENGE_ACTIONS.signIn,
+      (options) => credentialMode === 'username'
+        ? signInUsername({ username, password }, options)
+        : signIn({ email, password }, options),
+    ), {
+      failure: t('signIn.error.failed'),
+      onSuccess: (res) => {
+        // `signIn.email` resolves to EmailAuthData | TwoFactorRedirectData; for
+        // a 2FA-enrolled user the session is withheld and `data` is the redirect
+        // member - swap to the challenge instead of finishing.
+        const data = res.data;
+        // Password was right even when the session is withheld for a second
+        // factor. That factor is not an alternative sign-in method.
+        recordSignInMethod(credentialMode === 'username' ? 'username' : 'password');
+        if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
+          setChallenge(true);
+        } else {
+          return finishSignIn({ sessionStore, redirectTo, onSignedIn });
+        }
+      },
+    });
   const doMagic = () =>
-    start('magic', () =>
-      void run(() => authChallenge.run(AUTH_CHALLENGE_ACTIONS.passwordless, (options) => signInMagicLink({ email, callbackURL: redirectTo }, options)), {
-        failure: t('magicLink.error.sendFailed'),
-        onSuccess: () => {
-          // Parked, not recorded: sending the mail is not signing in, and
-          // the link is opened later from the user's mail client.
-          recordSignInMethod('magic-link', true);
-          setView('magic-sent');
-        },
-      }),
-    );
+    void run(() => authChallenge.run(AUTH_CHALLENGE_ACTIONS.passwordless, (options) => signInMagicLink({ email, callbackURL: redirectTo }, options)), {
+      failure: t('magicLink.error.sendFailed'),
+      onSuccess: () => {
+        // Parked, not recorded: sending the mail is not signing in, and
+        // the link is opened later from the user's mail client.
+        recordSignInMethod('magic-link', true);
+        setView('magic-sent');
+      },
+    });
   const doRequestOtp = () =>
-    start('otp', () =>
-      void run(() => authChallenge.run(AUTH_CHALLENGE_ACTIONS.passwordless, (options) => sendEmailOtp({ email, type: 'sign-in' }, options)), {
-        failure: t('emailOtp.error.sendFailed'),
-        onSuccess: () => setView('otp-code'),
-      }),
-    );
+    void run(() => authChallenge.run(AUTH_CHALLENGE_ACTIONS.passwordless, (options) => sendEmailOtp({ email, type: 'sign-in' }, options)), {
+      failure: t('emailOtp.error.sendFailed'),
+      onSuccess: () => setView('otp-code'),
+    });
   // SSO is a redirect out to the tenant's IdP (like a social button): no
   // Turnstile, no session mint here. `callbackURL` is REQUIRED by the server,
   // so return to the current page to redeem before the final redirect (mirrors
   // SocialButtons). A bare 404 means "no SSO connection for this domain" - map
   // it client-side (Decision 1); other failures use the standard code mapping.
   const doSso = () =>
-    start('sso', () =>
-      void run(
-        () => signInSso({ email, callbackURL: window.location.href }),
-        {
-          failure: t('sso.error.startFailed'),
-          mapError: (error) => (error.status === 404 ? t('sso.error.notFound') : null),
-          onSuccess: () => recordSignInMethod('sso', true),
-          // SSO always redirects the browser to the IdP; keep the spinner up
-          // through that navigation instead of flashing back to idle.
-          keepPendingOnSuccess: true,
-        },
-      ),
+    void run(
+      () => signInSso({ email, callbackURL: window.location.href }),
+      {
+        failure: t('sso.error.startFailed'),
+        mapError: (error) => (error.status === 404 ? t('sso.error.notFound') : null),
+        onSuccess: () => recordSignInMethod('sso', true),
+        // SSO always redirects the browser to the IdP; keep the spinner up
+        // through that navigation instead of flashing back to idle.
+        keepPendingOnSuccess: true,
+      },
     );
-  const PRIMARY_ACTION = { password: doPassword, magic: doMagic, otp: doRequestOtp, sso: doSso };
+  const doPasskey = () => void run(() => signInPasskey(), {
+    failure: t('passkey.error.signInFailed'),
+    onSuccess: (res) => {
+      if (res.data) return finishSignIn({ sessionStore, redirectTo, onSignedIn: onPasskeySignedIn });
+    },
+  });
+  const PRIMARY_ACTION = { password: doPassword, magic: doMagic, otp: doRequestOtp, sso: doSso, passkey: doPasskey };
 
   const tabLabels = {
     password: t('common.passwordLabel'), magic: t('signIn.tab.emailLink'),
@@ -353,33 +352,34 @@ export function SignIn({
     ? t('emailOtp.requestSubmit') : active === 'sso' ? t('sso.continueWith') : t('signIn.submit');
 
   return (
-    <div key={view} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-form">
+    <div key="signin-form" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-form">
       <header className={slot('ba-auth-header')}>
         {branding}
-        <h2 className={slot('ba-title')}>{t('signIn.title')}</h2>
+        <h2 tabIndex={-1} className={slot('ba-title')}>{t('signIn.title')}</h2>
         <p className={slot('ba-subtitle')}>{t('signIn.subtitle')}</p>
       </header>
       <InvitationBanner />
-      <SocialButtons providers={plan.social} />
+      <SocialButtons providers={plan.social} disabled={pending} onPendingChange={setSocialPending} />
       {showDivider && <div className={slot('ba-divider')}>{t('common.orDivider')}</div>}
       {tabMethods.length > 0 && (
         <form
           method="post"
+          noValidate={active === 'passkey'}
           className={slot('ba-fields')}
           onSubmit={(e) => {
             e.preventDefault();
-            if (active === 'passkey') e.currentTarget.querySelector<HTMLButtonElement>('[data-testid=passkey-button]')?.click();
-            else if (active) PRIMARY_ACTION[active]();
+            if (locked || !active) return;
+            rememberOpener(document.activeElement as HTMLElement);
+            PRIMARY_ACTION[active]();
           }}
         >
           {tabMethods.length > 1 && (
-            <MethodTabs id={tabId} methods={tabMethods} active={active} labels={tabLabels} onChange={(method) => { setSelected(method); setCredentialMode('email'); setError(null); }} />
+            <MethodTabs pending={locked} id={tabId} methods={tabMethods} active={active} labels={tabLabels} onChange={(method) => { setSelected(method); setCredentialMode('email'); setError(null); }} />
           )}
           {hasCredentialForm && (credentialMode === 'email' ? (
             <label className={slot('ba-label')}>
               {t('common.emailLabel')}
               <input
-                ref={emailRef}
                 className={slot('ba-input')}
                 type="email"
                 autoComplete={emailAutocomplete(plan.autofillHost !== null)}
@@ -426,15 +426,11 @@ export function SignIn({
           )}
           {authChallenge.control}
           <FormError>{error}</FormError>
-          {active === 'passkey' ? (
-            <PasskeyButton redirectTo={redirectTo} onSignedIn={onPasskeySignedIn} />
-          ) : (
-            <button className={slot('ba-button')} type="submit" disabled={pending || authChallenge.configPending} aria-busy={pending || undefined}>
-              <Busy busy={pending} label={active === 'password' ? t('signIn.submitPending') : active === 'sso' ? t('sso.redirecting') : t('common.sending')}>{activeLabel}</Busy>
-            </button>
-          )}
+          <button id={`${tabId}-submit`} className={slot('ba-button')} type="submit" disabled={locked || (active !== 'passkey' && authChallenge.configPending)} aria-busy={pending || undefined}>
+            <Busy busy={pending} label={active === 'passkey' ? t('passkey.waiting') : active === 'password' ? t('signIn.submitPending') : active === 'sso' ? t('sso.redirecting') : t('common.sending')}>{active === 'passkey' ? t('passkey.signInButton') : activeLabel}</Busy>
+          </button>
           {active === 'password' && resetPasswordUrl && (
-            <button type="button" className={slot('ba-link-button')} onClick={() => setView('forgot')}>{t('signIn.forgotLink')}</button>
+            <button id={`${tabId}-forgot`} type="button" className={slot('ba-link-button')} disabled={locked} onClick={(event) => { rememberOpener(event.currentTarget); setView('forgot'); }}>{t('signIn.forgotLink')}</button>
           )}
           </div>
           {tabMethods.filter((method) => method !== active).map((method) => <div key={method} role="tabpanel" hidden id={`${tabId}-panel-${method}`} aria-labelledby={`${tabId}-tab-${method}`} />)}
@@ -442,7 +438,7 @@ export function SignIn({
             <button
               type="button"
               className={slot('ba-link-button')}
-              disabled={pending}
+              disabled={locked}
               onClick={() => {
                 setError(null);
                 setCredentialMode((current) =>
@@ -460,7 +456,9 @@ export function SignIn({
         <button
           type="button"
           className={slot('ba-link-button')}
-          onClick={() => setView('phone')}
+          id={`${tabId}-phone`}
+          disabled={locked}
+          onClick={(event) => { rememberOpener(event.currentTarget); setView('phone'); }}
         >
           {t('phoneOtp.usePhone')}
         </button>

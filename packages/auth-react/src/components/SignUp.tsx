@@ -1,4 +1,5 @@
 'use client';
+import { useStepFocus } from './use-step-focus';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useHandoffCompletion } from './use-handoff-completion';
@@ -94,6 +95,11 @@ export function SignUp({
   const [pendingEmail, setPendingEmail] = React.useState<string | null>(null);
   const [completeWithPasskey, setCompleteWithPasskey] = React.useState(false);
 
+  const step = isLoading || isError || mfaEnrollment === 'confirming' ? null
+    : mfaEnrollment === 'pending' ? 'mfa-enrolment' : config?.signUp?.mode === 'waitlist' ? 'waitlist'
+    : pendingEmail ? 'verify-pending' : completeWithPasskey ? 'passkey-offer' : 'form';
+  const { stepRef } = useStepFocus(step);
+
   function finishSignUp() {
     onSignedUp?.();
     if (redirectTo) window.location.assign(redirectTo);
@@ -167,7 +173,7 @@ export function SignUp({
 
   if (isLoading) {
     return (
-      <div key="signup-loading" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-loading" aria-busy="true">
+      <div ref={stepRef} key="signup-loading" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-loading" aria-busy="true">
         <div className={slot('ba-skeleton')} />
         <div className={slot('ba-skeleton')} />
       </div>
@@ -175,12 +181,16 @@ export function SignUp({
   }
 
   if (isError) {
-    return <PublicConfigError showBadge={showBadge} showBranding={showBranding} />;
+    return (
+      <div key="signup-error" ref={stepRef} className={slot('ba-step')}>
+        <PublicConfigError showBadge={showBadge} showBranding={showBranding} />
+      </div>
+    );
   }
 
   if (mfaEnrollment !== 'clear') {
     return (
-      <div key="signup-mfa-enrolment" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-mfa-enrolment" aria-busy={mfaEnrollment === 'confirming'}>
+      <div ref={stepRef} key="signup-mfa-enrolment" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-mfa-enrolment" aria-busy={mfaEnrollment === 'confirming'}>
         {showBranding ? <AuthOwlBranding /> : null}
         {mfaEnrollment === 'pending' ? <MfaEnrollmentStep /> : <div className={slot('ba-skeleton')} />}
         <AuthOwlBadge force={showBadge} />
@@ -189,12 +199,16 @@ export function SignUp({
   }
 
   if (config?.signUp?.mode === 'waitlist') {
-    return <Waitlist onJoined={onWaitlisted} showBadge={showBadge} showBranding={showBranding} />;
+    return (
+      <div key="signup-waitlist" ref={stepRef} className={slot('ba-step')}>
+        <Waitlist onJoined={onWaitlisted} showBadge={showBadge} showBranding={showBranding} />
+      </div>
+    );
   }
 
   if (pendingEmail) {
     return (
-      <div key="signup-verify-pending" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-verify-pending">
+      <div ref={stepRef} key="signup-verify-pending" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-verify-pending" role="status">
         {showBranding ? <AuthOwlBranding /> : null}
         <VerificationPending
           email={pendingEmail}
@@ -239,7 +253,7 @@ export function SignUp({
 
   if (completeWithPasskey) {
     return (
-      <div key="signup-passkey-step" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-passkey-step">
+      <div ref={stepRef} key="signup-passkey-step" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-passkey-step" role="status">
         {showBranding ? <AuthOwlBranding /> : null}
         <PasskeyOffer variant="sign-up" onComplete={finishSignUp} />
         <AuthOwlBadge force={showBadge} />
@@ -248,10 +262,10 @@ export function SignUp({
   }
 
   return (
-    <div key="signup-form" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-form">
+    <div ref={stepRef} key="signup-form" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-form">
       <header className={slot('ba-auth-header')}>
         {showBranding ? <AuthOwlBranding /> : null}
-        <h2 className={slot('ba-title')}>{t('signUp.title')}</h2>
+        <h2 tabIndex={-1} className={slot('ba-title')}>{t('signUp.title')}</h2>
         <p className={slot('ba-subtitle')}>{t('signUp.subtitle')}</p>
       </header>
       <InvitationBanner />

@@ -34,6 +34,13 @@ function palette(scheme) {
     'shadow-menu-ink': 'rgba(0,0,0,0.12)',
     'shadow-toggle-ink': 'rgba(0,0,0,.2)',
     'shadow-dialog-ink': 'rgba(0,0,0,0.3)',
+    'shadow-auth-card': scheme === 'light'
+      ? '0 4px 16px color-mix(in srgb, var(--ao-shadow-dialog-ink) 20%, transparent), 0 1px 2px color-mix(in srgb, var(--ao-shadow-dialog-ink) 16.67%, transparent)'
+      : 'var(--ao-shadow-dialog)',
+    'shadow-auth-tab': scheme === 'light'
+      ? '0 1px 2px color-mix(in srgb, var(--ao-shadow-dialog-ink) 33.33%, transparent), 0 0 0 1px var(--ao-line)'
+      : '0 0 0 1px var(--ao-line-strong)',
+    'auth-tab-surface': scheme === 'light' ? 'var(--ao-surface)' : 'var(--ao-highlight)',
     'shadow-organization-ink': 'rgba(0,0,0,0.18)',
     overlay: scheme === 'light' ? 'rgba(9, 9, 11, 0.58)' : 'rgba(0, 0, 0, 0.72)',
   };

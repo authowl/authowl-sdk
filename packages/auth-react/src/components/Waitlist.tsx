@@ -1,4 +1,5 @@
 'use client';
+import { useStepFocus } from './use-step-focus';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useWaitlist } from '../hooks';
@@ -30,9 +31,11 @@ export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistP
   const [email, setEmail] = React.useState('');
   const [joined, setJoined] = React.useState(false);
 
+  const { stepRef } = useStepFocus(joined ? 'joined' : 'request');
+
   if (joined) {
     return (
-      <div className={slot('ba-form')} data-testid="waitlist-accepted">
+      <div key="waitlist-accepted" ref={stepRef} className={slot('ba-form ba-step')} data-testid="waitlist-accepted" role="status">
         {showBranding ? <AuthOwlBranding /> : null}
         <h2 className={slot('ba-title')}>{t('waitlist.acceptedTitle')}</h2>
         <p className={slot('ba-muted')}>{t('waitlist.acceptedDescription')}</p>
@@ -42,7 +45,7 @@ export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistP
   }
 
   return (
-    <div className={slot('ba-form')} data-testid="waitlist-form">
+    <div key="waitlist-form" ref={stepRef} className={slot('ba-form ba-step')} data-testid="waitlist-form">
       {showBranding ? <AuthOwlBranding /> : null}
       <h2 className={slot('ba-title')}>{t('waitlist.title')}</h2>
       <p className={slot('ba-muted')}>{t('waitlist.description')}</p>
