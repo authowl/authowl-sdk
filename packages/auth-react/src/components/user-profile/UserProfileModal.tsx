@@ -3,6 +3,7 @@ import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useT } from '../../i18n';
 import { ModalSurface } from '../ModalSurface';
+import { codeIconAttributes } from '../factor-icons';
 import { AuthOwlBadge } from '../AuthOwlBadge';
 
 export function UserProfileModal({
@@ -40,12 +41,9 @@ export function UserProfileModal({
             onClick={onClose}
             autoFocus
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <svg {...codeIconAttributes} focusable="false">
               <path
                 d="M6 6l12 12M18 6L6 18"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
               />
             </svg>
           </button>

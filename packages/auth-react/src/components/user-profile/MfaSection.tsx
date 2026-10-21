@@ -1,39 +1,34 @@
 'use client';
-import { ProfileSectionFrame } from './ProfileSectionFrame';
+import { ProfileSectionDisclosure } from './ProfileSectionShell';
 import { useSlot } from '../../elements';
 import * as React from 'react';
-import { useMFA, usePublicConfig, useSession, useUser } from '../../hooks';
+import { useMFA, useSession, useUser } from '../../hooks';
 import { useT } from '../../i18n';
 import { MFAEnrollment } from '../MFAEnrollment';
 import { MFAChallenge } from '../MFAChallenge';
 import { useStepUpAction } from '../use-step-up-action';
 import { Busy } from '../Spinner';
 import { FormError } from '../FormError';
-import { resolveProjectCapabilities } from '../../project-capabilities';
 
-export function MfaSection() {
+export function MfaSection({ required }: { required: boolean }) {
   const t = useT();
   const { user } = useUser();
-  const { config } = usePublicConfig();
-  const required = resolveProjectCapabilities(config).mfaRequired;
   return (
-    <ProfileSectionFrame section="mfa" title={t('userProfile.mfa.title')} meta={user?.twoFactorEnabled ? (required ? t('userProfile.mfa.requiredActive') : t('userProfile.mfa.active')) : (required ? t('userProfile.mfa.requiredDescription') : t('userProfile.mfa.description'))}>
-      <MfaSectionContent />
-    </ProfileSectionFrame>
+    <ProfileSectionDisclosure success={user?.twoFactorEnabled === true} section="mfa" title={t('userProfile.mfa.title')} meta={user?.twoFactorEnabled ? (required ? t('userProfile.mfa.requiredActive') : t('userProfile.mfa.active')) : (required ? t('userProfile.mfa.requiredDescription') : t('userProfile.mfa.description'))}>
+      <MfaSectionContent required={required} />
+    </ProfileSectionDisclosure>
   );
 }
 
-function MfaSectionContent() {
+function MfaSectionContent({ required }: { required: boolean }) {
   const slot = useSlot();
   const t = useT();
   const { user } = useUser();
   const session = useSession();
-  const { config } = usePublicConfig();
   const { disable } = useMFA();
   const { pending, error, stepUpRequired, run, resume, cancel } = useStepUpAction();
   const [password, setPassword] = React.useState('');
   const [showDisable, setShowDisable] = React.useState(false);
-  const required = resolveProjectCapabilities(config).mfaRequired;
 
   if (!user?.twoFactorEnabled) {
     return (

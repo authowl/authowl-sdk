@@ -32,8 +32,23 @@ function sectionStory(section: UserProfileSection): Story {
 }
 
 export const Profile = sectionStory('profile');
-export const Security = sectionStory('password');
-export const ConnectedAccounts = sectionStory('social');
+function groupStory(group: 'security' | 'connections', section: UserProfileSection): Story {
+  return {
+    args: { section: undefined },
+    play: async ({ canvasElement }) => {
+      const canvas = within(canvasElement);
+      const nav = await canvas.findByRole('navigation');
+      const link = nav.querySelector<HTMLAnchorElement>(`a[href="#authowl-profile-${section}"]`)!;
+      await userEvent.click(link);
+      await waitFor(() => expect(canvasElement.querySelector(`[data-group="${group}"]`)).not.toBeNull());
+      expect(canvasElement.querySelectorAll('[aria-expanded="true"]')).toHaveLength(0);
+      await expectStoryMatrix(canvasElement);
+    },
+  };
+}
+
+export const Security = groupStory('security', 'password');
+export const ConnectedAccounts = groupStory('connections', 'social');
 export const Email = sectionStory('email');
 export const Password = sectionStory('password');
 export const SocialConnections = sectionStory('social');

@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuthActionResult } from '@authowl/core';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => {
   const user = {
@@ -122,6 +122,8 @@ vi.mock('../hooks', () => ({
   useMFA: () => mocks.mfa,
 }));
 
+vi.mock('./PrivacyCenter', () => ({ PrivacyCenter: () => <div data-testid="privacy-center" /> }));
+
 vi.mock('../i18n', () => ({
   Bidi: ({ children }: { children: React.ReactNode }) => <bdi>{children}</bdi>,
   useLocale: () => 'en',
@@ -149,6 +151,7 @@ describe('UserProfile', () => {
   beforeEach(() => {
     window.history.replaceState(null, '', '/');
     vi.clearAllMocks();
+    mocks.user.name = 'Mona';
     mocks.user.twoFactorEnabled = false;
     mocks.user.email = 'mona@example.test';
     mocks.user.emailVerified = true;
@@ -223,6 +226,43 @@ describe('UserProfile', () => {
     expect(name).toHaveProperty('value', 'Draft name');
   });
 
+  it('opens initial requests, then collapses and focuses later controlled changes', async () => {
+    const { rerender } = render(<UserProfile section="email" />);
+    expect(screen.getByLabelText('userProfile.email.newLabel')).toBeTruthy();
+    expect(document.activeElement).not.toBe(screen.getByRole('heading', { name: 'userProfile.email.title' }));
+    rerender(<UserProfile section="password" />);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'userProfile.password.title' })));
+    expect(screen.queryByLabelText('userProfile.password.currentLabel')).toBeNull();
+    rerender(<UserProfile section="mfa" />);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'userProfile.mfa.title' })));
+    expect(within(screen.getByRole('heading', { name: 'userProfile.mfa.title' }).closest('section')!).getByRole('button', { expanded: false })).toBeTruthy();
+  });
+
+  it('does not reapply an old hash when enrollment adds recovery', () => {
+    window.history.replaceState(null, '', '#authowl-profile-email');
+    const { container, rerender } = render(<UserProfile />);
+    fireEvent.click(screen.getByRole('link', { name: 'userProfile.group.security' }));
+    // The host restores an old URL without dispatching hashchange.
+    window.history.replaceState(null, '', '#authowl-profile-email');
+    mocks.user.twoFactorEnabled = true;
+    rerender(<UserProfile />);
+    expect(container.querySelector('[data-group]')?.getAttribute('data-group')).toBe('security');
+    expect(screen.getByRole('heading', { name: 'userProfile.recovery.title' })).toBeTruthy();
+  });
+
+  it('uses one section title and one modal h1, and mounts privacy only while open', () => {
+    Object.assign(mocks.config, { privacy: {}, accountDeletion: false });
+    const { container } = render(<UserProfile mode="modal" section="privacy" onClose={() => {}} />);
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { name: 'privacy.title' })).toHaveLength(1);
+    expect(screen.getByText('userProfile.group.privacy.description')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'userProfile.delete.title' })).toBeNull();
+    expect(screen.getByTestId('privacy-center')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'privacy.title: common.close' }));
+    expect(screen.queryByTestId('privacy-center')).toBeNull();
+    expect(container.querySelectorAll('strong.ao-profile-row-title')).toHaveLength(0);
+  });
+
   it('hides unavailable groups and navigates to the first available security section', () => {
     Object.assign(mocks.config, { socialProviders: [], privacy: undefined, accountDeletion: false, enabledMethods: [], twoFactor: false });
     render(<UserProfile />);
@@ -238,12 +278,11 @@ describe('UserProfile', () => {
     mocks.user.twoFactorEnabled = true;
     mocks.mfa.disable.mockResolvedValueOnce({ data: null, error: { code: 'SECOND_FACTOR_REQUIRED', status: 403 } });
     render(<UserProfile defaultSection="mfa" />);
-    openRow('mfa');
     fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
     fireEvent.change(screen.getByLabelText('common.passwordLabel'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replaceConfirm' }));
     await screen.findByLabelText('mfa.challenge.totpLabel');
-    fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.title: common.cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.title: common.close' }));
     expect(screen.queryByLabelText('common.passwordLabel')).toBeNull();
     openRow('mfa');
     fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
@@ -315,7 +354,6 @@ describe('UserProfile', () => {
   it('drives passkey removal through a named confirmation', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<UserProfile defaultSection="passkeys" />);
-    openRow('passkeys');
 
     fireEvent.click(await screen.findByRole('button', { name: 'passkeys.remove' }));
 
@@ -326,7 +364,6 @@ describe('UserProfile', () => {
   it('explains required MFA replacement and disables the factor after password confirmation', async () => {
     mocks.user.twoFactorEnabled = true;
     render(<UserProfile defaultSection="mfa" />);
-    openRow('mfa');
 
     expect(screen.getByText('userProfile.mfa.requiredActive')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
@@ -345,6 +382,28 @@ describe('UserProfile', () => {
   describe('second-factor step-up', () => {
     const gated = { data: null, error: { code: 'SECOND_FACTOR_REQUIRED', status: 403 } };
 
+    it.each(['mfa', 'recovery'] as const)('never replays %s after closing during verification', async (section) => {
+      mocks.user.twoFactorEnabled = true;
+      const action = section === 'mfa' ? mocks.mfa.disable : mocks.mfa.regenerateBackupCodes;
+      action.mockResolvedValueOnce(gated);
+      let resolveVerification!: (value: unknown) => void;
+      const verification = new Promise((resolve) => { resolveVerification = resolve; });
+      mocks.mfa.verifyTotp.mockReturnValueOnce(verification);
+      render(<UserProfile defaultSection={section} />);
+      if (section === 'mfa') fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
+      fireEvent.change(screen.getByLabelText('common.passwordLabel'), { target: { value: 'secret' } });
+      fireEvent.click(screen.getByRole('button', { name: section === 'mfa' ? 'userProfile.mfa.replaceConfirm' : 'backupCodes.submit' }));
+      fireEvent.change(await screen.findByLabelText('mfa.challenge.totpLabel'), { target: { value: '123456' } });
+      await waitFor(() => expect(mocks.mfa.verifyTotp).toHaveBeenCalledOnce());
+      fireEvent.click(screen.getByRole('button', { name: `userProfile.${section}.title: common.close` }));
+      await act(async () => {
+        resolveVerification({ data: { token: 'session-token' }, error: null });
+        await verification;
+      });
+      expect(action).toHaveBeenCalledOnce();
+      expect(mocks.refetch).not.toHaveBeenCalled();
+    });
+
     it('collects a code and finishes the removal the server gated', async () => {
       mocks.user.twoFactorEnabled = true;
       mocks.mfa.disable
@@ -352,7 +411,6 @@ describe('UserProfile', () => {
         .mockResolvedValueOnce({ data: { status: true }, error: null });
       mocks.mfa.verifyTotp.mockResolvedValue({ data: { token: 'session-token' }, error: null });
       render(<UserProfile defaultSection="mfa" />);
-    openRow('mfa');
 
       fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
@@ -384,7 +442,6 @@ describe('UserProfile', () => {
         error: { code: 'INVALID_CODE', status: 401 },
       });
       render(<UserProfile defaultSection="mfa" />);
-    openRow('mfa');
 
       fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
@@ -403,7 +460,6 @@ describe('UserProfile', () => {
       mocks.user.twoFactorEnabled = true;
       mocks.mfa.disable.mockResolvedValueOnce(gated);
       render(<UserProfile defaultSection="mfa" />);
-    openRow('mfa');
 
       fireEvent.click(screen.getByRole('button', { name: 'userProfile.mfa.replace' }));
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
@@ -427,7 +483,6 @@ describe('UserProfile', () => {
         .mockResolvedValueOnce({ data: { backupCodes: ['code-9'] }, error: null });
       mocks.mfa.verifyBackupCode.mockResolvedValue({ data: { token: 'session-token' }, error: null });
       render(<UserProfile defaultSection="recovery" />);
-    openRow('recovery');
 
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
         target: { value: 'password-1' },
@@ -450,7 +505,6 @@ describe('UserProfile', () => {
       mocks.user.twoFactorEnabled = true;
       mocks.mfa.regenerateBackupCodes.mockResolvedValueOnce(gated);
       render(<UserProfile defaultSection="recovery" />);
-    openRow('recovery');
 
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), {
         target: { value: 'password-1' },
@@ -469,7 +523,6 @@ describe('UserProfile', () => {
     mocks.user.twoFactorEnabled = true;
     const onDeleted = vi.fn();
     render(<UserProfile defaultSection="danger" onDeleted={onDeleted} />);
-    openRow('danger');
 
     expect(screen.getByRole('link', { name: 'userProfile.group.security' })).toBeTruthy();
     const confirmation = screen.getByRole('textbox');
@@ -481,11 +534,19 @@ describe('UserProfile', () => {
     expect(onDeleted).toHaveBeenCalledOnce();
   });
 
+  it('omits the email line for phone-only identity', () => {
+    mocks.user.email = null;
+    mocks.user.name = '   ';
+    mocks.user.phoneNumber = '01000000000';
+    const { container } = render(<UserProfile />);
+    expect(container.querySelector('.ao-profile-identity-copy small')).toBeNull();
+    expect(container.querySelector('.ao-profile-avatar')?.textContent).toBe('○');
+  });
+
   it('uses a phone identifier for deletion when the account has no email', async () => {
     mocks.user.email = null;
     mocks.user.phoneNumber = '01000000000';
     render(<UserProfile defaultSection="danger" />);
-    openRow('danger');
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '01000000000' } });
     fireEvent.click(screen.getByRole('button', { name: 'userProfile.delete.submit' }));
@@ -497,7 +558,6 @@ describe('UserProfile', () => {
     mocks.user.twoFactorEnabled = true;
     mocks.user.emailVerified = false;
     render(<UserProfile defaultSection="recovery" />);
-    openRow('recovery');
 
     expect(screen.getByText('userProfile.recovery.emailUnavailable')).toBeTruthy();
     expect(screen.queryByText('userProfile.recovery.emailDescription')).toBeNull();
@@ -514,7 +574,6 @@ describe('UserProfile', () => {
       },
     });
     render(<UserProfile defaultSection="passkeys" />);
-    openRow('passkeys');
 
     expect(await screen.findByRole('button', { name: 'passkeys.remove' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'passkeys.add' })).toBeNull();
@@ -522,8 +581,7 @@ describe('UserProfile', () => {
 
   it('opens the email row inline and preserves its verification request', async () => {
     render(<UserProfile defaultSection="email" />);
-    expect(screen.queryByLabelText('userProfile.email.newLabel')).toBeNull();
-    openRow('email');
+    expect(screen.getByLabelText('userProfile.email.newLabel')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('userProfile.email.newLabel'), { target: { value: 'new@example.test' } });
     fireEvent.click(screen.getByRole('button', { name: 'userProfile.email.submit' }));
     await waitFor(() => expect(mocks.account.changeEmail).toHaveBeenCalledWith({

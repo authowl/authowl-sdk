@@ -18,7 +18,7 @@ describe('UserProfile model', () => {
   });
 
   it('owns all ten sections exactly once in the approved group order', () => {
-    expect(USER_PROFILE_GROUPS).toEqual([
+    expect(USER_PROFILE_GROUPS.map(({ id, sections }) => ({ id, sections }))).toEqual([
       { id: 'profile', sections: ['profile', 'email'] },
       { id: 'security', sections: ['password', 'passkeys', 'mfa', 'recovery', 'sessions'] },
       { id: 'connections', sections: ['social'] },
@@ -30,7 +30,7 @@ describe('UserProfile model', () => {
   });
 
   it('filters unavailable sections and hides empty groups', () => {
-    expect(userProfileGroupsFor(['email', 'sessions', 'danger'])).toEqual([
+    expect(userProfileGroupsFor(['email', 'sessions', 'danger']).map(({ id, sections }) => ({ id, sections }))).toEqual([
       { id: 'profile', sections: ['email'] },
       { id: 'security', sections: ['sessions'] },
       { id: 'privacy', sections: ['danger'] },

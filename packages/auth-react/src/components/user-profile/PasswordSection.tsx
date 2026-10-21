@@ -1,29 +1,27 @@
 'use client';
-import { ProfileSectionFrame } from './ProfileSectionFrame';
+import { ProfileSectionDisclosure } from './ProfileSectionShell';
 import { useSlot } from '../../elements';
 import * as React from 'react';
-import { useAccount, usePublicConfig } from '../../hooks';
-import { resolveProjectCapabilities } from '../../project-capabilities';
+import { useAccount } from '../../hooks';
 import { useT } from '../../i18n';
 import { useSubmitAction } from '../use-submit-action';
 import { Busy } from '../Spinner';
 import { FormError } from '../FormError';
 
-export function PasswordSection() {
-  const t = useT();
+type PasswordPolicy = { passwordMinLength: number; passwordMaxLength: number };
+
+export function PasswordSection(policy: PasswordPolicy) {
   return (
-    <ProfileSectionFrame section="password" title={t('userProfile.password.title')} meta={t('userProfile.password.description')} action={t('userProfile.password.submit')}>
-      <PasswordSectionContent />
-    </ProfileSectionFrame>
+    <ProfileSectionDisclosure section="password">
+      <PasswordSectionContent {...policy} />
+    </ProfileSectionDisclosure>
   );
 }
 
-function PasswordSectionContent() {
+function PasswordSectionContent({ passwordMinLength, passwordMaxLength }: PasswordPolicy) {
   const slot = useSlot();
   const t = useT();
   const account = useAccount();
-  const { config } = usePublicConfig();
-  const { passwordMinLength, passwordMaxLength } = resolveProjectCapabilities(config);
   const { pending, error, setError, run } = useSubmitAction();
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');

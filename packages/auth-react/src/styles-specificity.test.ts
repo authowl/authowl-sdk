@@ -21,6 +21,38 @@ function selectorList(text: string): string[] {
   return result;
 }
 
+// Strict structural check before CSSOM, which can silently discard invalid rules.
+function validateSelector(selector: string): void {
+  const stack: string[] = [];
+  let quote = '';
+  for (let i = 0; i < selector.length; i++) {
+    const char = selector[i]!;
+    if (char === '\\') { i++; continue; }
+    if (quote) { if (char === quote) quote = ''; continue; }
+    if (char === '"' || char === "'") { quote = char; continue; }
+    if (char === '(' || char === '[') stack.push(char);
+    if (char === ')' || char === ']') {
+      if (stack.pop() !== (char === ')' ? '(' : '[')) throw new Error(`Unbalanced selector: ${selector}`);
+    }
+  }
+  if (quote || stack.length) throw new Error(`Unbalanced selector: ${selector}`);
+  for (const item of selectorList(selector)) {
+    if (!item.trim() || /^[>+~]|[>+~]$/.test(item.trim())) throw new Error(`Dangling combinator: ${selector}`);
+  }
+  // Validate each functional selector's branches too, including nested :is/:where.
+  const functions = /:(?:where|is|not)\(/g;
+  while (functions.exec(selector)) {
+    let end = functions.lastIndex;
+    let depth = 1;
+    for (; depth && end < selector.length; end++) {
+      if (selector[end] === '(') depth++;
+      if (selector[end] === ')') depth--;
+    }
+    validateSelector(selector.slice(functions.lastIndex, end - 1));
+    functions.lastIndex = end;
+  }
+}
+
 function specificity(selector: string): Specificity {
   const value: Specificity = [0, 0, 0];
   const tokens = /(:[\w-]+)\(|(\[[^\]]*\])|(::[\w-]+)|([.#:][\w-]+)|([\w-]+)/g;
@@ -59,9 +91,24 @@ function selectors(rules: CSSRuleList): string[] {
   });
 }
 
-// Exceptions are confined to selectors already present before the card cleanup.
-// New selectors must stay at or below a single class. Each exception is exact.
+// Legacy rules and bare descendants retain a class floor above host resets.
+// Class-targeted selectors stay at or below one class. Each exception is exact.
 const LEGACY_EXCEPTIONS: Record<string, string> = {
+  ":where(.authowl-root) .ao-passkey-info strong": "Bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-factor-subtitle strong": "Bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-identity-copy strong": "Bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-identity-copy small": "Bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-modal-header h1": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-modal-header p": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-section input[type='email']": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-section input[inputmode='url']": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-current span": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-status span": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-recovery-card p": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-recovery-card bdi": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root) .ao-profile-close svg": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root)[dir='rtl'] .ao-profile button": "Pre-existing bare-element styling must override host element resets.",
+  ":where(.authowl-root)[dir='rtl'] .ao-profile input": "Pre-existing bare-element styling must override host element resets.",
   ":where(.authowl-root) .ao-input:focus": "Pre-existing control variant or interaction-state styling.",
   ":where(.authowl-root) .ao-button:not(.ao-button-secondary):not(.ao-danger-button):hover:not(:disabled)": "Pre-existing control variant or interaction-state styling.",
   ":where(.authowl-root) .ao-button:not(.ao-button-secondary):not(.ao-danger-button):active:not(:disabled)": "Pre-existing control variant or interaction-state styling.",
@@ -153,11 +200,31 @@ const LEGACY_EXCEPTIONS: Record<string, string> = {
 };
 
 describe('authentication stylesheet specificity', () => {
+  it('rejects malformed selectors before the browser can discard them', () => {
+    for (const bad of [':where(.authowl-root .ao-profile-list +)', '.one >', '+ .one', ':where(.one', ':is(.one))']) {
+      expect(() => validateSelector(bad), bad).toThrow();
+    }
+  });
+
+  it('validates every source selector, including rules discarded by CSSOM', () => {
+    const source = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const match of source.matchAll(/([^{}]+)\{/g)) {
+      const header = match[1]!.trim();
+      if (header.startsWith('@') || /^(?:from|to|[\d.]+%)(?:\s*,|$)/.test(header)) continue;
+      expect(() => validateSelector(header), header).not.toThrow();
+    }
+  });
   it('measures functional selectors using CSS specificity rules', () => {
     expect(specificity(':where(.authowl-root .ao-auth-card) .ao-input')).toEqual([0, 1, 0]);
     expect(specificity(':where(.authowl-root) .ao-auth-card .ao-input')).toEqual([0, 2, 0]);
     expect(specificity(':is(.one, #two) > button:not(:disabled)')).toEqual([1, 1, 1]);
     expect(specificity(':where(.root :is(.one, #two)) .tab:where(:focus-visible)')).toEqual([0, 1, 0]);
+  });
+
+  it('keeps bare-element rules above a host preflight element selector', () => {
+    for (const selector of Object.keys(LEGACY_EXCEPTIONS).filter((selector) => / (?:h1|p|span|strong|small|em|bdi|svg|input)(?:\b|\[)/.test(selector))) {
+      expect(compare(specificity(selector), [0, 0, 1]), selector).toBeGreaterThan(0);
+    }
   });
 
   it('caps every source selector at one class except documented legacy rules', () => {

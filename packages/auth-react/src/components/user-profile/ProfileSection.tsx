@@ -1,5 +1,5 @@
 'use client';
-import { ProfileSectionFrame } from './ProfileSectionFrame';
+import { ProfileSectionDisclosure } from './ProfileSectionShell';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useSession, useUser } from '../../hooks';
@@ -12,9 +12,9 @@ export function ProfileSection({ firstLastName, usernameEnabled, legacyNameField
   const t = useT();
   const { user } = useUser();
   return (
-    <ProfileSectionFrame section="profile" title={t('userProfile.profile.title')} meta={user?.name || t('userProfile.profile.description')} action={t('userProfile.edit')}>
+    <ProfileSectionDisclosure section="profile" title={t('userProfile.profile.title')} meta={user?.name || t('userProfile.profile.description')} action={t('userProfile.edit')}>
       <ProfileSectionContent firstLastName={firstLastName} usernameEnabled={usernameEnabled} legacyNameField={legacyNameField} />
-    </ProfileSectionFrame>
+    </ProfileSectionDisclosure>
   );
 }
 

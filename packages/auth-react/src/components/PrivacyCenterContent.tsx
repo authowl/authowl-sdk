@@ -13,6 +13,7 @@ import { useAuthClient, usePublicConfig, useUser } from '../hooks';
 import { useLocale, useServerError, useT, type MessageKey } from '../i18n';
 import { Busy } from './Spinner';
 import { FormError } from './FormError';
+import type { PrivacyCenterProps } from './PrivacyCenter';
 
 const RIGHT_KEYS: Record<PrivacyRightType, MessageKey> = {
   access: 'privacy.right.access',
@@ -34,12 +35,9 @@ const STATE_KEYS: Record<PrivacyRightState, MessageKey> = {
   withdrawn: 'privacy.state.withdrawn',
 };
 
-export type PrivacyCenterContentProps = {
-  /** Optional class name on the privacy-center section. */
-  className?: string;
-};
+export type PrivacyCenterContentProps = PrivacyCenterProps;
 
-export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = {}) {
+export function PrivacyCenterContent({ className, title }: PrivacyCenterContentProps = {}) {
   const slot = useSlot();
   const t = useT();
   const locale = useLocale();
@@ -116,12 +114,12 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
   }
 
   return (
-    <section className={slot(classes('ba-profile-section ba-privacy-center', className))} aria-labelledby="ba-privacy-title">
-      <header className={slot('ba-profile-section-header ba-privacy-center-header')}>
+    <section className={slot(classes('ba-profile-section ba-privacy-center', className))} aria-labelledby={title === null ? undefined : "ba-privacy-title"}>
+      {title !== null && <header className={slot('ba-profile-section-header ba-privacy-center-header')}>
         <p className={slot('ba-eyebrow')}>{t('privacy.dataUse')}</p>
-        <h2 className={slot('ba-title')} id="ba-privacy-title">{t('privacy.title')}</h2>
+        <h2 className={slot('ba-title')} id="ba-privacy-title">{title ?? t('privacy.title')}</h2>
         <p className={slot('ba-muted')}>{t('privacy.description')}</p>
-      </header>
+      </header>}
       <FormError>{error}</FormError>
 
       <div className={slot('ba-privacy-center-block')}>

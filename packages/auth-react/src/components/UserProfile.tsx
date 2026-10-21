@@ -2,26 +2,14 @@
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { usePublicConfig, useUser } from '../hooks';
-import { Bidi, useT, type MessageKey } from '../i18n';
-import { EmailSection } from './user-profile/EmailSection';
-import { DeleteAccountSection } from './user-profile/DeleteAccountSection';
-import { MfaSection } from './user-profile/MfaSection';
-import { PasswordSection } from './user-profile/PasswordSection';
-import { PasskeysSection } from './user-profile/PasskeysSection';
-import { ProfileSection } from './user-profile/ProfileSection';
-import { RecoverySection } from './user-profile/RecoverySection';
-import { SessionsSection } from './user-profile/SessionsSection';
-import { SocialSection } from './user-profile/SocialSection';
+import { useT } from '../i18n';
 import { UserProfileModal } from './user-profile/UserProfileModal';
-import { ProfileSectionFrame } from './user-profile/ProfileSectionFrame';
-import { PrivacyCenter } from './PrivacyCenter';
+import { UserProfileBody } from './user-profile/UserProfileBody';
 import { AuthOwlBadge } from './AuthOwlBadge';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { resolveProjectCapabilities } from '../project-capabilities';
 import {
   userProfileSectionsFor,
-  userProfileGroupsFor,
-  type UserProfileGroup,
   userProfileSectionFromHash,
   userProfileSectionHash,
   type UserProfileSection,
@@ -53,13 +41,6 @@ export type UserProfileProps = UserProfileSharedProps & (
   }
 );
 
-const GROUP_KEYS: Record<UserProfileGroup, { title: MessageKey; subtitle: MessageKey }> = {
-  profile: { title: 'userProfile.nav.profile', subtitle: 'userProfile.group.profile.description' },
-  security: { title: 'userProfile.group.security', subtitle: 'userProfile.group.security.description' },
-  connections: { title: 'userProfile.nav.social', subtitle: 'userProfile.group.connections.description' },
-  privacy: { title: 'userProfile.nav.privacy', subtitle: 'userProfile.group.privacy.description' },
-};
-
 export function UserProfile(props: UserProfileProps = {}) {
   const slot = useSlot();
   const {
@@ -75,7 +56,13 @@ export function UserProfile(props: UserProfileProps = {}) {
   const { config } = usePublicConfig();
   const [internalSection, setInternalSection] = React.useState<UserProfileSection>(defaultSection ?? 'profile');
   const active = section ?? internalSection;
-  const [focusSection, setFocusSection] = React.useState<UserProfileSection | null>(null);
+  const [requested, setRequested] = React.useState<{ section: UserProfileSection } | undefined>(() => {
+    const initial = section ?? defaultSection;
+    return initial ? { section: initial } : undefined;
+  });
+  const [closeVersion, setCloseVersion] = React.useState(0);
+  const previousSection = React.useRef(section);
+  const [focusSection, setFocusSection] = React.useState<{ section: UserProfileSection } | null>(null);
   const capabilities = resolveProjectCapabilities(config);
   const passwordEnabled = config !== null && capabilities.passwordSignIn;
   const passkeysEnabled = capabilities.passkeySignIn || capabilities.passkeyAdd;
@@ -97,26 +84,50 @@ export function UserProfile(props: UserProfileProps = {}) {
     [deletionEnabled, mfaEnabled, passkeysEnabled, passwordEnabled, privacyEnabled, recoveryEnabled, socialEnabled],
   );
 
+  // Capture the incoming URL exactly once, including while config loads.
+  const readHash = React.useRef(false);
   React.useEffect(() => {
-    if (section !== undefined) return;
+    if (readHash.current) return;
+    readHash.current = true;
+    if (section !== undefined || defaultSection !== undefined) return;
+    const next = userProfileSectionFromHash(window.location.hash);
+    if (next) {
+      setInternalSection(next);
+      setRequested({ section: next });
+      if (mode === 'page') setFocusSection({ section: next });
+    }
+  }, [defaultSection, mode, section]);
+
+  React.useEffect(() => {
+    if (mode !== 'page' || section !== undefined) return;
     const onHashChange = () => {
       const next = userProfileSectionFromHash(window.location.hash);
       if (next && sections.includes(next)) {
         setInternalSection(next);
-        if (mode === 'page') setFocusSection(next);
+        setRequested({ section: next });
+        setFocusSection({ section: next });
       }
     };
-    if (!defaultSection) onHashChange();
-    if (mode !== 'page') return;
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
-  }, [defaultSection, mode, section, sections]);
+  }, [mode, section, sections]);
 
   const visibleActive = sections.includes(active) ? active : 'profile';
+
+  React.useEffect(() => {
+    if (previousSection.current === section) return;
+    previousSection.current = section;
+    setRequested(undefined);
+    setCloseVersion((version) => version + 1);
+    setFocusSection({ section: visibleActive });
+  }, [section, visibleActive]);
+
   const select = (next: UserProfileSection) => {
     if (section === undefined) setInternalSection(next);
+    setRequested(undefined);
+    setCloseVersion((version) => version + 1);
     onSectionChange?.(next);
-    setFocusSection(next);
+    setFocusSection({ section: next });
     if (mode === 'page' && typeof window !== 'undefined') {
       window.history.replaceState(null, '', userProfileSectionHash(next));
     }
@@ -132,6 +143,8 @@ export function UserProfile(props: UserProfileProps = {}) {
     <UserProfileBody
       key={user.id}
       active={visibleActive}
+      mode={mode}
+      disclosure={{ requested, closeVersion }}
       focusSection={focusSection}
       sections={sections}
       onSelect={select}
@@ -159,93 +172,5 @@ export function UserProfile(props: UserProfileProps = {}) {
         <AuthOwlBadge />
       </footer>
     </article>
-  );
-}
-
-function UserProfileBody({
-  active,
-  focusSection,
-  sections,
-  onSelect,
-  onDeleted,
-  capabilities,
-}: {
-  active: UserProfileSection;
-  focusSection: UserProfileSection | null;
-  sections: readonly UserProfileSection[];
-  onSelect: (section: UserProfileSection) => void;
-  onDeleted?: () => void;
-  capabilities: ReturnType<typeof resolveProjectCapabilities>;
-}) {
-  const slot = useSlot();
-  const t = useT();
-  const { user } = useUser();
-  const groups = userProfileGroupsFor(sections);
-  const group = groups.find((item) => item.sections.some((item) => item === active)) ?? groups[0]!;
-  const contentRef = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    if (focusSection !== active) return;
-    const heading = contentRef.current?.querySelector<HTMLElement>(`[data-profile-section="${active}"] h2`);
-    heading?.focus({ preventScroll: true });
-    heading?.scrollIntoView?.({ block: 'nearest' });
-  }, [active, focusSection]);
-  const available = (item: UserProfileSection) => group.sections.some((section) => section === item);
-  return (
-    <div className={slot('ba-profile-layout')}>
-      <nav className={slot('ba-profile-nav')} aria-label={t('userProfile.nav.aria')}>
-        <div className={slot('ba-profile-identity')}>
-          {user?.image ? <img className={slot('ba-profile-avatar')} src={user.image} alt="" /> : (
-            <span className={slot('ba-profile-avatar')} aria-hidden="true">
-              {(user?.name || user?.email || '?').trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}
-            </span>
-          )}
-          <div className={slot('ba-profile-identity-copy')}>
-            <strong>{user?.name}</strong>
-            <small><Bidi>{user?.email}</Bidi></small>
-          </div>
-        </div>
-        {groups.map((item) => (
-          <a
-            key={item.id}
-            href={userProfileSectionHash(item.sections[0]!)}
-            className={slot('ba-profile-nav-item')}
-            aria-current={group.id === item.id ? 'page' : undefined}
-            onClick={(event) => {
-              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-              event.preventDefault();
-              onSelect(item.sections[0]!);
-            }}
-          >
-            {t(GROUP_KEYS[item.id].title)}
-          </a>
-        ))}
-      </nav>
-      <div key={group.id} ref={contentRef} className={slot('ba-profile-content ba-step')} data-section={active} data-group={group.id}>
-        <header className={slot('ba-profile-group-heading')}>
-          <h1 className={slot('ba-profile-group-title')}>{t(GROUP_KEYS[group.id].title)}</h1>
-          <p className={slot('ba-profile-group-subtitle')}>{t(GROUP_KEYS[group.id].subtitle)}</p>
-        </header>
-        {available('profile') && (
-          <ProfileSection
-            firstLastName={capabilities.firstLastName}
-            usernameEnabled={capabilities.collectUsername}
-            legacyNameField={capabilities.legacyNameField}
-          />
-        )}
-        {available('email') && <EmailSection allowChange={capabilities.emailChange} />}
-        {available('password') && <PasswordSection />}
-        {available('passkeys') && <PasskeysSection allowAdd={capabilities.passkeyAdd} />}
-        {available('mfa') && <MfaSection />}
-        {available('recovery') && <RecoverySection />}
-        {available('sessions') && <SessionsSection />}
-        {available('social') && <SocialSection />}
-        {available('privacy') && (
-          <ProfileSectionFrame section="privacy" title={t('userProfile.nav.privacy')} meta={t('userProfile.group.privacy.description')}>
-            <PrivacyCenter />
-          </ProfileSectionFrame>
-        )}
-        {available('danger') && <DeleteAccountSection onDeleted={onDeleted} />}
-      </div>
-    </div>
   );
 }

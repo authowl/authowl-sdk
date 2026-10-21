@@ -1,4 +1,7 @@
 import type { Locale } from '@authowl/core';
+import type { MessageKey } from '../../i18n';
+
+export type NonEmpty<T> = readonly [T, ...T[]];
 
 export const USER_PROFILE_SECTIONS = [
   'profile',
@@ -17,21 +20,20 @@ export type UserProfileSection = (typeof USER_PROFILE_SECTIONS)[number];
 
 /** Navigation order and section order within each account page. */
 export const USER_PROFILE_GROUPS = [
-  { id: 'profile', sections: ['profile', 'email'] },
-  { id: 'security', sections: ['password', 'passkeys', 'mfa', 'recovery', 'sessions'] },
-  { id: 'connections', sections: ['social'] },
-  { id: 'privacy', sections: ['privacy', 'danger'] },
-] as const satisfies readonly { id: string; sections: readonly UserProfileSection[] }[];
+  { id: 'profile', title: 'userProfile.nav.profile', subtitle: 'userProfile.group.profile.description', sections: ['profile', 'email'] },
+  { id: 'security', title: 'userProfile.group.security', subtitle: 'userProfile.group.security.description', sections: ['password', 'passkeys', 'mfa', 'recovery', 'sessions'] },
+  { id: 'connections', title: 'userProfile.nav.social', subtitle: 'userProfile.group.connections.description', sections: ['social'] },
+  { id: 'privacy', title: 'userProfile.nav.privacy', subtitle: 'userProfile.group.privacy.description', sections: ['privacy', 'danger'] },
+] as const satisfies readonly { id: string; title: MessageKey; subtitle: MessageKey; sections: NonEmpty<UserProfileSection> }[];
 
 export type UserProfileGroup = (typeof USER_PROFILE_GROUPS)[number]['id'];
 
 export function userProfileGroupsFor(sections: readonly UserProfileSection[]) {
-  return USER_PROFILE_GROUPS.map((group) => ({
-    id: group.id,
-    sections: group.sections.filter((section) => sections.includes(section)),
-  })).filter((group) => group.sections.length > 0);
+  return USER_PROFILE_GROUPS.flatMap((group) => {
+    const [first, ...rest] = group.sections.filter((section) => sections.includes(section));
+    return first ? [{ ...group, sections: [first, ...rest] as NonEmpty<UserProfileSection> }] : [];
+  });
 }
-
 
 export type UserProfileCapabilities = {
   password: boolean;

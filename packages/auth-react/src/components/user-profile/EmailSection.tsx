@@ -1,5 +1,5 @@
 'use client';
-import { ProfileSectionFrame } from './ProfileSectionFrame';
+import { ProfileSectionDisclosure } from './ProfileSectionShell';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useUser } from '../../hooks';
@@ -12,22 +12,19 @@ export function EmailSection({ allowChange }: { allowChange: boolean }) {
   const t = useT();
   const { user } = useUser();
   return (
-    <ProfileSectionFrame section="email" title={t('userProfile.email.title')} meta={!user?.email ? t('userProfile.email.unavailable') : <><Bidi>{user.email}</Bidi>{!allowChange && <span data-testid="email-change-disabled"> · {t('userProfile.email.changeDisabled')}</span>}</>} action={t('userProfile.edit')}>
-      {user?.email && allowChange ? <EmailSectionContent /> : null}
-    </ProfileSectionFrame>
+    <ProfileSectionDisclosure section="email" title={t('userProfile.email.title')} meta={!user?.email ? t('userProfile.email.unavailable') : <><Bidi>{user.email}</Bidi>{!allowChange && <span data-testid="email-change-disabled"> · {t('userProfile.email.changeDisabled')}</span>}</>} action={t('userProfile.edit')}>
+      {user?.email && allowChange ? <EmailSectionContent email={user.email} /> : null}
+    </ProfileSectionDisclosure>
   );
 }
 
-function EmailSectionContent() {
+function EmailSectionContent({ email }: { email: string }) {
   const slot = useSlot();
   const t = useT();
   const account = useAccount();
-  const { user } = useUser();
   const { pending, error, run } = useSubmitAction();
   const [newEmail, setNewEmail] = React.useState('');
   const [sent, setSent] = React.useState(false);
-
-  if (!user?.email) return null;
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -52,7 +49,7 @@ function EmailSectionContent() {
       <p className={slot('ba-muted')}>{t('userProfile.email.description')}</p>
       <p className={slot('ba-profile-current')}>
         <span>{t('userProfile.email.current')}</span>
-        <strong><Bidi>{user.email}</Bidi></strong>
+        <strong><Bidi>{email}</Bidi></strong>
       </p>
       <form method="post" className={slot('ba-fields')} onSubmit={submit}>
         <label className={slot('ba-label')}>

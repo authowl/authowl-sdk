@@ -1,16 +1,15 @@
 'use client';
-import { ProfileSectionFrame } from './ProfileSectionFrame';
+import { ProfileSectionDisclosure } from './ProfileSectionShell';
 import { useSlot } from '../../elements';
 import { useUser } from '../../hooks';
 import { Bidi, useT } from '../../i18n';
 import { BackupCodesManager } from '../BackupCodesManager';
 
 export function RecoverySection() {
-  const t = useT();
   return (
-    <ProfileSectionFrame section="recovery" title={t('userProfile.recovery.title')} meta={t('userProfile.recovery.description')}>
+    <ProfileSectionDisclosure section="recovery">
       <RecoverySectionContent />
-    </ProfileSectionFrame>
+    </ProfileSectionDisclosure>
   );
 }
 

@@ -1,7 +1,6 @@
 'use client';
-import { ProfileIcon } from './ProfileSectionFrame';
+import { ProfileRow, ProfileSectionShell } from './ProfileSectionShell';
 import { useSlot } from '../../elements';
-import * as React from 'react';
 import { useAccount, useSession } from '../../hooks';
 import { useLocale, useT } from '../../i18n';
 import { useSubmitAction } from '../use-submit-action';
@@ -16,7 +15,6 @@ export function SessionsSection() {
   const account = useAccount();
   const sessionState = useSession();
   const mutation = useSubmitAction();
-  const titleId = React.useId();
   const resource = useAccountResource(
     () => account.listSessions(),
     t('userProfile.sessions.loadError'),
@@ -41,10 +39,7 @@ export function SessionsSection() {
   };
 
   return (
-    <section className={slot('ba-profile-section')} aria-labelledby={titleId} data-profile-section="sessions">
-      <header className={slot('ba-profile-section-header')}>
-        <h2 id={titleId} tabIndex={-1} className={slot('ba-profile-section-title')}>{t('userProfile.sessions.title')}</h2>
-      </header>
+    <ProfileSectionShell section="sessions" title={t('userProfile.sessions.title')} list>
       {resource.data === null ? (
         resource.loading
           ? <div className={slot('ba-profile-list-skeleton')} aria-busy="true"><div className={slot('ba-skeleton')} /><div className={slot('ba-skeleton')} /></div>
@@ -54,18 +49,13 @@ export function SessionsSection() {
           {sessions.map((session) => {
             const label = session.userAgent?.trim() || t('userProfile.sessions.unknownDevice');
             return (
-              <li className={slot('ba-profile-list-item')} key={session.id}>
-                <ProfileIcon section="sessions" />
-                <span className={slot('ba-profile-row-copy')}>
-                  <strong>{label}</strong>
-                  <small>
-                    {session.id === currentId && <em>{t('userProfile.sessions.current')}</em>}
-                    {formatSessionTime(session.updatedAt, locale)}
-                  </small>
-                </span>
-                <button className={slot('ba-profile-row-button')} type="button" disabled={mutation.pending} onClick={() => revoke(session.id, label)}>
-                  {t('userProfile.sessions.revoke')}
-                </button>
+              <li key={session.id}>
+                <ProfileRow section="sessions" title={label}
+                  badge={session.id === currentId ? <span className={slot('ba-profile-pill')}>{t('userProfile.sessions.current')}</span> : undefined}
+                  meta={formatSessionTime(session.updatedAt, locale)}
+                  action={<button className={slot('ba-profile-row-button')} type="button" disabled={mutation.pending} onClick={() => revoke(session.id, label)}>
+                    {t('userProfile.sessions.revoke')}
+                  </button>} />
               </li>
             );
           })}
@@ -95,6 +85,6 @@ export function SessionsSection() {
         </div>
       )}
       <FormError>{mutation.error}</FormError>
-    </section>
+    </ProfileSectionShell>
   );
 }

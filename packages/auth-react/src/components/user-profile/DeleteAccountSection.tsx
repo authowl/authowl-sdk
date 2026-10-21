@@ -1,5 +1,5 @@
 'use client';
-import { ProfileSectionFrame } from './ProfileSectionFrame';
+import { ProfileSectionDisclosure } from './ProfileSectionShell';
 import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useSession, useUser } from '../../hooks';
@@ -9,11 +9,10 @@ import { Busy } from '../Spinner';
 import { FormError } from '../FormError';
 
 export function DeleteAccountSection({ onDeleted }: { onDeleted?: () => void }) {
-  const t = useT();
   return (
-    <ProfileSectionFrame section="danger" title={t('userProfile.delete.title')} meta={t('userProfile.delete.description')} action={t('userProfile.delete.submit')}>
+    <ProfileSectionDisclosure section="danger">
       <DeleteAccountSectionContent onDeleted={onDeleted} />
-    </ProfileSectionFrame>
+    </ProfileSectionDisclosure>
   );
 }
 
