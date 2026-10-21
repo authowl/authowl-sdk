@@ -171,6 +171,25 @@ pnpm build:storybook
 pnpm test:storybook  # real Chromium smoke, interaction, and axe checks
 ```
 
+### Pixel baselines
+
+CI comparison failure images are available in the failed CI run’s `screenshot-failures` artifact for 7 days.
+
+Run `pnpm screenshots:update` to regenerate baselines with Linux Chromium inside
+exactly the pinned Docker image used by the canonical gate. This uses the current
+working tree; review and commit the generated PNGs before running the clean-tree
+gate. Never author baselines with macOS Chromium or a direct Vitest update command.
+
+Baselines live in
+`stories/__screenshots__/<file>.stories.tsx/storybook-<en|ar>-<light|dark>/*.png`.
+Every story is captured after its play function, including full-height content and
+portalled dialogs, at a fixed viewport and UTC timezone. CI always compares them
+through `scripts/ci/local-gate.sh`. Plain `pnpm test:storybook` skips screenshot
+comparison locally because system fonts differ; comparison is enabled only with
+`AUTHOWL_SCREENSHOTS=1` (use the Docker gate for canonical results).
+
+Run the gate with `AUTHOWL_SCREENSHOT_THRESHOLD=0` to list every changed story when a slice must prove which colours moved (default: `0.06`, valid range: `[0,1]`). Up to 64 mismatched pixels per story are tolerated: native and emulated x86_64 Chromium anti-alias isolated glyph edges differently.
+
 ## Security model
 
 - **Publishable keys** (`pk_test_…` in development, `pk_live_…` in production)

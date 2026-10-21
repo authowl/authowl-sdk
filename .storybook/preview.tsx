@@ -1,3 +1,4 @@
+import './screenshot-environment';
 import type { Preview } from '@storybook/react-vite';
 import React from 'react';
 import '@authowl/react/styles.css';
@@ -5,6 +6,12 @@ import { PreviewAuth } from '../examples/vite-react/src/PreviewAuth';
 
 const preview: Preview = {
   tags: ['autodocs'],
+  afterEach: async ({ id }) => {
+    if (import.meta.env.AUTHOWL_SCREENSHOTS === '1') {
+      const { captureStory } = await import('./screenshots');
+      await captureStory(id);
+    }
+  },
   globalTypes: {
     locale: {
       description: 'Component language and reading direction',
@@ -57,6 +64,9 @@ const preview: Preview = {
           privacyEnabled={privacyEnabled}
           passkeyRelyingPartyId={passkeyRelyingPartyId}
           primaryColor={primaryColor}
+          signInMethod={context.parameters.authowl?.signInMethod}
+          wrongPassword={context.parameters.authowl?.wrongPassword === true}
+          mfaEnrollment={context.parameters.authowl?.mfaEnrollment === true}
         >
           <main
             style={{

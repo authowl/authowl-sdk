@@ -6,15 +6,6 @@
 #
 set -euo pipefail
 
-# Docker refuses `--cpus` above the host's core count ("range of CPUs is from
-# 0.01 to 2.00, as there are only 2 CPUs available"), which killed the whole
-# release gate on a 2-core GitHub runner before it built anything. Ask for the
-# budget we want, take what the host actually has.
-gate_cpus() {
-  local want="$1" have
-  have=$(getconf _NPROCESSORS_ONLN 2>/dev/null || nproc 2>/dev/null || echo 1)
-  if [ "$want" -le "$have" ]; then echo "$want"; else echo "$have"; fi
-}
 umask 077
 
 root=$(cd "$(dirname "$0")/../.." && pwd -P)
@@ -88,6 +79,12 @@ source /dev/stdin <<<"$ownership_helper"
 # shellcheck disable=SC1091
 source /dev/stdin <<<"$toolchain_helper"
 sdk_ci_load_toolchain /dev/stdin <<<"$toolchain_contract"
+image_helper=$(
+  GIT_NO_REPLACE_OBJECTS=1 git show "$commit:scripts/ci/docker-sdk.sh"
+)
+# shellcheck source=/dev/stdin
+# shellcheck disable=SC1091
+source /dev/stdin <<<"$image_helper"
 
 if [[ "$(GIT_NO_REPLACE_OBJECTS=1 git show "$commit:.nvmrc")" != "${NODE_VERSION#v}" ]]; then
   echo 'SDK local-gate: .nvmrc must match the pinned Linux runtime' >&2
@@ -281,6 +278,38 @@ run_step() {
   printf 'result.%s=passed\n' "$name" >>"$completed_file"
 }
 
+# Vitest 4 toMatchScreenshot writes <name>-actual-<browser>-<platform>.png and
+# <name>-diff-<browser>-<platform>.png under .vitest-attachments,
+# independently of resolveScreenshotPath (which controls reference baselines).
+# The Docker /workspace bind mount survives container removal until cleanup.
+export_screenshot_failures() (
+  cd "$workspace"
+  local image
+  local destination
+  while IFS= read -r -d '' image; do
+    destination="$result_dir/screenshot-failures/${image#./}"
+    mkdir -p "${destination%/*}" || return
+    cp "$image" "$destination" || return
+  done < <(
+    find . -type d -name node_modules -prune -o \
+      -type f -path '*/.vitest-attachments/*' \
+      \( -name '*-actual-*.png' -o -name '*-diff-*.png' \) -print0
+  )
+)
+
+run_storybook_browser() {
+  local status=0
+  docker_sdk_offline env AUTHOWL_SCREENSHOTS=1 \
+    AUTHOWL_SCREENSHOT_THRESHOLD="${AUTHOWL_SCREENSHOT_THRESHOLD-0.06}" \
+    pnpm run test:storybook || status=$?
+  if [[ "$status" -ne 0 ]]; then
+    if ! export_screenshot_failures; then
+      echo 'SDK local-gate: screenshot failure export failed' >&2
+    fi
+  fi
+  return "$status"
+}
+
 prepare_immutable_repository() {
   (
     umask 022
@@ -320,22 +349,6 @@ validate_archive_attributes() {
   )
 }
 
-build_ci_image() {
-  cp "$immutable_repository/docker/ci.Dockerfile" "$image_context/Dockerfile"
-  docker build \
-    --pull \
-    --label "${AUTHOWL_SDK_CI_RUN_LABEL}=${run_id}" \
-    --build-arg "NODE_BASE_IMAGE=${NODE_BASE_IMAGE}" \
-    --build-arg "PLAYWRIGHT_BASE_IMAGE=${PLAYWRIGHT_BASE_IMAGE}" \
-    --build-arg "NODE_VERSION=${NODE_VERSION}" \
-    --build-arg "PNPM_VERSION=${PNPM_VERSION}" \
-    --build-arg "PNPM_INTEGRITY=${PNPM_INTEGRITY}" \
-    --tag "$ci_image_tag" \
-    "$image_context"
-  ci_image_id=$(docker image inspect --format '{{.Id}}' "$ci_image_tag")
-  printf 'tool.ci_image=%s\n' "$ci_image_id" >>"$completed_file"
-}
-
 prepare_dependency_store() {
   dependency_store_volume=$(
     docker volume create \
@@ -345,7 +358,7 @@ prepare_dependency_store() {
     docker volume create \
       --label "${AUTHOWL_SDK_CI_RUN_LABEL}=${run_id}"
   )
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --init \
     --network none \
     --read-only \
@@ -398,7 +411,7 @@ verify_source_export() {
     GIT_NO_REPLACE_OBJECTS=1 \
       git --git-dir="$repository_mirror" rev-parse --show-object-format
   )
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --init \
     --network none \
     --read-only \
@@ -418,7 +431,7 @@ verify_source_export() {
 snapshot_source() {
   local output_file=$1
   local snapshot_mode=${2:-authored}
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --init \
     --network none \
     --read-only \
@@ -500,7 +513,7 @@ docker_dependency_network() {
       return 2
       ;;
   esac
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --init \
     --read-only \
     --user "$(id -u):$(id -g)" \
@@ -520,45 +533,7 @@ docker_dependency_network() {
 }
 
 docker_sdk_offline() {
-  local -a additional_mounts=()
-  local -a additional_environment=()
-  if [[ "${1:-}" == '--consumer-exec-tmp' ]]; then
-    additional_mounts=(
-      --tmpfs '/consumer-tmp:rw,exec,nosuid,nodev,size=2g'
-    )
-    additional_environment=(
-      --env AUTHOWL_CONSUMER_TMPDIR=/consumer-tmp
-    )
-    shift
-  fi
-  docker run --rm \
-    --init \
-    --network none \
-    --read-only \
-    --user "$(id -u):$(id -g)" \
-    --cap-drop ALL \
-    --security-opt no-new-privileges:true \
-    --memory 8g \
-    --cpus "$(gate_cpus 4)" \
-    --pids-limit 2048 \
-    --shm-size 2g \
-    --tmpfs /tmp:rw,nosuid,nodev,size=2g \
-    "${additional_mounts[@]+"${additional_mounts[@]}"}" \
-    --mount "type=bind,src=$workspace,dst=/workspace" \
-    --mount "type=volume,src=$dependency_store_volume,dst=/pnpm-store" \
-    --mount "type=bind,src=$npm_cache,dst=/npm-cache" \
-    --workdir /workspace \
-    --env HOME=/tmp \
-    --env CI=true \
-    --env COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
-    --env npm_config_cache=/npm-cache \
-    --env npm_config_offline=true \
-    --env npm_config_audit=false \
-    --env npm_config_fund=false \
-    --env npm_config_logs_dir=/tmp/npm-logs \
-    --env npm_config_update_notifier=false \
-    "${additional_environment[@]+"${additional_environment[@]}"}" \
-    "$ci_image_tag" "$@"
+  sdk_ci_run none "$@"
 }
 
 prepare_consumer_workspace() {
@@ -572,7 +547,7 @@ prepare_consumer_workspace() {
   cp \
     "$immutable_repository/scripts/ci/fixtures/shadcn-globals.css" \
     "$consumer_workspace/scripts/ci/fixtures/"
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --init \
     --network none \
     --read-only \
@@ -611,7 +586,7 @@ prepare_consumer_workspace() {
 
 prepare_release_artifacts() {
   release_stage=$(mktemp -d "$release_base/.stage-$commit.XXXXXXXX")
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --init \
     --network none \
     --read-only \
@@ -632,7 +607,7 @@ prepare_release_artifacts() {
 }
 
 docker_consumer_network() {
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --init \
     --read-only \
     --user "$(id -u):$(id -g)" \
@@ -694,7 +669,7 @@ run_step ci-image build_ci_image
 run_step dependency-store prepare_dependency_store
 run_step gate-preflight-tests run_preflight_tests
 run_step semgrep run_semgrep
-run_step gitleaks docker run --rm \
+run_step gitleaks docker run --platform linux/amd64 --rm \
   --network none \
   --read-only \
   --user "$(id -u):$(id -g)" \
@@ -762,7 +737,7 @@ run_step lint docker_sdk_offline pnpm run lint
 run_step typecheck docker_sdk_offline pnpm run typecheck
 run_step tests docker_sdk_offline pnpm run test
 run_step storybook-build docker_sdk_offline pnpm run build:storybook
-run_step storybook-browser docker_sdk_offline pnpm run test:storybook
+run_step storybook-browser run_storybook_browser
 run_step tokens-browser docker_sdk_offline \
   pnpm --filter @authowl/tokens run test:browser
 run_step next-generator docker_sdk_offline --consumer-exec-tmp \

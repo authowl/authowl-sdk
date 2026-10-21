@@ -140,7 +140,7 @@ done
 # shellcheck source=scripts/ci/docker-resource-ownership.sh
 source "${repo_root}/scripts/ci/docker-resource-ownership.sh"
 
-docker run --rm \
+docker run --platform linux/amd64 --rm \
   --network none \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=32m \
@@ -203,7 +203,7 @@ scan_volume="$(
 # revisions at the same moment, so a checksum around a live fetch is still a
 # nondeterministic release input. The compressed copies are repository-owned,
 # license-noted below, and re-verified semantically before every scan.
-docker run --rm \
+docker run --platform linux/amd64 --rm \
   --network none \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m \
@@ -238,7 +238,7 @@ docker run --rm \
 # the source repository, Git metadata, ignored local secrets, or build output.
 list_scan_files |
   COPYFILE_DISABLE=1 tar --null -C "${repo_root}" -T - -cf - |
-  docker run --rm -i \
+  docker run --platform linux/amd64 --rm -i \
     --network none \
     --read-only \
     --cap-drop ALL \
@@ -255,7 +255,7 @@ list_scan_files |
         > /workspace/src/.semgrepignore
     '
 
-docker run --rm \
+docker run --platform linux/amd64 --rm \
   --network none \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=256m \

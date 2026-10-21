@@ -84,7 +84,7 @@ expect_failure() {
 snapshot_source() {
   local source_directory=$1
   local snapshot_mode=${2:-authored}
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --network none \
     --read-only \
     --user "$(id -u):$(id -g)" \
@@ -107,7 +107,7 @@ load_toolchain_fixture() (
 )
 
 verify_export_fixture() {
-  docker run --rm \
+  docker run --platform linux/amd64 --rm \
     --network none \
     --read-only \
     --user "$(id -u):$(id -g)" \
@@ -198,7 +198,7 @@ printf '%s\n' \
   '{"name":"authowl-pack-fixture","version":"1.0.0","scripts":{"prepack":"touch lifecycle-ran"}}' \
   >"$pack_fixture/package/package.json"
 printf 'fixture\n' >"$pack_fixture/package/index.js"
-docker run --rm \
+docker run --platform linux/amd64 --rm \
   --network none \
   --read-only \
   --user "$(id -u):$(id -g)" \

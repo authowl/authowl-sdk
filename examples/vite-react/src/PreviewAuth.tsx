@@ -1,6 +1,8 @@
 import React from 'react';
 import { AuthOwlProvider } from '@authowl/react';
 
+export type PreviewSignInMethod = 'password' | 'email_otp' | 'magic_link' | 'passkey' | 'phone_otp' | 'sso';
+
 const PREVIEW_PK = 'pk_live_11111111-1111-1111-1111-111111111111_abcdefghij0123456789';
 
 const user = {
@@ -95,6 +97,9 @@ function createPreviewFetch(
   configUnavailable: boolean,
   privacyEnabled: boolean,
   passkeyRelyingPartyId: string | undefined,
+  signInMethod: PreviewSignInMethod | undefined,
+  mfaEnrollment: boolean,
+  wrongPassword: boolean,
 ): typeof fetch {
   return async (input: RequestInfo | URL): Promise<Response> => {
     const url = new URL(String(input));
@@ -108,7 +113,7 @@ function createPreviewFetch(
         authBaseUrl:
           'https://auth.preview.test/api/projects/11111111-1111-1111-1111-111111111111/auth',
         branding: { appName: 'Cairo Studio', theme: 'light', primaryColor },
-        enabledMethods: ['password', 'magic_link', 'passkey'],
+        enabledMethods: signInMethod ? [signInMethod] : ['password', 'magic_link', 'passkey'],
         // WebAuthn validates the relying-party id against the CALLING page, so
         // passkey surfaces hide themselves unless the id covers the host the
         // story renders on - and the preview API lives on `auth.preview.test`,
@@ -116,7 +121,7 @@ function createPreviewFetch(
         // names the story's own host here, which is what a correctly configured
         // project looks like. Left unset elsewhere so the default preview keeps
         // demonstrating the honest cross-host behaviour.
-        ...(passkeyRelyingPartyId
+        ...(!signInMethod && passkeyRelyingPartyId
           ? {
             authentication: {
               email: { signUp: true, signIn: ['password', 'magic_link'] },
@@ -127,7 +132,16 @@ function createPreviewFetch(
             },
           }
           : {}),
-        socialProviders: ['google', 'github'],
+        ...(signInMethod === 'passkey' ? {
+          authentication: {
+            email: { signUp: false, signIn: [] },
+            phone: { signUp: false, signIn: false },
+            password: { signUp: false, add: false },
+            username: { collectOnSignUp: false, signIn: false },
+            passkey: { signIn: true, add: true, relyingPartyId: passkeyRelyingPartyId },
+          },
+        } : {}),
+        socialProviders: signInMethod ? [] : ['google', 'github'],
         socialProviderClientIds: { google: 'preview-google-client-id.apps.googleusercontent.com' },
         requireEmailVerification: true,
         legal: {
@@ -140,11 +154,11 @@ function createPreviewFetch(
               }
             : {}),
         },
-        twoFactor: true,
-        mfaRequired: true,
+        twoFactor: !signInMethod,
+        mfaRequired: !signInMethod,
         accountDeletion: true,
         organizations: true,
-        sso: false,
+        sso: signInMethod === 'sso',
         jwtIssuer: null,
         turnstileSiteKey: null,
         authTurnstileSiteKey: null,
@@ -180,7 +194,24 @@ function createPreviewFetch(
         }],
       });
     }
-    if (path.endsWith('/get-session')) return Response.json(signedIn ? { user, session } : null);
+    if (path.endsWith('/two-factor/enable')) {
+      return Response.json({
+        totpURI: 'otpauth://totp/Cairo%20Studio:mona@example.test?secret=JBSWY3DPEHPK3PXP&issuer=Cairo%20Studio',
+        backupCodes: ['preview-0001', 'preview-0002', 'preview-0003', 'preview-0004'],
+      });
+    }
+    if (path.endsWith('/phone-otp/challenge')) {
+      return Response.json({ kind: 'akedly_shield_v1_2', connectionId: 'preview-phone', challenge: 'a'.repeat(64), difficulty: 0, challengeToken: 'preview-challenge-token', challengeRequired: false, turnstile: { required: false, siteKey: null } });
+    }
+    if (path.endsWith('/phone-otp/start')) {
+      return Response.json({ status: 'pending' });
+    }
+    if (path.endsWith('/sign-in/email') && wrongPassword) {
+      return Response.json({ code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }, { status: 401 });
+    }
+    if (path.endsWith('/get-session')) {
+      return Response.json(signedIn ? { user: { ...user, twoFactorEnabled: !mfaEnrollment }, session } : null);
+    }
     if (path.endsWith('/organization/list')) return Response.json(organizations);
     if (path.endsWith('/organization/get-full-organization')) {
       const id = url.searchParams.get('organizationId');
@@ -209,17 +240,17 @@ function createPreviewFetch(
   };
 }
 
-export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; children: React.ReactNode }) {
+export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, signInMethod, mfaEnrollment = false, wrongPassword = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; signInMethod?: PreviewSignInMethod; mfaEnrollment?: boolean; wrongPassword?: boolean; children: React.ReactNode }) {
   const previewFetch = React.useMemo(
     () => createPreviewFetch(
       signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled,
-      passkeyRelyingPartyId,
+      passkeyRelyingPartyId, signInMethod, mfaEnrollment, wrongPassword,
     ),
-    [configUnavailable, consentRequired, passkeyRelyingPartyId, primaryColor, privacyEnabled, signedIn],
+    [configUnavailable, consentRequired, passkeyRelyingPartyId, primaryColor, privacyEnabled, signedIn, signInMethod, mfaEnrollment, wrongPassword],
   );
   return (
     <AuthOwlProvider
-      publishableKey={PREVIEW_PK}
+      publishableKey={signInMethod ? PREVIEW_PK.replace('abcdefghij0123456789', `preview${signInMethod.replaceAll('_', '')}0123456789`) : mfaEnrollment ? PREVIEW_PK.replace('abcdefghij0123456789', 'previewMfaEnrollment0123456789') : PREVIEW_PK}
       apiUrl="https://auth.preview.test"
       fetch={previewFetch}
       locale={locale}
