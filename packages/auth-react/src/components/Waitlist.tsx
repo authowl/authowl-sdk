@@ -36,10 +36,10 @@ export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistP
   const { stepRef } = useStepFocus(step, true);
 
   return (
-    <div key={step} ref={stepRef} className={slot('ba-form ba-step')} data-testid={`waitlist-${step}`} role={joined ? 'status' : undefined}>
+    <div key={step} ref={stepRef} className={slot('ba-form ba-step')} data-testid={`waitlist-${step}`}>
       {showBranding ? <AuthOwlBranding /> : null}
       <h2 className={slot('ba-title')}>{t(joined ? 'waitlist.acceptedTitle' : 'waitlist.title')}</h2>
-      <p className={slot('ba-muted')}>{t(joined ? 'waitlist.acceptedDescription' : 'waitlist.description')}</p>
+      <p role={joined ? 'status' : undefined} className={slot('ba-muted')}>{t(joined ? 'waitlist.acceptedDescription' : 'waitlist.description')}</p>
       {!joined && (
       <form
         method="post"

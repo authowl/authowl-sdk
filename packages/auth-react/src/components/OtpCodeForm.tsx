@@ -39,6 +39,7 @@ export function OtpCodeForm({
   const locked = pending || Boolean(lock?.locked);
   const slot = useSlot();
   const t = useT();
+  const messageId = React.useId();
   return (
     <form
       method="post"
@@ -49,23 +50,24 @@ export function OtpCodeForm({
         if (!locked) onSubmit();
       }}
     >
-      <label className={slot('ba-label')}>
+      <p id={messageId} role="status" className={slot('ba-muted')}>
         {richMessage(t('emailOtp.codeLabel'), { email: <Bidi>{email}</Bidi> })}
-        <input
-          className={slot('ba-input')}
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          value={code}
-          onChange={(e) => onCodeChange(e.target.value)}
-          autoFocus
-          required
-        />
-      </label>
+      </p>
+      <input
+        aria-labelledby={messageId}
+        className={slot('ba-input')}
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        value={code}
+        onChange={(e) => onCodeChange(e.target.value)}
+        autoFocus
+        required
+      />
       <FormError>{error}</FormError>
       <button className={slot('ba-button')} type="submit" disabled={locked} aria-busy={pending || undefined}>
         <Busy busy={pending} label={t('common.verifying')}>{t('emailOtp.verifySubmit')}</Busy>
       </button>
-      <button type="button" className={slot('ba-link-button')} disabled={locked} onClick={onChangeEmail}>
+      <button type="button" className={slot('ba-link-button')} onClick={onChangeEmail}>
         {t('emailOtp.changeEmail')}
       </button>
     </form>

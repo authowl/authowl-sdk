@@ -13,6 +13,7 @@ import { useSubmitAction } from './use-submit-action';
 import { usePasskeyAutofill } from './passkey-autofill';
 import { useSignInMethodRecorder, useLastUsedSignInMethod } from '../last-used-method';
 import { StepCard } from './StepCard';
+import { useAuthCardLock } from './AuthCardLock';
 import { usePasskeySignIn } from './use-passkey-sign-in';
 import { MethodTabs } from './MethodTabs';
 import { SocialButtons } from './SocialButtons';
@@ -85,8 +86,8 @@ export function SignIn({
   // factor is always TOTP; <MFAChallenge> covers it and offers backup codes as a
   // universal fallback.
   const [challenge, setChallenge] = React.useState(false);
-  const [childPending, setChildPending] = React.useState(false);
-  const locked = pending || childPending;
+  const lock = useAuthCardLock(pending);
+  const { locked } = lock;
   // Hook, so it must run unconditionally - the early returns below are all after it.
   // 'clear' on an unknown answer: a sign-in form must never be replaced by an
   // enrolment screen it cannot leave. See useConfirmedMfaPending.
@@ -285,8 +286,8 @@ export function SignIn({
     if (view === 'magic-sent') {
       return (
         <>
-          <p className={slot('ba-muted')}>{t('magicLink.sent')}</p>
-          <button type="button" className={slot('ba-link-button')} disabled={locked} onClick={back}>
+          <p role="status" className={slot('ba-muted')}>{t('magicLink.sent')}</p>
+          <button type="button" className={slot('ba-link-button')} onClick={back}>
             <span className={slot('ba-icon-back')} aria-hidden="true">←</span> {t('forgotPassword.backToSignIn')}
           </button>
         </>
@@ -300,6 +301,7 @@ export function SignIn({
           onSignedIn={onPhoneOtpSignedIn}
           onBack={back}
           onMfaPasswordRequired={() => {
+            restoreFocus(null);
             setSelected('password');
             setCredentialMode('email');
             setView('sign-in');
@@ -329,7 +331,7 @@ export function SignIn({
             {tabMethods.length > 1 && (
               <MethodTabs id={tabId} methods={tabMethods} active={active!} labels={methods} onChange={(method) => { setSelected(method); setCredentialMode('email'); setError(null); }} />
             )}
-            {plan.primary !== null && (
+            {plan.primary !== null && active !== 'passkey' && (
               <AuthField
                 label={t(usingUsername ? 'common.usernameLabel' : 'common.emailLabel')}
                 type={usingUsername ? 'text' : 'email'}
@@ -344,26 +346,39 @@ export function SignIn({
             )}
             <div className={slot('ba-fields')} role={tabMethods.length > 1 ? 'tabpanel' : undefined} id={`${tabId}-panel`} aria-labelledby={tabMethods.length > 1 ? `${tabId}-tab-${active}` : undefined}>
               {active === 'password' && (
-                <AuthField
-                  label={t('common.passwordLabel')}
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setError(null);
-                  }}
-                  required
-                />
+                <div className={slot('ba-label')}>
+                  <div className={slot('ba-label-row')}>
+                    <label htmlFor={`${tabId}-password`}>{t('common.passwordLabel')}</label>
+                    {resetPasswordUrl && (
+                      <button id={`${tabId}-forgot`} type="button" className={slot('ba-link-button')} disabled={locked} onClick={(event) => { rememberOpener(event.currentTarget); setView('forgot'); }}>{t('signIn.forgotLink')}</button>
+                    )}
+                  </div>
+                  <input
+                    id={`${tabId}-password`}
+                    className={slot('ba-input')}
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError(null);
+                    }}
+                    required
+                  />
+                </div>
+              )}
+              {active === 'otp' && <p className={slot('ba-method-help')}>{t('signIn.emailCodeHelp')}</p>}
+              {active === 'passkey' && (
+                <div className={slot('ba-passkey-info')}>
+                  <strong>{t('signIn.passkeyTitle')}</strong>
+                  <p className={slot('ba-method-help')}>{t('signIn.passkeyHelp')}</p>
+                </div>
               )}
               {authChallenge.control}
               <FormError>{error}</FormError>
               <button id={`${tabId}-submit`} className={slot('ba-button')} type="submit" disabled={locked || (!unvalidated && authChallenge.configPending)} onClick={(event) => { if (document.activeElement === event.currentTarget) rememberOpener(event.currentTarget); }} aria-busy={pending || undefined}>
                 <Busy busy={pending} label={method?.busy}>{method?.submit}</Busy>
               </button>
-              {active === 'password' && resetPasswordUrl && (
-                <button id={`${tabId}-forgot`} type="button" className={slot('ba-link-button')} disabled={locked} onClick={(event) => { rememberOpener(event.currentTarget); setView('forgot'); }}>{t('signIn.forgotLink')}</button>
-              )}
             </div>
             {plan.username && active === 'password' && (
               <button
@@ -406,7 +421,7 @@ export function SignIn({
   }
 
   return (
-    <StepCard lock={{ locked, setPending: setChildPending }} key={step} step={step} kind="signIn" stepRef={stepRef} showBadge={showBadge} showBranding={showBranding}>
+    <StepCard lock={lock} key={step} step={step} kind="signIn" stepRef={stepRef} showBadge={showBadge} showBranding={showBranding}>
       {renderStep()}
     </StepCard>
   );

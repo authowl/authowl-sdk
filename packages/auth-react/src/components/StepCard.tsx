@@ -2,12 +2,12 @@
 import * as React from 'react';
 import { useSlot } from '../elements';
 import { useT } from '../i18n';
+import { usePublicConfig } from '../hooks';
 import { AuthCardLock } from './AuthCardLock';
 import { AuthOwlBranding } from './AuthOwlBranding';
 import { AuthOwlBadge } from './AuthOwlBadge';
 
 const STEP_ID: Record<string, string> = { 'mfa-confirming': 'mfa-enrolment', 'passkey-offer': 'passkey-step' };
-const STATUS_STEPS = ['otp-code', 'magic-sent', 'verify-pending', 'passkey-offer'];
 
 /** Shared sign-in/sign-up shell, header, status semantics and branding. */
 export function StepCard({ lock, step, kind, stepRef, showBranding, showBadge, children }: {
@@ -21,6 +21,10 @@ export function StepCard({ lock, step, kind, stepRef, showBranding, showBadge, c
 }) {
   const slot = useSlot();
   const t = useT();
+  const { config } = usePublicConfig();
+  const branded = showBranding && Boolean(config?.branding?.logoUrl
+    || config?.branding?.showAppName !== false && config?.branding?.appName?.trim()
+    || config?.environmentType);
   const bare = step === 'error' || step === 'waitlist';
   const decorated = !bare && step !== 'loading';
   const branding = showBranding ? <AuthOwlBranding /> : null;
@@ -29,10 +33,9 @@ export function StepCard({ lock, step, kind, stepRef, showBranding, showBadge, c
     <AuthCardLock.Provider value={lock}>
       <div ref={stepRef} className={slot(bare ? 'ba-step' : 'ba-form ba-card ba-auth-card ba-step')}
         data-testid={bare ? undefined : `${kind.toLowerCase()}-${STEP_ID[step] ?? step}`}
-        aria-busy={step === 'loading' || step === 'mfa-confirming' || undefined}
-        role={STATUS_STEPS.includes(step) ? 'status' : undefined}>
+        aria-busy={step === 'loading' || step === 'mfa-confirming' || undefined}>
         {step === 'form' ? (
-          <header className={slot('ba-auth-header')}>
+          <header className={slot('ba-auth-header')} data-branded={branded || undefined}>
             {branding}
             {title}
             <p className={slot('ba-subtitle')}>{t(`${kind}.subtitle`)}</p>

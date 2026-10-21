@@ -9,11 +9,20 @@ export const AuthCardLock = React.createContext<{
   setPending: (pending: boolean) => void;
 } | null>(null);
 
+export function useAuthCardLock(pending: boolean) {
+  const [count, setCount] = React.useState(0);
+  const setPending = React.useCallback((started: boolean) => {
+    setCount((value) => value + (started ? 1 : -1));
+  }, []);
+  return { locked: pending || count > 0, setPending };
+}
+
 export function useAuthCardPending(pending: boolean) {
   const lock = React.useContext(AuthCardLock);
   const report = lock?.setPending;
   useClientLayoutEffect(() => {
-    report?.(pending);
+    if (!pending) return;
+    report?.(true);
     return () => report?.(false);
   }, [pending, report]);
   return pending || Boolean(lock?.locked);

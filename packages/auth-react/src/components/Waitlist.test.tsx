@@ -43,7 +43,9 @@ describe('Waitlist', () => {
       undefined,
     ));
     expect(await screen.findByTestId('waitlist-accepted')).toBeTruthy();
-    expect(screen.getByText('waitlist.acceptedDescription')).toBeTruthy();
+    expect(screen.getByRole('status')).toBe(screen.getByText('waitlist.acceptedDescription'));
+    expect(screen.getByRole('status').tagName).toBe('P');
+    expect(screen.getByTestId('waitlist-accepted').getAttribute('role')).toBeNull();
     expect(onJoined).toHaveBeenCalledOnce();
   });
 });

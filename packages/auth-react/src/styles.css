@@ -110,7 +110,7 @@
 :where(.authowl-root) .ao-passkey-actions { display: flex; gap: 12px; flex-shrink: 0; }
 
 /* Social sign-in */
-:where(.authowl-root) .ao-social { display: grid; gap: 10px; }
+:where(.authowl-root) .ao-social { display: grid; grid-template-columns: repeat(var(--ao-social-columns, 1), minmax(0, 1fr)); gap: 8px; }
 :where(.authowl-root) .ao-social-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--ao-control-height, 40px); box-sizing: border-box; background: var(--ba-surface, var(--ao-surface)); color: var(--ba-fg, var(--ao-fg)); padding: 9px 14px; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: var(--ao-border-radius, 6px); cursor: pointer; font-weight: 500; font-size: 14px; }
 :where(.authowl-root) .ao-social-button:where(:hover:not(:disabled)) { border-color: var(--ba-accent, var(--ao-accent)); background: var(--ba-hover, var(--ao-hover)); }
 :where(.authowl-root) .ao-social-button:where(:disabled) { opacity: 0.5; cursor: not-allowed; }
@@ -371,7 +371,7 @@
 
 
 /* AO-58 authentication surfaces. Hosts can replace the shell through elements. */
-:where(.authowl-root) .ao-auth-card { box-sizing: border-box; width: 400px; max-width: 100%; padding: 28px; gap: 18px; border: 1px solid var(--ao-border); border-radius: var(--ao-border-radius, var(--ao-radius-xl)); background: var(--ao-surface); box-shadow: var(--ao-shadow-card); }
+:where(.authowl-root) .ao-auth-card { box-sizing: border-box; width: 400px; max-width: 100%; padding: 28px; gap: 20px; border: 1px solid var(--ao-border); border-radius: var(--ao-border-radius, var(--ao-radius-xl)); background: var(--ao-surface); box-shadow: var(--ao-shadow-card); }
 :where(.authowl-root .ao-auth-card) .ao-title { font-size: 18px; line-height: 24px; margin: 0; letter-spacing: -.01em; }
 :where(.authowl-root .ao-auth-card) .ao-subtitle { font-size: 13px; line-height: 1.5; margin: -10px 0 0; color: var(--ao-muted); }
 :where(.authowl-root .ao-auth-card) .ao-branding { margin: 0; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
@@ -387,10 +387,9 @@
 :where(.authowl-root) .ao-method-tab { z-index: 1; height: 30px; padding-inline: 4px; border: 0; border-radius: 7px; background: transparent; color: var(--ao-muted); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
 :where(.authowl-root) .ao-method-tab:where([aria-selected=true]) { color: var(--ao-fg); }
 :where(.authowl-root) .ao-method-tab:where(:focus-visible) { outline: 2px solid var(--ao-accent); outline-offset: 1px; }
-:where(.authowl-root) .ao-tab-indicator { position: absolute; top: var(--ao-tab-padding); inset-inline-start: var(--ao-tab-padding); width: calc((100% - var(--ao-tab-padding) * 2) / var(--ao-tab-columns)); height: 30px; transform: translate(calc(var(--ao-tab-col) * 100% * var(--ao-tab-direction, 1)), calc(var(--ao-tab-row) * 100%)); border-radius: 7px; background: var(--ao-auth-tab-surface); box-shadow: var(--ao-shadow-tab); transition: transform var(--ao-duration-base) var(--ao-ease-standard); }
-:where(.authowl-root[dir=rtl], .authowl-root [dir=rtl]) .ao-tab-indicator { --ao-tab-direction: -1; }
-:where(.authowl-root) .ao-step { animation: ao-in var(--ao-duration-base); }
-:where(.authowl-root .ao-auth-card) .ao-error { padding: 10px 12px; border: 1px solid var(--ao-danger-text); border-radius: 10px; background: var(--ao-danger-soft); animation: ao-shake var(--ao-duration-slow); }
+:where(.authowl-root) .ao-tab-indicator { position: absolute; top: var(--ao-tab-padding); inset-inline-start: calc(3px + var(--ao-tab-col) * (100% - 6px) / var(--ao-tab-columns)); width: calc((100% - var(--ao-tab-padding) * 2) / var(--ao-tab-columns)); height: 30px; transform: translateY(calc(var(--ao-tab-row) * 100%)); border-radius: 7px; background: var(--ao-auth-tab-surface); box-shadow: var(--ao-shadow-tab); transition: inset-inline-start var(--ao-duration-base) var(--ao-ease-standard), transform var(--ao-duration-base) var(--ao-ease-standard); }
+:where(.authowl-root) .ao-step:where(:not(.ao-step .ao-step)) { animation: ao-in var(--ao-duration-base); }
+:where(.authowl-root .ao-auth-card) .ao-error { padding: 10px 12px; border: 0; border-radius: 10px; background: var(--ao-danger-soft); animation: ao-shake var(--ao-duration-slow); }
 :where(.authowl-root .ao-auth-card) :is(.ao-button, .ao-social-button) { transition: transform var(--ao-duration-fast), background var(--ao-duration-fast); -webkit-tap-highlight-color: transparent; }
 :where(.authowl-root .ao-auth-card) :is(.ao-button:where(:active:not(:disabled)), .ao-social-button:where(:active:not(:disabled))) { transform: scale(.98); }
 :where(.authowl-root .ao-auth-card) .ao-spinner, :where(.authowl-root .ao-auth-card .ao-spinner)::before, :where(.authowl-root .ao-auth-card .ao-spinner)::after { width: 5px; height: 5px; border: 0; border-radius: 50%; background: currentColor; animation: ao-dot calc(var(--ao-duration-slow) * 3) infinite; }
@@ -409,18 +408,24 @@
   :where(.authowl-root .ao-auth-card) .ao-input { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  :where(.authowl-root .ao-auth-card) .ao-spinner { display: none; }
+  :where(.authowl-root .ao-auth-card) .ao-spinner, :where(.authowl-root .ao-auth-card .ao-spinner)::before, :where(.authowl-root .ao-auth-card .ao-spinner)::after { animation: none; }
 }
 
 :where(.authowl-root) .ao-name-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 
-:where(.authowl-root) .ao-auth-header { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; row-gap: 2px; align-items: center; }
+:where(.authowl-root) .ao-auth-header { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 12px; row-gap: 2px; align-items: center; }
 :where(.authowl-root .ao-auth-header) > .ao-branding { grid-row: 1 / 3; max-width: 80px; flex-direction: column; gap: 4px; }
 :where(.authowl-root .ao-auth-header) .ao-branding-identity { flex-direction: column; gap: 2px; max-width: 100%; }
 :where(.authowl-root .ao-auth-header) .ao-branding-name { max-width: 100%; font-size: 10px; }
 :where(.authowl-root .ao-auth-header) .ao-branding-logo { max-width: 80px; height: 36px; }
 :where(.authowl-root .ao-auth-header) .ao-branding-fallback { width: 36px; height: 36px; flex-basis: 36px; }
 :where(.authowl-root .ao-auth-header) .ao-environment { font-size: 9px; padding: 2px 4px; }
-:where(.authowl-root .ao-auth-header) > :is(.ao-title, .ao-subtitle) { grid-column: 2; margin: 0; }
-:where(.authowl-root) .ao-auth-header:where(:not(:has(.ao-branding))) { grid-template-columns: minmax(0, 1fr); }
-:where(.authowl-root .ao-auth-header:not(:has(.ao-branding))) > :is(.ao-title, .ao-subtitle) { grid-column: 1; }
+:where(.authowl-root .ao-auth-header) > :is(.ao-title, .ao-subtitle) { grid-column: 1; margin: 0; }
+:where(.authowl-root) .ao-auth-header:where([data-branded]) { grid-template-columns: auto minmax(0, 1fr); }
+:where(.authowl-root .ao-auth-header[data-branded]) > :is(.ao-title, .ao-subtitle) { grid-column: 2; }
+
+:where(.authowl-root) .ao-label-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+:where(.authowl-root .ao-label-row) .ao-link-button { font-size: 12px; }
+:where(.authowl-root) .ao-method-help { margin: 0; font-size: 12px; line-height: 16px; color: var(--ao-muted); }
+:where(.authowl-root) .ao-passkey-info { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 10px; background: var(--ao-inset); color: var(--ao-fg); font-size: 13px; }
+:where(.authowl-root .ao-passkey-info) strong { font-weight: 500; }

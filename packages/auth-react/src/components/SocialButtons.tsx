@@ -34,6 +34,8 @@ export type SocialButtonsProps = {
   callbackURL?: string;
   /** Reuse the enclosing form's hint; omitted for standalone storage lookup. */
   lastUsed?: LastUsedSignInMethod | null;
+  /** Registration copy without sign-in history hints. */
+  signUp?: boolean;
 };
 
 /**
@@ -41,17 +43,24 @@ export type SocialButtonsProps = {
  * A social sign-in also creates the account on first use, so this is shared by
  * both <SignIn/> and <SignUp/>.
  */
-export function SocialButtons({ providers, callbackURL, lastUsed: hint }: SocialButtonsProps) {
+export function SocialButtons({ providers, callbackURL, lastUsed: hint, signUp = false }: SocialButtonsProps) {
   const slot = useSlot();
   const t = useT();
   const { signInSocial } = useSignIn();
-  const storedHint = useLastUsedSignInMethod(hint === undefined);
+  const storedHint = useLastUsedSignInMethod(!signUp && hint === undefined);
+  const hintId = React.useId();
   const lastUsed = hint === undefined ? storedHint : hint;
   const recordSignInMethod = useSignInMethodRecorder();
   const [activeProvider, setActiveProvider] = React.useState<string | null>(null);
   const { pending, error, setError, run } = useSubmitAction();
 
   const locked = useAuthCardPending(pending);
+
+  // useSubmitAction resets pending on a persisted pageshow. Clear the provider
+  // alongside it, including after a failed redirect start.
+  React.useEffect(() => {
+    if (!pending) setActiveProvider(null);
+  }, [pending]);
 
   // A social sign-in now begins with a NAVIGATION, so a failure to start cannot
   // come back as a return value - it arrives as `?error=` on the page the flow
@@ -72,14 +81,17 @@ export function SocialButtons({ providers, callbackURL, lastUsed: hint }: Social
   if (providers.length === 0) return null;
 
   return (
-    <div className={slot('ba-social')} style={{ gridTemplateColumns: `repeat(${Math.min(providers.length, 3)}, minmax(0,1fr))` }}>
+    <div className={slot('ba-social')} style={{ '--ao-social-columns': Math.min(providers.length, 3) } as React.CSSProperties}>
       {providers.map((provider) => {
         const busy = pending && activeProvider === provider;
+        const used = !signUp && lastUsed === `social:${provider}`;
+        const descriptionId = `${hintId}-${provider}`;
         return (
           <button
             key={provider}
             type="button"
-            aria-label={busy ? t('social.redirecting') : t('social.continueWith', { provider: label(provider) })}
+            aria-label={busy ? t('social.redirecting') : t(signUp ? 'social.signUpWith' : 'social.continueWith', { provider: label(provider) })}
+            aria-describedby={used ? descriptionId : undefined}
             className={slot('ba-social-button')}
             disabled={locked}
             aria-busy={busy || undefined}
@@ -105,7 +117,7 @@ export function SocialButtons({ providers, callbackURL, lastUsed: hint }: Social
               <ProviderIcon provider={provider} />
               {label(provider)}
             </Busy>
-            {lastUsed === `social:${provider}` && <span className={slot('ba-last-used')}>{t('signIn.lastUsed')}</span>}
+            {used && <span id={descriptionId} className={slot('ba-last-used')}>{t('signIn.lastUsed')}</span>}
           </button>
         );
       })}

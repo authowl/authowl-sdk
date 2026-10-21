@@ -33,7 +33,7 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
 
   if (codeSent) {
     return (
-      <div key={step} ref={stepRef} role="status" className={slot('ba-fields ba-step')} data-testid="signup-emailotp-code">
+      <div key={step} ref={stepRef} className={slot('ba-fields ba-step')} data-testid="signup-emailotp-code">
         <OtpCodeForm
           email={email}
           code={code}

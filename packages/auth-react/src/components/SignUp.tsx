@@ -1,5 +1,6 @@
 'use client';
 import { StepCard } from './StepCard';
+import { useAuthCardLock } from './AuthCardLock';
 import { useSubmitAction } from './use-submit-action';
 import { useStepFocus } from './use-step-focus';
 import { AuthField } from './AuthField';
@@ -72,8 +73,8 @@ export function SignUp({
   const { pending: submitting, error, setError, run } = useSubmitAction();
   useHandoffCompletion(redirectTo, onSignedUp, () => setError(t('signUp.error.failed')));
   const mfaEnrollment = useConfirmedMfaPending('clear');
-  const [childPending, setChildPending] = React.useState(false);
-  const locked = submitting || childPending;
+  const lock = useAuthCardLock(submitting);
+  const { locked } = lock;
   // Legal consent: when the project requires it, the account can't be created
   // until this is ticked. It gates BOTH the password submit and the social
   // buttons (a social sign-in also creates the account), and the accepted
@@ -247,7 +248,7 @@ export function SignUp({
     return (
       <>
         <InvitationBanner />
-        <SocialButtons providers={social} />
+        <SocialButtons providers={social} signUp />
         {showPassword && social.length > 0 && (
           <div className={slot('ba-divider')}>{t('common.orDivider')}</div>
         )}
@@ -363,7 +364,7 @@ export function SignUp({
   }
 
   return (
-    <StepCard lock={{ locked, setPending: setChildPending }} key={step} step={step} kind="signUp" stepRef={stepRef} showBadge={showBadge} showBranding={showBranding}>
+    <StepCard lock={lock} key={step} step={step} kind="signUp" stepRef={stepRef} showBadge={showBadge} showBranding={showBranding}>
       {renderStep()}
     </StepCard>
   );

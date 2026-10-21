@@ -164,7 +164,7 @@ describe('SignUp passwordless passkey flow', () => {
       fireEvent.change(screen.getByLabelText('common.passwordLabel'), { target: { value: 'password-123' } });
     }
     fireEvent.submit(screen.getByRole('button', { name: method === 'password' ? 'signUp.submit' : 'signUp.passwordlessSubmit' }).closest('form')!);
-    const social = screen.getByRole<HTMLButtonElement>('button', { name: 'social.continueWith' });
+    const social = screen.getByRole<HTMLButtonElement>('button', { name: 'social.signUpWith' });
     expect(social.disabled).toBe(true);
     fireEvent.click(social);
     expect(mocks.signInSocial).not.toHaveBeenCalled();
@@ -180,7 +180,7 @@ describe('SignUp passwordless passkey flow', () => {
       finish = () => resolve({ data: { redirect: true }, error: null });
     }));
     render(<SignUp />);
-    fireEvent.click(screen.getByRole('button', { name: 'social.continueWith' }));
+    fireEvent.click(screen.getByRole('button', { name: 'social.signUpWith' }));
     const submit = screen.getByRole<HTMLButtonElement>('button', { name: method === 'password' ? 'signUp.submit' : 'signUp.passwordlessSubmit' });
     expect(submit.disabled).toBe(true);
     fireEvent.submit(submit.closest('form')!);
@@ -194,7 +194,7 @@ describe('SignUp passwordless passkey flow', () => {
   it('returns social sign-in to the form before navigating to redirectTo', async () => {
     mocks.config.socialProviders = ['google'];
     render(<SignUp redirectTo="/dashboard" />);
-    fireEvent.click(screen.getByRole('button', { name: 'social.continueWith' }));
+    fireEvent.click(screen.getByRole('button', { name: 'social.signUpWith' }));
     await waitFor(() => expect(mocks.signInSocial).toHaveBeenCalledWith({
       provider: 'google', callbackURL: window.location.href, errorCallbackURL: window.location.href,
     }));
@@ -205,7 +205,7 @@ describe('SignUp passwordless passkey flow', () => {
     mocks.client.handoff = new Promise<boolean>((resolve) => { redeem = resolve; });
     const assign = vi.fn();
     const originalWindow = window;
-    vi.stubGlobal('window', { ...originalWindow, document: originalWindow.document, location: { ...originalWindow.location, assign } });
+    vi.stubGlobal('window', { ...originalWindow, addEventListener: originalWindow.addEventListener.bind(originalWindow), removeEventListener: originalWindow.removeEventListener.bind(originalWindow), document: originalWindow.document, location: { ...originalWindow.location, assign } });
     const onCompleted = vi.fn();
     try {
       const view = render(<React.StrictMode><SignUp redirectTo="/dashboard" onSignedUp={onCompleted} /></React.StrictMode>);
@@ -242,7 +242,7 @@ describe('SignUp passwordless passkey flow', () => {
     mocks.client.handoff = Promise.resolve(true);
     const assign = vi.fn();
     const originalWindow = window;
-    vi.stubGlobal('window', { ...originalWindow, document: originalWindow.document, location: { ...originalWindow.location, assign } });
+    vi.stubGlobal('window', { ...originalWindow, addEventListener: originalWindow.addEventListener.bind(originalWindow), removeEventListener: originalWindow.removeEventListener.bind(originalWindow), document: originalWindow.document, location: { ...originalWindow.location, assign } });
     const completed = vi.fn();
     try {
       const view = render(<React.StrictMode><SignUp redirectTo="/dashboard" onSignedUp={completed} /></React.StrictMode>);
@@ -289,6 +289,9 @@ describe('SignUp passwordless passkey flow', () => {
     );
 
     const codeStep = await screen.findByTestId('emailotp-code');
+    expect(screen.getByTestId('signup-emailotp-code').getAttribute('role')).toBeNull();
+    expect(screen.getByRole('status')).toBe(screen.getByText('emailOtp.codeLabel'));
+    expect(screen.getByRole('status').tagName).toBe('P');
     fireEvent.change(codeStep.querySelector('input')!, {
       target: { value: '123456' },
     });
@@ -304,10 +307,29 @@ describe('SignUp passwordless passkey flow', () => {
     const heading = screen.getByRole('heading', { name: 'signUp.passkeyTitle' });
     expect(document.activeElement).toBe(heading);
     expect(heading.tabIndex).toBe(-1);
-    expect(heading.closest('[role=status]')).toBe(offer);
+    expect(heading.closest('[role=status]')).toBeNull();
+    expect(offer.getAttribute('role')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'signUp.passkeySubmit' }));
     await waitFor(() => expect(mocks.addPasskey).toHaveBeenCalledTimes(1));
     expect(onSignedUp).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Change email enabled while verifying a code', async () => {
+    let finish!: (value: Awaited<ReturnType<typeof mocks.signInEmailOtp>>) => void;
+    mocks.signInEmailOtp.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    render(<SignUp />);
+    fireEvent.change(screen.getByLabelText('common.emailLabel'), { target: { value: 'mona@example.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'signUp.passwordlessSubmit' }));
+    await screen.findByTestId('emailotp-code');
+    fireEvent.change(screen.getByLabelText('emailOtp.codeLabel'), { target: { value: '123456' } });
+    fireEvent.submit(screen.getByTestId('emailotp-code'));
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'common.verifying' }).disabled).toBe(true);
+    const change = screen.getByRole<HTMLButtonElement>('button', { name: 'emailOtp.changeEmail' });
+    expect(change.disabled).toBe(false);
+    fireEvent.click(change);
+    expect(document.activeElement).toBe(screen.getByLabelText('common.emailLabel'));
+    finish({ data: {}, error: null });
+    await waitFor(() => expect(mocks.signInEmailOtp).toHaveResolved());
   });
 
   it('offers the same passkey completion after password registration', async () => {
@@ -409,7 +431,10 @@ describe('SignUp passwordless passkey flow', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'signUp.submit' }));
 
-    expect(await screen.findByTestId('signup-verify-pending')).toBeTruthy();
+    const verification = await screen.findByTestId('signup-verify-pending');
+    expect(verification.getAttribute('role')).toBeNull();
+    expect(screen.getByRole('status')).toBe(screen.getByText('verifyPending.body'));
+    expect(screen.getByRole('status').tagName).toBe('P');
   });
 
   it('lets the user finish when the passkey ceremony is skipped', async () => {

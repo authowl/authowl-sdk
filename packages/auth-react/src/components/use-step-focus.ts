@@ -31,12 +31,13 @@ export function useStepFocus(step: string, settled: boolean) {
     if (target) {
       if (/^H[1-6]$/.test(target.tagName)) target.tabIndex = -1;
       target.focus();
+      if (document.activeElement !== target) root.querySelector<HTMLElement>(FOCUSABLE)?.focus();
     }
   }, [step, settled, state]);
 
   return {
     stepRef: (node: HTMLElement | null) => { state.root = node; },
     rememberOpener: (control: HTMLElement) => { state.opener = control.id || null; },
-    restoreFocus: () => { state.returning = true; },
+    restoreFocus: (opener = state.opener) => { state.opener = opener; state.returning = true; },
   };
 }

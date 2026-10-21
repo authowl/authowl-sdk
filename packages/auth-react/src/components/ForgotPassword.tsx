@@ -42,12 +42,12 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
 
   if (sent) {
     return (
-      <div ref={stepRef} role="status" className={slot('ba-fields ba-step')} data-testid="forgot-sent">
-        <p className={slot('ba-muted')}>
+      <div ref={stepRef} className={slot('ba-fields ba-step')} data-testid="forgot-sent">
+        <p role="status" className={slot('ba-muted')}>
           {richMessage(t('forgotPassword.sent'), { email: <Bidi>{email}</Bidi> })}
         </p>
         {onBack && (
-          <button type="button" className={slot('ba-link-button')} disabled={locked} onClick={onBack}>
+          <button type="button" className={slot('ba-link-button')} onClick={onBack}>
             <span className={slot('ba-icon-back')} aria-hidden="true">←</span> {t('forgotPassword.backToSignIn')}
           </button>
         )}
@@ -89,7 +89,7 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
         <Busy busy={pending} label={t('common.sending')}>{t('forgotPassword.submit')}</Busy>
       </button>
       {onBack && (
-        <button type="button" className={slot('ba-link-button')} disabled={locked} onClick={onBack}>
+        <button type="button" className={slot('ba-link-button')} onClick={onBack}>
           <span className={slot('ba-icon-back')} aria-hidden="true">←</span> {t('forgotPassword.backToSignIn')}
         </button>
       )}
