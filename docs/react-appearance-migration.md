@@ -7,6 +7,10 @@
   token mapping below for lower-level overrides.
 - Check custom CSS against the DOM-contract changes listed below, including
   method tabs, code cells and grouped UserProfile rows.
+- Update end-to-end (E2E) test selectors as well as CSS. Method tabs replace
+  stacked alternates, and social buttons show the bare provider name as visible
+  text with an accessible name of `Continue with <provider>`. The Verify button
+  is hidden in numeric code modes, where complete codes auto-submit.
 - The theme default changed from `light` to `inherit`, and an
   `<html data-authowl-theme="dark">` no longer forces SDK dark mode. Set
   `appearance={{ theme: 'light' }}` to keep the old look.
@@ -172,7 +176,7 @@ the ten existing section identifiers. Every `#authowl-profile-<section>` URL
 selects its group, opens the requested row and focuses that section heading. Navigation writes the first
 available section hash in the selected group.
 
-DOM changes in the unreleased React major: `.ao-profile-nav-item` is now an anchor
+DOM changes in 1.0: `.ao-profile-nav-item` is now an anchor
 with `aria-current="page"`; it replaces the old per-section buttons. The 184px
 sidebar starts with `.ao-profile-identity`, containing the shared Avatar, name
 and email when present. Avatar now uses one first grapheme of the trimmed name,
