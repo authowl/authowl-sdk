@@ -27,7 +27,10 @@ export async function captureStory(storyId: string) {
       // Two baseline runs in the same pinned image differ by at most 13/255 per
       // channel on shadow and corner edges (rasterization noise). 0.06 ignores
       // grey deltas up to about 15 and still counts any real edge or colour change.
-      comparatorOptions: { allowedMismatchedPixels: 0, threshold, includeAA: true },
+      // Native x86_64 (CI) and emulated x86_64 Chromium anti-alias an isolated
+      // glyph edge differently (measured: 16 pixels on one story); 64 pixels of
+      // 691,200 absorbs that while a 1px layout change still moves thousands.
+      comparatorOptions: { allowedMismatchedPixels: 64, threshold, includeAA: true },
       screenshotOptions: { animations: 'disabled', caret: 'hide' },
     });
   } finally {
