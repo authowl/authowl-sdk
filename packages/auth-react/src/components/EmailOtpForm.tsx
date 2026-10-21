@@ -44,14 +44,8 @@ export function EmailOtpForm({ redirectTo, onSignedIn, webauthnAutofill }: Email
           setOtp(value);
           setError(null);
         }}
-        pending={pending}
-        error={error}
-        onSubmit={() =>
-          void run(() => signInEmailOtp({ email, otp }), {
-            failure: t('emailOtp.error.invalidCode'),
-            onSuccess: () => finishSignIn({ sessionStore, redirectTo, onSignedIn }),
-          })
-        }
+        onSubmit={() => signInEmailOtp({ email, otp })}
+        onSuccess={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })}
         onChangeEmail={() => {
           setStage('email');
           setOtp('');

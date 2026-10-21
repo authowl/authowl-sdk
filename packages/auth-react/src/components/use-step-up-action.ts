@@ -62,7 +62,7 @@ export type UseStepUpActionResult = Omit<UseSubmitActionResult, 'run'> & {
  * a challenge at sign-in therefore never sees the prompt at all.
  */
 export function useStepUpAction(): UseStepUpActionResult {
-  const { pending, error, setError, run } = useSubmitAction();
+  const { pending, succeeded, error, setError, run } = useSubmitAction();
   // The gated attempt itself, held verbatim. Re-running the caller's own thunk
   // is what makes the replay lossless: it closes over the inputs as submitted,
   // so resuming cannot silently send a different body than the one refused.
@@ -147,5 +147,5 @@ export function useStepUpAction(): UseStepUpActionResult {
     setError(null);
   }, [park, setError]);
 
-  return { pending, error, setError, stepUpRequired, run: guardedRun, resume, cancel };
+  return { pending, succeeded, error, setError, stepUpRequired, run: guardedRun, resume, cancel };
 }

@@ -275,7 +275,6 @@ describe('UserProfile', () => {
       expect(screen.queryByRole('alert')).toBeNull();
 
       fireEvent.change(code, { target: { value: '123456' } });
-      fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
 
       await waitFor(() => expect(mocks.mfa.verifyTotp).toHaveBeenCalledWith({
         code: '123456',
@@ -303,7 +302,6 @@ describe('UserProfile', () => {
 
       const code = await screen.findByLabelText('mfa.challenge.totpLabel');
       fireEvent.change(code, { target: { value: '000000' } });
-      fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
 
       await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
       expect(mocks.mfa.disable).toHaveBeenCalledTimes(1);
@@ -343,7 +341,7 @@ describe('UserProfile', () => {
       fireEvent.click(screen.getByRole('button', { name: 'backupCodes.submit' }));
 
       // The same prompt, reached from the other weakening endpoint.
-      fireEvent.click(await screen.findByText('mfa.challenge.useBackup'));
+      fireEvent.click(await screen.findByRole('button', { name: 'mfa.challenge.backupLabel' }));
       fireEvent.change(screen.getByLabelText('mfa.challenge.backupLabel'), {
         target: { value: 'backup-code-1' },
       });

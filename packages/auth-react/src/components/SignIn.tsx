@@ -235,7 +235,7 @@ export function SignIn({
     // the session, so finish exactly as a direct sign-in would.
     if (challenge) {
       return (
-        <MFAChallenge onVerified={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })} />
+        <MFAChallenge email={usingUsername ? undefined : email || undefined} onVerified={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })} />
       );
     }
 
@@ -260,17 +260,11 @@ export function SignIn({
               setOtp(value);
               setError(null);
             }}
-            pending={locked}
-            error={error}
-            onSubmit={() =>
-              void run(() => signInEmailOtp({ email, otp }), {
-                failure: t('emailOtp.error.invalidCode'),
-                onSuccess: () => {
-                  recordSignInMethod('email-otp');
-                  finishSignIn({ sessionStore, redirectTo, onSignedIn });
-                },
-              })
-            }
+            onSubmit={() => signInEmailOtp({ email, otp })}
+            onSuccess={() => {
+              recordSignInMethod('email-otp');
+              return finishSignIn({ sessionStore, redirectTo, onSignedIn });
+            }}
             onChangeEmail={() => {
               setOtp('');
               setError(null);

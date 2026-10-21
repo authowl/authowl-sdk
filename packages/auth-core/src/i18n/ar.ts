@@ -47,6 +47,7 @@ export const ar: Record<keyof typeof en, string> = {
   'common.loading': 'جارٍ التحميل…',
   'common.continue': 'متابعة',
   'common.cancel': 'إلغاء',
+  'common.error.tryAgain': 'تعذر إكمال الطلب. حاول مرة أخرى.',
   'common.error.passwordTooShort': 'يجب ألا تقل كلمة المرور عن {min} أحرف.',
 
   'publicConfig.error.title': 'المصادقة غير متاحة مؤقتًا',
@@ -246,6 +247,11 @@ export const ar: Record<keyof typeof en, string> = {
 
   'mfaGate.title': 'إعداد المصادقة الثنائية مطلوب',
   'mfaGate.body': 'يتطلب هذا التطبيق المصادقة الثنائية. قم بإعدادها للمتابعة.',
+
+  'codeInput.verified': 'تم التحقق من الرمز',
+  'codeInput.autoSubmitHint': 'يُتحقَّق من الرمز تلقائيًا عند إدخال الرقم الأخير. يمكنك لصقه أيضًا.',
+  'mfa.challenge.otherWays': 'طرق أخرى للدخول',
+  'mfa.challenge.otpDestination': 'أرسلنا رمزًا إلى {email}. تنتهي صلاحيته خلال 3 دقائق.',
 
   'mfa.challenge.title': 'التحقق الثنائي',
   'mfa.stepUp.title': 'أكِّد هذا التغيير من تطبيق المصادقة',

@@ -1,31 +1,34 @@
 // @vitest-environment jsdom
 import * as React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PublicConfig } from '@authowl/core';
 
 const mocks = vi.hoisted(() => ({
   config: null as PublicConfig | null,
+  user: null as { email: string } | null,
+  verifyTotp: vi.fn(),
+  verifyBackupCode: vi.fn(),
+  sendOtp: vi.fn(),
+  verifyOtp: vi.fn(),
 }));
 
 vi.mock('../hooks', () => ({
   usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
-  useMFA: () => ({
-    verifyTotp: vi.fn(),
-    verifyBackupCode: vi.fn(),
-    sendOtp: vi.fn(),
-    verifyOtp: vi.fn(),
-  }),
+  useUser: () => ({ user: mocks.user }),
+  useMFA: () => mocks,
 }));
 
 vi.mock('../i18n', () => ({
   useT: () => (key: string) => key,
+  richMessage: (key: string, slots: Record<string, React.ReactNode>) => <>{key}{slots.email}</>,
+  Bidi: ({ children }: { children: React.ReactNode }) => children,
   useServerError: () => (_error: unknown, fallback: string) => fallback,
 }));
 
 import { MFAChallenge } from './MFAChallenge';
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.resetAllMocks(); mocks.user = null; });
 
 describe('MFAChallenge trust-device control', () => {
   afterEach(() => {
@@ -57,8 +60,8 @@ describe('MFAChallenge trust-device control', () => {
     const { container } = render(<MFAChallenge />);
 
     expect(container.querySelector('input[type="checkbox"]')).toBeNull();
-    expect(screen.queryByText('mfa.challenge.useEmailOtp')).toBeNull();
-    expect(screen.getByText('mfa.challenge.useBackup')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'mfa.challenge.otpLabel' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'mfa.challenge.backupLabel' })).toBeTruthy();
   });
 
   it('preserves both controls for a rolling-upgrade server without capability flags', () => {
@@ -69,7 +72,7 @@ describe('MFAChallenge trust-device control', () => {
     const { container } = render(<MFAChallenge />);
 
     expect(container.querySelector('input[type="checkbox"]')).not.toBeNull();
-    expect(screen.getByText('mfa.challenge.useEmailOtp')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'mfa.challenge.otpLabel' })).toBeTruthy();
   });
 });
 
@@ -100,8 +103,8 @@ describe('MFAChallenge step-up variant', () => {
   it('keeps every recovery factor the posture still permits', () => {
     render(<MFAChallenge variant="step-up" />);
 
-    expect(screen.getByText('mfa.challenge.useBackup')).toBeTruthy();
-    expect(screen.getByText('mfa.challenge.useEmailOtp')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'mfa.challenge.backupLabel' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'mfa.challenge.otpLabel' })).toBeTruthy();
   });
 
   it('offers a way out only when the caller can take one', () => {
@@ -114,4 +117,158 @@ describe('MFAChallenge step-up variant', () => {
 
     expect(onCancel).toHaveBeenCalledOnce();
   });
+});
+
+
+describe('MFAChallenge code completion', () => {
+  afterEach(() => { vi.clearAllMocks(); });
+
+  it('auto-submits once, remains locked during verification and shows success while finishing', async () => {
+    mocks.verifyTotp.mockResolvedValue({ data: {}, error: null });
+    const onVerified = vi.fn(() => new Promise<void>(() => {}));
+    render(<MFAChallenge onVerified={onVerified} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
+    fireEvent.submit(screen.getByTestId('mfa-challenge'));
+    await waitFor(() => expect(onVerified).toHaveBeenCalledTimes(1));
+    expect(mocks.verifyTotp).toHaveBeenCalledExactlyOnceWith({ code: '123456', trustDevice: false });
+    expect(screen.getByRole('textbox').parentElement?.getAttribute('data-state')).toBe('success');
+    expect((screen.getByRole('textbox') as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('does not auto-retry a failed value and keeps backup codes as unsanitized text with manual submit', async () => {
+    mocks.verifyTotp.mockResolvedValue({ data: null, error: { code: 'INVALID_CODE' } });
+    mocks.verifyBackupCode.mockResolvedValue({ data: {}, error: null });
+    render(<MFAChallenge />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
+    await screen.findByRole('alert');
+    expect(mocks.verifyTotp).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.backupLabel' }));
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: ' backup-Ab12-3456 ' } });
+    expect(input.value).toBe('backup-Ab12-3456');
+    expect(input.maxLength).toBe(-1);
+    expect(input.closest('.ao-code-input')).toBeNull();
+    expect(mocks.verifyBackupCode).not.toHaveBeenCalled();
+    fireEvent.submit(screen.getByTestId('mfa-challenge'));
+    await waitFor(() => expect(mocks.verifyBackupCode).toHaveBeenCalledExactlyOnceWith({ code: 'backup-Ab12-3456' }));
+  });
+
+  it('emails a fallback code and auto-submits it exactly once', async () => {
+    mocks.sendOtp.mockResolvedValue({ data: {}, error: null });
+    mocks.verifyOtp.mockResolvedValue({ data: {}, error: null });
+    render(<MFAChallenge email="mona@example.test" />);
+    fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.otpLabel' }));
+    const input = await screen.findByRole('textbox', { name: 'mfa.challenge.otpLabel' });
+    expect(screen.getByText('mona@example.test').closest('strong')).not.toBeNull();
+    fireEvent.change(input, { target: { value: '654321' } });
+    await waitFor(() => expect(mocks.verifyOtp).toHaveBeenCalledExactlyOnceWith({ code: '654321', trustDevice: false }));
+    expect(screen.getByRole('button', { name: 'mfa.challenge.resendOtp' })).toBeTruthy();
+  });
+});
+
+
+it('retains focus, selects the failed code and keeps its error on a no-op paste', async () => {
+  let fail!: (value: unknown) => void;
+  mocks.verifyTotp.mockReturnValue(new Promise((resolve) => { fail = resolve; }));
+  render(<MFAChallenge />);
+  const input = screen.getByRole('textbox') as HTMLInputElement;
+  input.focus();
+  fireEvent.change(input, { target: { value: '123456' } });
+  expect(input.readOnly).toBe(true);
+  expect(input.disabled).toBe(false);
+  expect(document.activeElement).toBe(input);
+  await act(async () => { fail({ data: null, error: { code: 'INVALID_CODE' } }); });
+  expect(document.activeElement).toBe(input);
+  expect(input.readOnly).toBe(false);
+  expect(input.selectionStart).toBe(0);
+  expect(input.selectionEnd).toBe(6);
+  fireEvent.select(input);
+  expect(input.selectionStart).toBe(0);
+  fireEvent.paste(input, { clipboardData: { getData: () => '123-456' } });
+  expect(screen.getByRole('alert')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'mfa.challenge.submit' })).toBeNull();
+});
+
+it.each(['network', 'server'] as const)('offers a visible Verify retry after a %s failure in code mode', async (failure) => {
+  if (failure === 'network') mocks.verifyTotp.mockRejectedValueOnce(new Error('offline'));
+  else mocks.verifyTotp.mockResolvedValueOnce({ data: null, error: { code: 'INTERNAL_SERVER_ERROR', status: 500 } });
+  render(<MFAChallenge />);
+  expect(screen.queryByRole('button', { name: 'mfa.challenge.submit' })).toBeNull();
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
+  expect((await screen.findByRole('alert')).textContent).toBe('common.error.tryAgain');
+  mocks.verifyTotp.mockResolvedValueOnce({ data: {}, error: null });
+  fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
+  await waitFor(() => expect(screen.getByRole('status').textContent).toBe('codeInput.verified'));
+});
+
+it('uses visible chip names and labels Other ways in as a group', () => {
+  render(<MFAChallenge />);
+  const group = screen.getByRole('group', { name: 'mfa.challenge.otherWays' });
+  for (const chip of group.querySelectorAll('button')) {
+    expect(screen.getByRole('button', { name: chip.textContent! })).toBe(chip);
+    expect(chip.hasAttribute('aria-label')).toBe(false);
+  }
+});
+
+it('keeps resend pending independent from verifying, and status excludes the resend button', async () => {
+  let sent!: (value: unknown) => void;
+  mocks.sendOtp.mockReturnValueOnce(new Promise((resolve) => { sent = resolve; }));
+  render(<MFAChallenge />);
+  fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.otpLabel' }));
+  expect(screen.getByRole('textbox')).toHaveProperty('readOnly', true);
+  expect(screen.queryByText('common.verifying')).toBeNull();
+  expect(mocks.verifyOtp).not.toHaveBeenCalled();
+  await act(async () => { sent({ data: {}, error: null }); });
+  const resend = screen.getByRole('button', { name: 'mfa.challenge.resendOtp' });
+  expect(resend.closest('[role="status"]')).toBeNull();
+  const sending = new Promise<never>(() => {});
+  mocks.verifyOtp.mockReturnValueOnce(sending);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: '654321' } });
+  expect(screen.getByRole('status').textContent).toBe('common.verifying');
+  expect(screen.getByRole('status').hasAttribute('aria-busy')).toBe(false);
+  expect(resend).toHaveProperty('disabled', true);
+  expect(mocks.sendOtp).toHaveBeenCalledTimes(1);
+});
+
+
+it('places device trust before the code and includes the choice in auto-submit', async () => {
+  mocks.verifyTotp.mockResolvedValue({ data: {}, error: null });
+  render(<MFAChallenge />);
+  const checkbox = screen.getByRole('checkbox');
+  const input = screen.getByRole('textbox');
+  expect(checkbox.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  fireEvent.click(checkbox);
+  fireEvent.change(input, { target: { value: '123456' } });
+  await waitFor(() => expect(mocks.verifyTotp).toHaveBeenCalledExactlyOnceWith({ code: '123456', trustDevice: true }));
+});
+
+it.each([
+  ['sign-in', undefined, undefined],
+  ['sign-in', 'recipient@example.test', 'recipient@example.test'],
+  ['step-up', undefined, 'session@example.test'],
+  ['step-up', 'recipient@example.test', 'recipient@example.test'],
+] as const)('limits the session-email fallback for %s with explicit destination %s', async (variant, email, expected) => {
+  mocks.user = { email: 'session@example.test' };
+  mocks.sendOtp.mockResolvedValue({ data: {}, error: null });
+  render(<MFAChallenge variant={variant} email={email} />);
+  fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.otpLabel' }));
+  await screen.findByRole('textbox', { name: 'mfa.challenge.otpLabel' });
+  if (expected) expect(screen.getByText(expected).closest('strong')).not.toBeNull();
+  else expect(screen.getByText('mfa.challenge.otpHint')).toBeTruthy();
+  if (expected !== 'session@example.test') expect(screen.queryByText('session@example.test')).toBeNull();
+});
+
+it.each(['totp', 'backup', 'otp'] as const)('distinguishes thrown errors from rejected %s codes', async (mode) => {
+  const verify = mode === 'totp' ? mocks.verifyTotp : mode === 'backup' ? mocks.verifyBackupCode : mocks.verifyOtp;
+  verify.mockRejectedValueOnce(new Error('SDK or network failure'));
+  mocks.sendOtp.mockResolvedValue({ data: {}, error: null });
+  render(<MFAChallenge />);
+  if (mode !== 'totp') fireEvent.click(screen.getByRole('button', { name: `mfa.challenge.${mode === 'backup' ? 'backup' : 'otp'}Label` }));
+  const input = await screen.findByRole('textbox', { name: `mfa.challenge.${mode === 'totp' ? 'totp' : mode === 'backup' ? 'backup' : 'otp'}Label` });
+  fireEvent.change(input, { target: { value: '123456' } });
+  if (mode === 'backup') fireEvent.submit(screen.getByTestId('mfa-challenge'));
+  expect((await screen.findByRole('alert')).textContent).toBe('common.error.tryAgain');
+  verify.mockResolvedValueOnce({ data: null, error: { code: 'INVALID_CODE' } });
+  fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(`mfa.challenge.error.invalid${mode === 'totp' ? 'Totp' : mode === 'backup' ? 'Backup' : 'Otp'}`));
 });

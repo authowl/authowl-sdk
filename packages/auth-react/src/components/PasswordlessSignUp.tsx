@@ -13,7 +13,7 @@ import { AUTH_CHALLENGE_ACTIONS, useAuthChallenge } from './AuthChallenge';
 import { FormError } from './FormError';
 
 export type PasswordlessSignUpProps = {
-  onAuthenticated: () => void;
+  onAuthenticated: () => void | Promise<void>;
 };
 
 /** Prove an email and establish a passwordless account through the email OTP flow. */
@@ -38,14 +38,8 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
           email={email}
           code={code}
           onCodeChange={setCode}
-          pending={locked}
-          error={error}
-          onSubmit={() =>
-            void run(() => signInEmailOtp({ email, otp: code }), {
-              failure: t('emailOtp.error.invalidCode'),
-              onSuccess: onAuthenticated,
-            })
-          }
+          onSubmit={() => signInEmailOtp({ email, otp: code })}
+          onSuccess={() => onAuthenticated()}
           onChangeEmail={() => {
             setCode('');
             setError(null);

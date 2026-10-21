@@ -1,13 +1,18 @@
 'use client';
 import { useSlot } from '../elements';
 import * as React from 'react';
-import { useMFA, usePublicConfig } from '../hooks';
-import { useT } from '../i18n';
+import { useMFA, usePublicConfig, useUser } from '../hooks';
+import { Bidi, richMessage, useT } from '../i18n';
 import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
+import { CodeInput, CodeSuccess } from './CodeInput';
+import { FactorIcon } from './factor-icons';
+import { useAuthCardPending } from './AuthCardLock';
 import { FormError } from './FormError';
 
 export type MFAChallengeProps = {
+  /** Known email destination, including a sign-in challenge with no session yet. */
+  email?: string;
   /** Called once the factor is accepted (a session is issued on `sign-in`). */
   onVerified?: () => void | Promise<void>;
   /**
@@ -44,6 +49,7 @@ export type MFAChallengeProps = {
  */
 export function MFAChallenge({
   onVerified,
+  email,
   allowTrustDevice = true,
   variant = 'sign-in',
   onCancel,
@@ -51,12 +57,21 @@ export function MFAChallenge({
   const slot = useSlot();
   const t = useT();
   const { config } = usePublicConfig();
+  const { user } = useUser();
   const { verifyTotp, verifyBackupCode, sendOtp, verifyOtp } = useMFA();
-  const { pending, error, setError, run } = useSubmitAction();
+  const { pending: verifying, succeeded: success, error: verifyError, setError, run } = useSubmitAction();
+  const resend = useSubmitAction();
+  const locked = useAuthCardPending(verifying || resend.pending);
+  const blocked = locked || success;
+  const error = verifyError || resend.error;
+  const [retryVerify, setRetryVerify] = React.useState(false);
+  const helperId = React.useId();
+  const otherWaysId = React.useId();
   const [mode, setMode] = React.useState<'totp' | 'backup' | 'otp'>('totp');
   const [code, setCode] = React.useState('');
   const [trustDevice, setTrustDevice] = React.useState(false);
   const stepUp = variant === 'step-up';
+  const destination = email || (stepUp ? user?.email : undefined);
   // Additive flags default open for rolling compatibility. The server remains
   // the enforcement boundary when an older response does not carry them.
   //
@@ -82,23 +97,34 @@ export function MFAChallenge({
   // has its own failure copy, so a stale one would read wrong under the new
   // input. (The otp path clears via `run` when it sends.)
   const switchMode = (next: 'totp' | 'backup') => {
+    if (blocked) return;
     setMode(next);
     setCode('');
     setError(null);
+    resend.setError(null);
+    setRetryVerify(false);
   };
 
   // B.5d lost-authenticator fallback: entering email-code mode sends the code.
-  const requestOtp = () =>
-    void run(() => sendOtp({}), {
+  const requestOtp = () => {
+    if (blocked) return;
+    setError(null);
+    void resend.run(() => sendOtp({}), {
       failure: t('mfa.challenge.error.otpSendFailed'),
       onSuccess: () => {
         setMode('otp');
         setCode('');
+        setRetryVerify(false);
       },
     });
+  };
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (blocked) return;
+    resend.setError(null);
+    // Throws and completion-handoff failures can retry the same code.
+    setRetryVerify(true);
     const action =
       mode === 'totp'
         ? () => verifyTotp({ code, trustDevice })
@@ -106,12 +132,15 @@ export function MFAChallenge({
           ? () => verifyBackupCode({ code })
           : () => verifyOtp({ code, trustDevice });
     void run(action, {
-      failure:
-        mode === 'totp'
-          ? t('mfa.challenge.error.invalidTotp')
-          : mode === 'backup'
-            ? t('mfa.challenge.error.invalidBackup')
-            : t('mfa.challenge.error.invalidOtp'),
+      failure: t('common.error.tryAgain'),
+      trackSuccess: true,
+      mapError: (authError) => {
+        const codeFailure = (authError.status ?? 400) < 500 && ['INVALID_CODE', 'INVALID_TOTP', 'INVALID_OTP', 'INVALID_BACKUP_CODE', 'OTP_EXPIRED', 'OTP_HAS_EXPIRED'].includes(authError.code ?? '');
+        setRetryVerify(!codeFailure);
+        return codeFailure
+          ? t(mode === 'totp' ? 'mfa.challenge.error.invalidTotp' : mode === 'backup' ? 'mfa.challenge.error.invalidBackup' : 'mfa.challenge.error.invalidOtp')
+          : null;
+      },
       onSuccess: () => onVerified?.(),
     });
   };
@@ -129,29 +158,21 @@ export function MFAChallenge({
         ? t('mfa.challenge.backupLabel')
         : t('mfa.challenge.otpLabel');
 
+  const showResend = mode === 'otp' && canUseEmailOtp;
   return (
-    <form method="post" className={slot('ba-fields')} data-testid="mfa-challenge" onSubmit={submit}>
-      <h2 className={slot('ba-title')}>{t(stepUp ? 'mfa.stepUp.title' : 'mfa.challenge.title')}</h2>
-      <p className={slot('ba-muted')}>{hint}</p>
-      <label className={slot('ba-label')}>
-        {label}
-        <input
-          className={slot('ba-input')}
-          value={code}
-          onChange={(e) => {
-            setCode(e.target.value.trim());
-            setError(null);
-          }}
-          inputMode={mode === 'backup' ? 'text' : 'numeric'}
-          autoComplete="one-time-code"
-          autoFocus
-          required
-        />
-      </label>
+    <form method="post" className={slot('ba-fields ba-factor-form')} data-testid="mfa-challenge" onSubmit={submit}>
+      <header className={slot('ba-factor-header')}>
+        <h2 className={slot('ba-title')}>{t(stepUp ? 'mfa.stepUp.title' : 'mfa.challenge.title')}</h2>
+        <p className={slot('ba-factor-subtitle')}>
+          {mode === 'otp' && destination
+            ? richMessage(t('mfa.challenge.otpDestination'), { email: <strong><Bidi>{destination}</Bidi></strong> })
+            : hint}
+        </p>
+      </header>
       {mode !== 'backup' && canTrustDevice && (
-        <label className={slot('ba-consent ba-consent-centered')}>
+        <label className={slot('ba-consent ba-consent-centered ba-factor-trust')}>
           <span className={slot('ba-checkbox-control')}>
-            <input className={slot('ba-checkbox')} type="checkbox" checked={trustDevice} onChange={(e) => setTrustDevice(e.target.checked)} />
+            <input className={slot('ba-checkbox')} type="checkbox" checked={trustDevice} disabled={blocked} onChange={(e) => setTrustDevice(e.target.checked)} />
             <span className={slot('ba-checkbox-visual')} aria-hidden="true">
               <span className={slot('ba-checkbox-check')} />
             </span>
@@ -159,25 +180,56 @@ export function MFAChallenge({
           <span>{t('mfa.challenge.trustDevice', { days: 30 })}</span>
         </label>
       )}
+      {mode === 'backup' ? (
+        <label className={slot('ba-label')}>
+          {label}
+          <input className={slot('ba-input')} value={code}
+            onChange={(e) => { setCode(e.target.value.trim()); setError(null); }}
+            inputMode="text" autoComplete="one-time-code" autoFocus required readOnly={locked} disabled={success} />
+        </label>
+      ) : (
+        <CodeInput key={mode} value={code} onChange={(value) => { setCode(value); setError(null); }}
+          aria-label={label} aria-describedby={helperId} autoFocus readOnly={locked} disabled={success}
+          state={success ? 'success' : error ? 'error' : 'idle'} />
+      )}
+      {/* The live region stays mounted so its updates are announced; the
+          visible row renders only when it has something to show. */}
+      <span className={slot('ba-sr-only')} role="status">
+        {success ? t('codeInput.verified') : verifying ? t('common.verifying') : ''}
+      </span>
+      {(success || verifying || showResend) && (
+        <div className={slot('ba-code-status')}>
+          <span className={slot('ba-code-verifying')} aria-hidden="true">
+            {success ? <><CodeSuccess />{t('codeInput.verified')}</> : <Busy busy={verifying} label={t('common.verifying')}>{null}</Busy>}
+          </span>
+          {showResend && (
+            <button type="button" className={slot('ba-link-button')} disabled={blocked} aria-busy={resend.pending || undefined} onClick={requestOtp}>
+              {t('mfa.challenge.resendOtp')}
+            </button>
+          )}
+        </div>
+      )}
+      {mode !== 'backup' && <p id={helperId} className={slot('ba-method-help')}>{t('codeInput.autoSubmitHint')}</p>}
       <FormError>{error}</FormError>
-      <button className={slot('ba-button')} type="submit" disabled={pending || !code} aria-busy={pending || undefined}>
-        <Busy busy={pending} label={t('common.verifying')}>{t('mfa.challenge.submit')}</Busy>
-      </button>
-      {mode !== 'totp' && (
-        <button type="button" className={slot('ba-link-button')} onClick={() => switchMode('totp')}>
-          {t('mfa.challenge.useTotp')}
+      {(mode === 'backup' || verifyError && retryVerify) && (
+        <button className={slot('ba-button')} type="submit" disabled={blocked || !code} aria-busy={verifying || undefined}>
+          <Busy busy={verifying} label={t('common.verifying')}>{t('mfa.challenge.submit')}</Busy>
         </button>
       )}
-      {mode !== 'backup' && (
-        <button type="button" className={slot('ba-link-button')} onClick={() => switchMode('backup')}>
-          {t('mfa.challenge.useBackup')}
-        </button>
-      )}
-      {canUseEmailOtp && (
-        <button type="button" className={slot('ba-link-button')} disabled={pending} onClick={requestOtp}>
-          {t(mode === 'otp' ? 'mfa.challenge.resendOtp' : 'mfa.challenge.useEmailOtp')}
-        </button>
-      )}
+      <div className={slot('ba-factor-options')} role="group" aria-labelledby={otherWaysId}>
+        <span id={otherWaysId}>{t('mfa.challenge.otherWays')}</span>
+        <div className={slot('ba-factor-chips')}>
+          {([
+            { factor: 'totp', label: t('userProfile.mfa.authenticator'), show: true, select: () => switchMode('totp') },
+            { factor: 'backup', label: t('mfa.challenge.backupLabel'), show: true, select: () => switchMode('backup') },
+            { factor: 'otp', label: t('mfa.challenge.otpLabel'), show: canUseEmailOtp, select: requestOtp },
+          ] as const).filter(({ factor, show }) => factor !== mode && show).map(({ factor, label: factorLabel, select }) => (
+            <button key={factor} type="button" className={slot('ba-factor-chip')} disabled={blocked} onClick={select}>
+              <FactorIcon factor={factor} />{factorLabel}
+            </button>
+          ))}
+        </div>
+      </div>
       {onCancel && (
         <button type="button" className={slot('ba-link-button')} onClick={onCancel}>
           {t('common.cancel')}

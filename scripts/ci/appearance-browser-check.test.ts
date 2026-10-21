@@ -5,7 +5,8 @@ import { chromium, type Browser, type Page } from 'playwright';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { neutral, toCss } from '@authowl/tokens';
 import { AuthOwlProvider } from '../../packages/auth-react/src/provider';
-import { OtpCodeForm } from '../../packages/auth-react/src/components/OtpCodeForm';
+import { FormError } from '../../packages/auth-react/src/components/FormError';
+import { useSlot } from '../../packages/auth-react/src/elements';
 import type { Appearance } from '../../packages/auth-react/src/appearance';
 import { contrastRatio, parseColor } from '../../packages/auth-react/src/brand';
 
@@ -15,13 +16,21 @@ const css = readFileSync(new URL('../../packages/auth-react/dist/styles.css', im
 const hostTokens = readFileSync(new URL('../../packages/tokens/dist/tokens.css', import.meta.url), 'utf8');
 beforeAll(async () => { browser = await chromium.launch({ channel: 'chromium' }); page = await browser.newPage(); });
 afterAll(async () => { await browser?.close(); });
-const noop = () => {};
+// The stylesheet contract is about slot classes, not one component's markup:
+// a field, an error, a primary and a link button rendered through slot().
+function Fields() {
+  const slot = useSlot();
+  return createElement('form', { className: slot('ba-fields') },
+    createElement('input', { className: slot('ba-input'), 'aria-label': 'Code' }),
+    createElement(FormError, null, 'Wrong code'),
+    createElement('button', { className: slot('ba-button'), type: 'button' }, 'Verify'),
+    createElement('button', { className: slot('ba-link-button'), type: 'button' }, 'Use a different email'));
+}
 function markup(appearance?: Appearance) {
   return renderToString(createElement(AuthOwlProvider, {
     publishableKey: 'pk_live_11111111-1111-1111-1111-111111111111_abcdefghij0123456789',
     apiUrl: 'https://auth.example.com', appearance,
-    children: createElement(OtpCodeForm, { email: 'a@example.com', code: '', onCodeChange: noop,
-      onSubmit: noop, onChangeEmail: noop, pending: false, error: 'Wrong code' }),
+    children: createElement(Fields),
   }));
 }
 async function mount(appearance?: Appearance, host = '', dark = false) {

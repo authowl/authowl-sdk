@@ -2,8 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import React from 'react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { MFAChallenge } from '@authowl/react';
+import { slot } from '@authowl/react';
 import { expectStoryMatrix } from './matrix';
-import { card } from './surface';
 
 // The sign-in second-factor prompt. It renders its initial TOTP step with no
 // config/session/network, so both the default and the backup-code fallback (a
@@ -12,7 +12,7 @@ const meta = {
   title: 'Conversion/MFAChallenge',
   component: MFAChallenge,
   render: (args) => (
-    <div style={card}>
+    <div className={`${slot('card')} ${slot('auth-card')}`}>
       <MFAChallenge {...args} />
     </div>
   ),
@@ -38,13 +38,65 @@ export const BackupCode: Story = {
     await expectStoryMatrix(canvasElement);
     const canvas = within(canvasElement);
     const form = await canvas.findByTestId('mfa-challenge');
-    // In TOTP mode the first link-button is "Use a backup code" (source order:
-    // backup, then email-OTP). Select structurally to stay locale-agnostic.
-    const useBackup = form.querySelector('.ba-link-button');
+    // In TOTP mode the first factor chip selects backup codes.
+    const useBackup = form.querySelector('.ba-factor-chip');
     expect(useBackup).not.toBeNull();
     await userEvent.click(useBackup as HTMLElement);
     await waitFor(() => {
       expect(form.querySelector('.ba-consent')).toBeNull();
     });
+  },
+};
+
+
+export const WithTrustDevice: Story = {
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    await userEvent.click(within(canvasElement).getByRole('checkbox'));
+    await expect(within(canvasElement).getByRole('checkbox')).toBeChecked();
+  },
+};
+
+export const StepUp: Story = {
+  args: { variant: 'step-up', onCancel: () => {} },
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    await expect(within(canvasElement).queryByRole('checkbox')).toBeNull();
+  },
+};
+
+export const EmailedCode: Story = {
+  args: { email: 'mona@example.test' },
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    const form = await within(canvasElement).findByTestId('mfa-challenge');
+    await userEvent.click(form.querySelectorAll('.ba-factor-chip')[1] as HTMLElement);
+    await waitFor(() => expect(form.querySelector('.ba-code-status .ba-link-button')).not.toBeNull());
+  },
+};
+
+export const Verifying: Story = {
+  parameters: { authowl: { codePending: true }, screenshot: { waitForIdle: false } },
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    await userEvent.type(within(canvasElement).getByRole('textbox'), '123456');
+    await waitFor(() => expect(canvasElement.querySelector('.ba-code-status .ba-spinner')).not.toBeNull());
+  },
+};
+
+export const InvalidCode: Story = {
+  parameters: { authowl: { invalidCode: true } },
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    await userEvent.type(within(canvasElement).getByRole('textbox'), '123456');
+    await within(canvasElement).findByRole('alert');
+  },
+};
+
+export const Verified: Story = {
+  play: async ({ canvasElement }) => {
+    await expectStoryMatrix(canvasElement);
+    await userEvent.type(within(canvasElement).getByRole('textbox'), '123456');
+    await waitFor(() => expect(canvasElement.querySelector('[data-state=success]')).not.toBeNull());
   },
 };

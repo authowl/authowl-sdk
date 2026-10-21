@@ -124,3 +124,12 @@ appearance={{
 A CSS-only legacy `--ba-primary` override still drives hover, active, accent
 and focus colours before token-brand fallbacks. Prefer the provider colour API
 for computed contrast labels and complete perceptual ramps.
+
+Numeric one-time codes now render one real text input over aria-hidden visual
+cells. The input retains numeric input mode and one-time-code autofill. Replace
+numeric `.ba-input` styling with the `code-control`, `code-input`, `code-cells`
+and `code-cell` element slots. Cells always run left to right, including Arabic.
+A complete code submits automatically; pending actions lock entry, and a failed
+value does not auto-retry until edited. Backup codes retain a plain text input
+and manual submission. MFA's other-factor link buttons are now pill chips,
+styled through `factor-chip`, in the `factor-options` section.

@@ -39,7 +39,7 @@ const mocks = vi.hoisted(() => ({
     } | undefined,
   },
   requestPasswordReset: vi.fn(async () => ({ data: { success: true }, error: null })),
-  signInUsername: vi.fn(async () => ({
+  signInUsername: vi.fn<() => Promise<{ data: { twoFactorRedirect?: boolean; redirect?: boolean; user?: object }; error: null }>>(async () => ({
     data: { redirect: false, user: {} },
     error: null,
   })),
@@ -53,6 +53,7 @@ const mocks = vi.hoisted(() => ({
   signIn: vi.fn<() => Promise<{ data: { twoFactorRedirect?: boolean } | null; error: null }>>(async () => ({ data: {}, error: null })),
   signInMagicLink: vi.fn(async () => ({ data: null, error: null })),
   signInPasskey: vi.fn<() => Promise<{ data: object | null; error: { code: string } | null }>>(async () => ({ data: {}, error: null })),
+  sendMfaOtp: vi.fn(async () => ({ data: {}, error: null })),
   serverError: vi.fn((_error: unknown, fallback: string) => fallback),
   configError: false,
   configLoading: false,
@@ -91,12 +92,12 @@ vi.mock('../hooks', () => ({
     signInSso: mocks.signInSso,
   }),
   usePasswordReset: () => ({ requestPasswordReset: mocks.requestPasswordReset }),
-  useMFA: () => ({ verifyTotp: vi.fn(), verifyBackupCode: vi.fn(), sendOtp: vi.fn(), verifyOtp: vi.fn() }),
+  useMFA: () => ({ verifyTotp: vi.fn(), verifyBackupCode: vi.fn(), sendOtp: mocks.sendMfaOtp, verifyOtp: vi.fn() }),
 }));
 
 vi.mock('../i18n', () => ({
   Bidi: ({ children }: { children: React.ReactNode }) => <bdi>{children}</bdi>,
-  richMessage: (message: string) => message,
+  richMessage: (message: string, slots: Record<string, React.ReactNode>) => <>{message}{slots.email}</>,
   useServerError: () => mocks.serverError,
   useT: () => (key: string) => key,
 }));
@@ -703,6 +704,27 @@ describe('SignIn "Continue with SSO"', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe('sso.error.notFound');
+  });
+
+  it('uses generic MFA email copy after username sign-in, even with a previously entered email', async () => {
+    mocks.config.authentication = {
+      email: { signUp: true, signIn: ['password'] },
+      phone: { signUp: false, signIn: false },
+      password: { signUp: true, add: true },
+      passkey: { signIn: false, add: false },
+      username: { collectOnSignUp: true, signIn: true },
+    };
+    mocks.signInUsername.mockResolvedValueOnce({ data: { twoFactorRedirect: true }, error: null });
+    render(<SignIn />);
+    fireEvent.change(screen.getByLabelText('common.emailLabel'), { target: { value: 'stale@example.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'signIn.useUsername' }));
+    fireEvent.change(screen.getByLabelText('common.usernameLabel'), { target: { value: 'Mona_1' } });
+    fireEvent.change(screen.getByLabelText('common.passwordLabel', { selector: 'input' }), { target: { value: 'password-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'signIn.submit' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'mfa.challenge.otpLabel' }));
+    await screen.findByText('mfa.challenge.otpHint');
+    expect(screen.queryByText('mfa.challenge.otpDestination')).toBeNull();
+    expect(screen.queryByText('stale@example.test')).toBeNull();
   });
 
   it('offers an explicit username mode and routes it to username sign-in', async () => {

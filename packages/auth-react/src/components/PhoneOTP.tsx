@@ -14,6 +14,8 @@ import { LegalConsentCheckbox } from './LegalConsentCheckbox';
 import { Turnstile } from './Turnstile';
 import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
+import { CodeInput, CodeSuccess } from './CodeInput';
+import { useAuthCardPending } from './AuthCardLock';
 import { FormError } from './FormError';
 
 export type PhoneOTPProps = {
@@ -50,7 +52,8 @@ export function PhoneOTP({
   const { sessionStore } = useAuthClient();
   const { config, isLoading } = usePublicConfig();
   const { preparePhoneOtp, startPhoneOtp, verifyPhoneOtp } = useSignIn();
-  const { pending, error, setError, run } = useSubmitAction();
+  const { pending, succeeded: success, error, setError, run } = useSubmitAction();
+  const locked = useAuthCardPending(pending);
   const [stage, setStage] = React.useState<'phone' | 'code' | 'hosted'>('phone');
   const [phoneNumber, setPhoneNumber] = React.useState('');
   const [code, setCode] = React.useState('');
@@ -133,6 +136,7 @@ export function PhoneOTP({
         data-testid="phoneotp-code"
         onSubmit={(event) => {
           event.preventDefault();
+          if (locked || success) return;
           void run(
             () =>
               verifyPhoneOtp({
@@ -148,6 +152,7 @@ export function PhoneOTP({
                 }
                 return null;
               },
+              trackSuccess: true,
               onSuccess: () => finishSignIn({ sessionStore, redirectTo, onSignedIn }),
             },
           );
@@ -156,26 +161,15 @@ export function PhoneOTP({
         <h2 className={slot('ba-title')}>{t('phoneOtp.title')}</h2>
         <label className={slot('ba-label')}>
           {t('phoneOtp.codeLabel')} <Bidi>{phoneNumber}</Bidi>
-          <input
-            className={slot('ba-input')}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            value={code}
-            onChange={(event) => {
-              setCode(event.target.value.replace(/\D/g, '').slice(0, 6));
-              setError(null);
-            }}
-            minLength={6}
-            maxLength={6}
-            autoFocus
-            required
-          />
+          <CodeInput value={code} onChange={(value) => { setCode(value); setError(null); }}
+            state={success ? 'success' : error ? 'error' : 'idle'} readOnly={locked} disabled={success} autoFocus />
         </label>
+        {success && <CodeSuccess />}
         <FormError>{error}</FormError>
         <button
           className={slot('ba-button')}
           type="submit"
-          disabled={pending || code.length !== 6}
+          disabled={locked || success || code.length !== 6}
           aria-busy={pending || undefined}
         >
           <Busy busy={pending} label={t('common.verifying')}>{t('phoneOtp.verifySubmit')}</Busy>

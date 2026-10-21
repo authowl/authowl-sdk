@@ -7,10 +7,10 @@ import { PreviewAuth } from '../examples/vite-react/src/PreviewAuth';
 
 const preview: Preview = {
   tags: ['autodocs'],
-  afterEach: async ({ id }) => {
+  afterEach: async ({ id, parameters }) => {
     if (import.meta.env.AUTHOWL_SCREENSHOTS === '1') {
       const { captureStory } = await import('./screenshots');
-      await captureStory(id);
+      await captureStory(id, parameters.screenshot);
     }
   },
   globalTypes: {
@@ -67,6 +67,8 @@ const preview: Preview = {
           primaryColor={primaryColor}
           signInMethod={context.parameters.authowl?.signInMethod}
           wrongPassword={context.parameters.authowl?.wrongPassword === true}
+          invalidCode={context.parameters.authowl?.invalidCode === true}
+          codePending={context.parameters.authowl?.codePending === true}
           mfaEnrollment={context.parameters.authowl?.mfaEnrollment === true}
         >
           <main

@@ -8,6 +8,8 @@ import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
 import { shouldDiscardSetup } from './mfa-enrollment';
 import { QrCode } from './QrCode';
+import { CodeInput, CodeSuccess } from './CodeInput';
+import { useAuthCardPending } from './AuthCardLock';
 import { FormError } from './FormError';
 
 export type MFAEnrollmentProps = {
@@ -37,7 +39,8 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
   const t = useT();
   const { enable, verifyTotp } = useMFA();
   const { user, isLoaded } = useUser();
-  const { pending, error, run } = useSubmitAction();
+  const { pending, error, setError, run } = useSubmitAction();
+  const locked = useAuthCardPending(pending);
   const [password, setPassword] = React.useState('');
   const [setup, setSetup] = React.useState<TwoFactorEnableData | null>(null);
   const [code, setCode] = React.useState('');
@@ -68,12 +71,22 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
     }
   }, [stale]);
 
+  // Effects run after the terminal view commits, so callbacks cannot observe secrets.
+  const notified = React.useRef(false);
+  React.useEffect(() => {
+    if (done && !notified.current) {
+      notified.current = true;
+      onEnrolled?.();
+    }
+  }, [done, onEnrolled]);
+
   // Terminal success: the factor is now active. Reached only after a live code
   // verified, with the secrets already cleared, so the drop-in component stops
   // showing the QR/backup codes even when no `onEnrolled` navigation is provided.
   if (done) {
     return (
       <div className={slot('ba-fields')} data-testid="mfa-enroll-done">
+        <CodeSuccess />
         <h2 className={slot('ba-title')}>{t('mfa.enroll.doneTitle')}</h2>
         <p className={slot('ba-muted')}>{t('mfa.enroll.doneBody')}</p>
       </div>
@@ -109,6 +122,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
         data-testid="mfa-enroll-password"
         onSubmit={(e) => {
           e.preventDefault();
+          if (locked) return;
           void run(() => enable({ password }), {
             failure: t('mfa.enroll.error.startFailed'),
             onSuccess: (res) => {
@@ -132,7 +146,7 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
           />
         </label>
         <FormError>{error}</FormError>
-        <button className={slot('ba-button')} type="submit" disabled={pending || !password} aria-busy={pending || undefined}>
+        <button className={slot('ba-button')} type="submit" disabled={locked || !password} aria-busy={pending || undefined}>
           <Busy busy={pending} label={t('mfa.enroll.startPending')}>{t('common.continue')}</Busy>
         </button>
       </form>
@@ -177,32 +191,28 @@ export function MFAEnrollment({ onEnrolled, title }: MFAEnrollmentProps) {
         className={slot('ba-fields')}
         onSubmit={(e) => {
           e.preventDefault();
+          if (locked) return;
           void run(() => verifyTotp({ code }), {
             failure: t('mfa.enroll.error.invalidCode'),
             onSuccess: () => {
               // Reach a terminal state: drop the secrets from memory/screen, then
               // hand off. Works whether or not `onEnrolled` navigates away.
               setSetup(null);
+              setPassword('');
               setCode('');
+              setupOwnerId.current = null;
               setDone(true);
-              onEnrolled?.();
             },
           });
         }}
       >
         <label className={slot('ba-label')}>
           {t('mfa.enroll.codeLabel')}
-          <input
-            className={slot('ba-input')}
-            value={code}
-            onChange={(e) => setCode(e.target.value.trim())}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-          />
+          <CodeInput value={code} onChange={(value) => { setCode(value); setError(null); }}
+            state={error ? 'error' : 'idle'} readOnly={locked} />
         </label>
         <FormError>{error}</FormError>
-        <button className={slot('ba-button')} type="submit" disabled={pending || !code} aria-busy={pending || undefined}>
+        <button className={slot('ba-button')} type="submit" disabled={locked || !code} aria-busy={pending || undefined}>
           <Busy busy={pending} label={t('common.verifying')}>{t('mfa.enroll.activateSubmit')}</Busy>
         </button>
       </form>
