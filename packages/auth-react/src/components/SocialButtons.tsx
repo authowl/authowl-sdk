@@ -1,9 +1,12 @@
 'use client';
+import type { LastUsedSignInMethod } from '@authowl/core';
+import { useSubmitAction } from './use-submit-action';
+import { useAuthCardPending } from './AuthCardLock';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useSignIn } from '../hooks';
 import { useSignInMethodRecorder, useLastUsedSignInMethod } from '../last-used-method';
-import { useT, useServerError } from '../i18n';
+import { useT } from '../i18n';
 import { ProviderIcon } from './social-icons';
 import { Busy } from './Spinner';
 import { FormError } from './FormError';
@@ -29,10 +32,8 @@ export type SocialButtonsProps = {
   providers: string[];
   /** Where to send the browser after the OAuth round-trip. */
   callbackURL?: string;
-  /** Lock social entry while another explicit sign-in is pending. */
-  disabled?: boolean;
-  /** Lets an enclosing sign-in surface lock its other methods. */
-  onPendingChange?: (pending: boolean) => void;
+  /** Reuse the enclosing form's hint; omitted for standalone storage lookup. */
+  lastUsed?: LastUsedSignInMethod | null;
 };
 
 /**
@@ -40,15 +41,17 @@ export type SocialButtonsProps = {
  * A social sign-in also creates the account on first use, so this is shared by
  * both <SignIn/> and <SignUp/>.
  */
-export function SocialButtons({ providers, callbackURL, disabled = false, onPendingChange }: SocialButtonsProps) {
+export function SocialButtons({ providers, callbackURL, lastUsed: hint }: SocialButtonsProps) {
   const slot = useSlot();
   const t = useT();
-  const toServerError = useServerError();
   const { signInSocial } = useSignIn();
-  const lastUsed = useLastUsedSignInMethod();
+  const storedHint = useLastUsedSignInMethod(hint === undefined);
+  const lastUsed = hint === undefined ? storedHint : hint;
   const recordSignInMethod = useSignInMethodRecorder();
-  const [pending, setPending] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
+  const [activeProvider, setActiveProvider] = React.useState<string | null>(null);
+  const { pending, error, setError, run } = useSubmitAction();
+
+  const locked = useAuthCardPending(pending);
 
   // A social sign-in now begins with a NAVIGATION, so a failure to start cannot
   // come back as a return value - it arrives as `?error=` on the page the flow
@@ -64,66 +67,48 @@ export function SocialButtons({ providers, callbackURL, disabled = false, onPend
     url.searchParams.delete('authowl_error');
     window.history.replaceState(window.history.state, '', url.toString());
     setError(t('social.error.startFailed'));
-  }, [t]);
+  }, [t, setError]);
 
   if (providers.length === 0) return null;
 
   return (
     <div className={slot('ba-social')} style={{ gridTemplateColumns: `repeat(${Math.min(providers.length, 3)}, minmax(0,1fr))` }}>
-      {providers.map((provider) => (
-        <button
-          key={provider}
-          type="button"
-          aria-label={pending === provider ? t('social.redirecting') : t('social.continueWith', { provider: label(provider) })}
-          className={slot('ba-social-button')}
-          disabled={disabled || pending !== null}
-          aria-busy={pending === provider || undefined}
-          onClick={async () => {
-            if (disabled || pending !== null) return;
-            setError(null);
-            setPending(provider);
-            onPendingChange?.(true);
-            try {
-              // OAuth leaves the application, so a zero-config drop-in must
-              // remember where to return. Consumers can still override it for
-              // a dedicated callback or post-authentication page.
-              const destination = callbackURL ?? window.location.href;
-              // On success the browser is redirected away (keep "Redirecting…").
-              // Two failure shapes now. On the first-party transport the flow
-              // starts with a navigation, so a start failure lands back HERE as
-              // `?error=` (read above) - which only works because we name this
-              // page as the error destination. On the legacy transport (React
-              // Native, `disableRedirect`, or a call carrying `scopes`) the
-              // action still returns `{ error }` and no redirect happens.
-              const res = await signInSocial({
+      {providers.map((provider) => {
+        const busy = pending && activeProvider === provider;
+        return (
+          <button
+            key={provider}
+            type="button"
+            aria-label={busy ? t('social.redirecting') : t('social.continueWith', { provider: label(provider) })}
+            className={slot('ba-social-button')}
+            disabled={locked}
+            aria-busy={busy || undefined}
+            onClick={() => {
+              if (locked) return;
+              setActiveProvider(provider);
+              // OAuth leaves the application; return here to redeem the handoff.
+              // Legacy transports can return an error instead of navigating.
+              void run(() => signInSocial({
                 provider,
-                callbackURL: destination,
+                callbackURL: callbackURL ?? window.location.href,
                 errorCallbackURL: window.location.href,
+              }), {
+                failure: t('social.error.startFailed'),
+                // Park only after redirect start succeeds. Promotion waits for a
+                // session on return, so abandoned consent never teaches the hint.
+                onSuccess: () => recordSignInMethod(`social:${provider}`, true),
+                keepPendingOnSuccess: true,
               });
-              if (res?.error) {
-                setError(toServerError(res.error, t('social.error.startFailed')));
-                setPending(null);
-                onPendingChange?.(false);
-              } else {
-                // Park only after the redirect start succeeds. A user who
-                // bounces off consent has not signed in; promotion waits for a
-                // session on return.
-                recordSignInMethod(`social:${provider}`, true);
-              }
-            } catch {
-              setError(t('social.error.startFailed'));
-              setPending(null);
-              onPendingChange?.(false);
-            }
-          }}
-        >
-          <Busy busy={pending === provider} label={t('social.redirecting')}>
-            <ProviderIcon provider={provider} />
-            {label(provider)}
-          </Busy>
-        {lastUsed === `social:${provider}` && <span className={slot('ba-last-used')}>{t('signIn.lastUsed')}</span>}
-        </button>
-      ))}
+            }}
+          >
+            <Busy busy={busy} label={t('social.redirecting')}>
+              <ProviderIcon provider={provider} />
+              {label(provider)}
+            </Busy>
+            {lastUsed === `social:${provider}` && <span className={slot('ba-last-used')}>{t('signIn.lastUsed')}</span>}
+          </button>
+        );
+      })}
       <FormError>{error}</FormError>
     </div>
   );

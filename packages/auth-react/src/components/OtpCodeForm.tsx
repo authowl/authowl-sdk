@@ -1,4 +1,5 @@
 'use client';
+import { AuthCardLock } from './AuthCardLock';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useT, richMessage, Bidi } from '../i18n';
@@ -34,6 +35,8 @@ export function OtpCodeForm({
   pending,
   error,
 }: OtpCodeFormProps) {
+  const lock = React.useContext(AuthCardLock);
+  const locked = pending || Boolean(lock?.locked);
   const slot = useSlot();
   const t = useT();
   return (
@@ -43,7 +46,7 @@ export function OtpCodeForm({
       data-testid="emailotp-code"
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit();
+        if (!locked) onSubmit();
       }}
     >
       <label className={slot('ba-label')}>
@@ -59,10 +62,10 @@ export function OtpCodeForm({
         />
       </label>
       <FormError>{error}</FormError>
-      <button className={slot('ba-button')} type="submit" disabled={pending} aria-busy={pending || undefined}>
+      <button className={slot('ba-button')} type="submit" disabled={locked} aria-busy={pending || undefined}>
         <Busy busy={pending} label={t('common.verifying')}>{t('emailOtp.verifySubmit')}</Busy>
       </button>
-      <button type="button" className={slot('ba-link-button')} disabled={pending} onClick={onChangeEmail}>
+      <button type="button" className={slot('ba-link-button')} disabled={locked} onClick={onChangeEmail}>
         {t('emailOtp.changeEmail')}
       </button>
     </form>

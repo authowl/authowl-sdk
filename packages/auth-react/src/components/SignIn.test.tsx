@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as methodHints from '../last-used-method';
 import { uninstrumentedUserEvent as userEvent } from 'storybook/test';
 
 const mocks = vi.hoisted(() => ({
@@ -362,6 +363,10 @@ describe('SignIn "Continue with SSO"', () => {
     expect(screen.getAllByLabelText('common.emailLabel')).toHaveLength(1);
     fireEvent.click(screen.getByRole('tab', { name: 'signIn.tab.sso' }));
     expect(screen.getByRole('button', { name: 'sso.continueWith' })).toBeDefined();
+    const panels = screen.getAllByRole('tabpanel', { hidden: true });
+    expect(panels).toHaveLength(1);
+    for (const tab of screen.getAllByRole('tab')) expect(tab.getAttribute('aria-controls')).toBe(panels[0]!.id);
+    expect(panels[0]!.getAttribute('aria-labelledby')).toBe(screen.getByRole('tab', { selected: true }).id);
     expect(document.querySelector('input[type=password]')).toBeNull();
   });
 
@@ -440,6 +445,27 @@ describe('SignIn "Continue with SSO"', () => {
     await waitFor(() => expect(submit.hasAttribute('aria-busy')).toBe(false));
   });
 
+  it('pins the submitted tab when a last-used hint arrives during the request', async () => {
+    mocks.config.enabledMethods = ['password', 'magic_link'];
+    const hint = vi.spyOn(methodHints, 'useLastUsedSignInMethod').mockReturnValue(null);
+    let finish!: (result: { data: object; error: null }) => void;
+    mocks.signIn.mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    try {
+      const view = render(<SignIn />);
+      fireEvent.change(screen.getByLabelText('common.emailLabel'), { target: { value: 'user@acme.test' } });
+      fireEvent.change(screen.getByLabelText('common.passwordLabel', { selector: 'input' }), { target: { value: 'password-1' } });
+      fireEvent.click(screen.getByRole('button', { name: 'signIn.submit' }));
+      hint.mockReturnValue('magic-link');
+      view.rerender(<SignIn />);
+      expect(screen.getByRole('tab', { selected: true }).textContent).toBe('common.passwordLabel');
+      finish({ data: {}, error: null });
+      await waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'signIn.submit' }).disabled).toBe(false));
+      expect(screen.getByRole('tab', { selected: true }).textContent).toBe('common.passwordLabel');
+    } finally {
+      hint.mockRestore();
+    }
+  });
+
   it('allows implicit Enter submission from an invalid partial email only on passkey', async () => {
     mocks.config.enabledMethods = ['password', 'passkey'];
     render(<SignIn />);
@@ -493,6 +519,23 @@ describe('SignIn "Continue with SSO"', () => {
     expect(finishSignIn).not.toHaveBeenCalled();
     if (outcome === 'failed') expect(screen.getByRole('alert').textContent).toBe('passkey.error.signInFailed');
     else expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('refocuses the remounted form after MFA confirmation clears', async () => {
+    const view = render(<SignIn />);
+    const previous = screen.getByTestId('signin-form');
+    let confirm!: (value: Awaited<ReturnType<typeof mocks.getSession>>) => void;
+    mocks.getSession.mockReturnValueOnce(new Promise((resolve) => { confirm = resolve; }));
+    mocks.needsMfaEnrollment = true;
+    view.rerender(<SignIn />);
+    expect(screen.getByTestId('signin-mfa-enrolment').getAttribute('aria-busy')).toBe('true');
+    expect(previous.isConnected).toBe(false);
+    confirm({ data: { session: { pendingMfaEnrollment: false } }, error: null });
+    await waitFor(() => expect(mocks.refetch).toHaveBeenCalled());
+    view.rerender(<SignIn />);
+    const form = screen.getByTestId('signin-form');
+    expect(form).not.toBe(previous);
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'signIn.title' }));
   });
 
   it('does not take focus when the form first appears after config loads', () => {

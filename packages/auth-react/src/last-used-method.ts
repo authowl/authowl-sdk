@@ -27,13 +27,13 @@ import { usePublicConfig } from './hooks';
  * Everything is per project and per browser, and never keyed by an identifier -
  * see the core module for why that line matters.
  */
-export function useLastUsedSignInMethod(): LastUsedSignInMethod | null {
+export function useLastUsedSignInMethod(enabled = true): LastUsedSignInMethod | null {
   const { config } = usePublicConfig();
   const projectId = config?.environmentId ?? null;
   const [hint, setHint] = React.useState<{ projectId: string; method: LastUsedSignInMethod | null } | null>(null);
   React.useEffect(() => {
-    if (projectId) setHint({ projectId, method: readLastUsedSignInMethod(projectId) });
-  }, [projectId]);
+    if (enabled && projectId) setHint({ projectId, method: readLastUsedSignInMethod(projectId) });
+  }, [enabled, projectId]);
   return hint && hint.projectId === projectId ? hint.method : null;
 }
 

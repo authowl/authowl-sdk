@@ -1,5 +1,7 @@
 'use client';
+import { useAuthCardPending } from './AuthCardLock';
 import { useStepFocus } from './use-step-focus';
+import { AuthField } from './AuthField';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useSignIn } from '../hooks';
@@ -25,16 +27,18 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
   const [code, setCode] = React.useState('');
   const [codeSent, setCodeSent] = React.useState(false);
 
-  const { stepRef, restoreFocus } = useStepFocus(codeSent ? 'code' : 'request');
+  const locked = useAuthCardPending(pending);
+  const step = codeSent ? 'code' : 'request';
+  const { stepRef, restoreFocus } = useStepFocus(step, true);
 
   if (codeSent) {
     return (
-      <div key="signup-emailotp-code" ref={stepRef} role="status" className={slot('ba-fields ba-step')} data-testid="signup-emailotp-code">
+      <div key={step} ref={stepRef} role="status" className={slot('ba-fields ba-step')} data-testid="signup-emailotp-code">
         <OtpCodeForm
           email={email}
           code={code}
           onCodeChange={setCode}
-          pending={pending}
+          pending={locked}
           error={error}
           onSubmit={() =>
             void run(() => signInEmailOtp({ email, otp: code }), {
@@ -54,41 +58,39 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
   }
 
   return (
-    <div key="signup-emailotp-request" ref={stepRef} className={slot('ba-fields ba-step')}>
-      <form
-        method="post"
-        className={slot('ba-fields')}
-        data-testid="signup-emailotp-request"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void run(() => authChallenge.run(AUTH_CHALLENGE_ACTIONS.passwordless, (options) => sendEmailOtp({ email, type: 'sign-in' }, options)), {
-            failure: t('emailOtp.error.sendFailed'),
-            onSuccess: () => setCodeSent(true),
-          });
-        }}
+    <form
+      key={step}
+      ref={stepRef}
+      method="post"
+      className={slot('ba-fields ba-step')}
+      data-testid="signup-emailotp-request"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (locked) return;
+        void run(() => authChallenge.run(AUTH_CHALLENGE_ACTIONS.passwordless, (options) => sendEmailOtp({ email, type: 'sign-in' }, options)), {
+          failure: t('emailOtp.error.sendFailed'),
+          onSuccess: () => setCodeSent(true),
+        });
+      }}
+    >
+      <AuthField
+        label={t('common.emailLabel')}
+        type="email"
+        value={email}
+        onChange={(event) => setEmail(event.target.value)}
+        autoComplete="email"
+        required
+      />
+      {authChallenge.control}
+      <FormError>{error}</FormError>
+      <button
+        className={slot('ba-button ba-button-secondary')}
+        type="submit"
+        disabled={locked || authChallenge.configPending}
+        aria-busy={pending || undefined}
       >
-        <label className={slot('ba-label')}>
-          {t('common.emailLabel')}
-          <input
-            className={slot('ba-input')}
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            autoComplete="email"
-            required
-          />
-        </label>
-        {authChallenge.control}
-        <FormError>{error}</FormError>
-        <button
-          className={slot('ba-button ba-button-secondary')}
-          type="submit"
-          disabled={pending || authChallenge.configPending}
-          aria-busy={pending || undefined}
-        >
-          <Busy busy={pending} label={t('common.sending')}>{t('signUp.passwordlessSubmit')}</Busy>
-        </button>
-      </form>
-    </div>
+        <Busy busy={pending} label={t('common.sending')}>{t('signUp.passwordlessSubmit')}</Busy>
+      </button>
+    </form>
   );
 }

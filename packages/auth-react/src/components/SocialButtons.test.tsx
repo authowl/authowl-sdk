@@ -41,6 +41,17 @@ describe('SocialButtons OAuth return destination', () => {
 
   afterEach(cleanup);
 
+  it.each([null, 'social:google'] as const)('reuses an explicit %s hint without reading storage', (lastUsed) => {
+    const read = vi.spyOn(Storage.prototype, 'getItem');
+    try {
+      render(<SocialButtons providers={['google']} lastUsed={lastUsed} />);
+      expect(read).not.toHaveBeenCalled();
+      expect(Boolean(screen.queryByText('signIn.lastUsed'))).toBe(lastUsed !== null);
+    } finally {
+      read.mockRestore();
+    }
+  });
+
   it('returns to the current page when no callback is configured', async () => {
     render(<SocialButtons providers={['google']} />);
 

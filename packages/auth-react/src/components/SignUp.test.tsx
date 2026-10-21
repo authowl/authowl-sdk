@@ -145,6 +145,52 @@ describe('SignUp passwordless passkey flow', () => {
 
   afterEach(cleanup);
 
+  it.each(['password', 'passwordless'])('locks social sign-in during deferred %s signup', async (method) => {
+    mocks.config.enabledMethods = method === 'password' ? ['password'] : ['email_otp'];
+    mocks.config.socialProviders = ['google'];
+    let finish!: () => void;
+    if (method === 'password') {
+      mocks.signUp.mockReturnValueOnce(new Promise((resolve) => {
+        finish = () => resolve({ data: { sessionCreated: true }, error: null });
+      }));
+    } else {
+      mocks.sendEmailOtp.mockReturnValueOnce(new Promise((resolve) => {
+        finish = () => resolve({ data: { success: true }, error: null });
+      }));
+    }
+    render(<SignUp />);
+    fireEvent.change(screen.getByLabelText('common.emailLabel'), { target: { value: 'mona@example.test' } });
+    if (method === 'password') {
+      fireEvent.change(screen.getByLabelText('common.passwordLabel'), { target: { value: 'password-123' } });
+    }
+    fireEvent.submit(screen.getByRole('button', { name: method === 'password' ? 'signUp.submit' : 'signUp.passwordlessSubmit' }).closest('form')!);
+    const social = screen.getByRole<HTMLButtonElement>('button', { name: 'social.continueWith' });
+    expect(social.disabled).toBe(true);
+    fireEvent.click(social);
+    expect(mocks.signInSocial).not.toHaveBeenCalled();
+    finish();
+    await waitFor(() => expect(social.disabled).toBe(false));
+  });
+
+  it.each(['password', 'passwordless'])('locks the %s signup submit during a pending social redirect', async (method) => {
+    mocks.config.enabledMethods = method === 'password' ? ['password'] : ['email_otp'];
+    mocks.config.socialProviders = ['google'];
+    let finish!: () => void;
+    mocks.signInSocial.mockReturnValueOnce(new Promise((resolve) => {
+      finish = () => resolve({ data: { redirect: true }, error: null });
+    }));
+    render(<SignUp />);
+    fireEvent.click(screen.getByRole('button', { name: 'social.continueWith' }));
+    const submit = screen.getByRole<HTMLButtonElement>('button', { name: method === 'password' ? 'signUp.submit' : 'signUp.passwordlessSubmit' });
+    expect(submit.disabled).toBe(true);
+    fireEvent.submit(submit.closest('form')!);
+    expect(mocks.signUp).not.toHaveBeenCalled();
+    expect(mocks.sendEmailOtp).not.toHaveBeenCalled();
+    finish();
+    await waitFor(() => expect(mocks.signInSocial).toHaveResolved());
+    expect(submit.disabled).toBe(true);
+  });
+
   it('returns social sign-in to the form before navigating to redirectTo', async () => {
     mocks.config.socialProviders = ['google'];
     render(<SignUp redirectTo="/dashboard" />);

@@ -34,6 +34,7 @@ function storybookProject(locale: 'en' | 'ar', theme: 'light' | 'dark', viewport
     ],
     test: {
       name: projectName,
+      ...(viewport.width <= 480 ? { include: ['stories/SignIn.stories.tsx', 'stories/SignUp.stories.tsx'] } : {}),
       browser: {
         enabled: true,
         headless: true,

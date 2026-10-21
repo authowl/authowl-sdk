@@ -1,11 +1,11 @@
 'use client';
 import { useSlot } from '../elements';
 import * as React from 'react';
-import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
+import { usePublicConfig } from '../hooks';
 import { passkeyBlockingDomain } from '../signin-methods';
 import { currentPageHost } from './page-host';
 import { useT } from '../i18n';
-import { finishSignIn } from './finish-sign-in';
+import { usePasskeySignIn } from './use-passkey-sign-in';
 import { useSubmitAction } from './use-submit-action';
 import { Busy } from './Spinner';
 import { FormError } from './FormError';
@@ -24,9 +24,8 @@ export type PasskeyButtonProps = {
 export function PasskeyButton({ redirectTo, onSignedIn }: PasskeyButtonProps) {
   const slot = useSlot();
   const t = useT();
-  const { sessionStore } = useAuthClient();
-  const { signInPasskey } = useSignIn();
   const { pending, error, run } = useSubmitAction();
+  const signIn = usePasskeySignIn(run, redirectTo, onSignedIn);
   // <SignIn/> renders this behind `plan.passkey`, which already asks this
   // question - but the component is exported, and a consumer who mounts it
   // directly got a button whose ceremony the browser refuses outright. Nothing
@@ -45,15 +44,7 @@ export function PasskeyButton({ redirectTo, onSignedIn }: PasskeyButtonProps) {
         disabled={pending}
         aria-busy={pending || undefined}
         data-testid="passkey-button"
-        onClick={() =>
-          void run(() => signInPasskey(), {
-            failure: t('passkey.error.signInFailed'),
-            // A dismissed prompt resolves with no data and no error - not a failure.
-            onSuccess: (res) => {
-              if (res.data) return finishSignIn({ sessionStore, redirectTo, onSignedIn });
-            },
-          })
-        }
+        onClick={signIn}
       >
         <Busy busy={pending} label={t('passkey.waiting')}>{t('passkey.signInButton')}</Busy>
       </button>

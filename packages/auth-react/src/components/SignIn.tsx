@@ -1,16 +1,19 @@
 'use client';
+import { AuthField } from './AuthField';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useHandoffCompletion } from './use-handoff-completion';
 import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
 import { useT } from '../i18n';
-import { resolveSignInMethods, emailAutocomplete } from '../signin-methods';
+import { resolveSignInMethods, emailAutocomplete, LAST_USED_TAB } from '../signin-methods';
 import { currentPageHost } from './page-host';
-import type { SignInPrimary } from '../signin-methods';
+import type { TabMethod } from '../signin-methods';
 import { finishSignIn } from './finish-sign-in';
 import { useSubmitAction } from './use-submit-action';
 import { usePasskeyAutofill } from './passkey-autofill';
 import { useSignInMethodRecorder, useLastUsedSignInMethod } from '../last-used-method';
+import { StepCard } from './StepCard';
+import { usePasskeySignIn } from './use-passkey-sign-in';
 import { MethodTabs } from './MethodTabs';
 import { SocialButtons } from './SocialButtons';
 import { useStepFocus } from './use-step-focus';
@@ -18,12 +21,10 @@ import { ForgotPassword } from './ForgotPassword';
 import { OtpCodeForm } from './OtpCodeForm';
 import { MFAChallenge } from './MFAChallenge';
 import { MfaEnrollmentStep, useConfirmedMfaPending } from './mfa-enrollment-step';
-import { AuthOwlBadge } from './AuthOwlBadge';
 import { Busy } from './Spinner';
 import { PhoneOTP } from './PhoneOTP';
 import { AUTH_CHALLENGE_ACTIONS, useAuthChallenge } from './AuthChallenge';
 import { FormError } from './FormError';
-import { AuthOwlBranding } from './AuthOwlBranding';
 import { InvitationBanner } from './InvitationBanner';
 import { PublicConfigError } from './PublicConfigError';
 
@@ -63,7 +64,6 @@ export function SignIn({
     sendEmailOtp,
     signInEmailOtp,
     signInSso,
-    signInPasskey,
   } = useSignIn();
   const { config, isLoading, isError } = usePublicConfig();
   const { pending, error, setError, run } = useSubmitAction();
@@ -73,6 +73,7 @@ export function SignIn({
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [credentialMode, setCredentialMode] = React.useState<'email' | 'username'>('email');
+  const usingUsername = credentialMode === 'username';
   const [otp, setOtp] = React.useState('');
   const [view, setView] = React.useState<'sign-in' | 'forgot' | 'otp-code' | 'magic-sent' | 'phone'>(
     'sign-in',
@@ -84,15 +85,17 @@ export function SignIn({
   // factor is always TOTP; <MFAChallenge> covers it and offers backup codes as a
   // universal fallback.
   const [challenge, setChallenge] = React.useState(false);
-  const [socialPending, setSocialPending] = React.useState(false);
-  const locked = pending || socialPending;
+  const [childPending, setChildPending] = React.useState(false);
+  const locked = pending || childPending;
   // Hook, so it must run unconditionally - the early returns below are all after it.
   // 'clear' on an unknown answer: a sign-in form must never be replaced by an
   // enrolment screen it cannot leave. See useConfirmedMfaPending.
   const mfaEnrolment = useConfirmedMfaPending('clear');
-  const step = isLoading || isError || mfaEnrolment === 'confirming' ? null
-    : mfaEnrolment === 'pending' ? 'mfa-enrolment' : challenge ? 'mfa-challenge' : view;
-  const { stepRef, rememberOpener, restoreFocus } = useStepFocus(step);
+  const step = isLoading ? 'loading' : isError ? 'error'
+    : mfaEnrolment === 'confirming' ? 'mfa-confirming'
+    : mfaEnrolment === 'pending' ? 'mfa-enrolment' : challenge ? 'mfa'
+    : view === 'forgot' && !resetPasswordUrl || view === 'sign-in' ? 'form' : view;
+  const { stepRef, rememberOpener, restoreFocus } = useStepFocus(step, !isLoading && !isError && mfaEnrolment !== 'confirming');
   const back = () => { restoreFocus(); setView('sign-in'); };
   const recordSignInMethod = useSignInMethodRecorder();
   const onPasskeySignedIn = React.useCallback(() => {
@@ -112,179 +115,28 @@ export function SignIn({
   const plan = resolveSignInMethods(config, currentPageHost());
 
   const lastUsed = useLastUsedSignInMethod();
-  type TabMethod = Exclude<SignInPrimary, null> | 'passkey';
   const [selected, setSelected] = React.useState<TabMethod | null>(null);
   const tabId = React.useId();
-  const tabMethods: TabMethod[] = [
-    ...(plan.password || plan.username ? ['password' as const] : []),
-    ...(plan.magicLink ? ['magic' as const] : []),
-    ...(plan.emailOtp ? ['otp' as const] : []),
-    ...(plan.sso ? ['sso' as const] : []),
-    ...(plan.passkey ? ['passkey' as const] : []),
-  ];
-  const active = selected && tabMethods.includes(selected) ? selected : plan.primary ?? tabMethods[0];
-  React.useEffect(() => {
-    const method = lastUsed === 'magic-link' ? 'magic' : lastUsed === 'email-otp' ? 'otp'
-      : lastUsed === 'username' ? 'password' : lastUsed;
-    if (method === 'password' || method === 'magic' || method === 'otp' || method === 'sso' || method === 'passkey') {
-      if (!locked) setSelected((current) => current ?? method);
-    }
-  }, [lastUsed, locked]);
+  const tabMethods = plan.tabs;
+  const available = (method: TabMethod | null | undefined) => method && tabMethods.includes(method) ? method : null;
+  const active = available(selected) ?? available(lastUsed ? LAST_USED_TAB[lastUsed] : null) ?? tabMethods[0];
+  const doPasskey = usePasskeySignIn(run, redirectTo, onPasskeySignedIn);
 
   // Passkey conditional autofill (progressive enhancement): armed on the single
   // shared email input whenever passkey is enabled and an email field exists.
   usePasskeyAutofill({
-    enabled: credentialMode === 'email' && plan.autofillHost !== null,
+    enabled: !usingUsername && plan.autofillHost !== null,
     redirectTo,
     onSignedIn: onPasskeySignedIn,
   });
 
-  const badge = <AuthOwlBadge force={showBadge} />;
-  const branding = showBranding ? <AuthOwlBranding /> : null;
-
-  if (isLoading) {
-    return (
-      <div key="signin-loading" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-loading" aria-busy="true">
-        <div className={slot('ba-skeleton')} />
-        <div className={slot('ba-skeleton')} />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div key="signin-error" ref={stepRef} className={slot('ba-step')}>
-        <PublicConfigError showBadge={showBadge} showBranding={showBranding} />
-      </div>
-    );
-  }
-
-  // Required-MFA enrolment, the OTHER way a password sign-in can succeed without
-  // producing a usable session. On a project with "Require MFA for everyone" a
-  // factor-less user's session is held at enrolment, and a held session reads as
-  // signed OUT - so <SignedOut> keeps this component mounted and, without this
-  // branch, we re-render the sign-in form on top of a sign-in that WORKED. To the
-  // user the page just blinks and nothing happens, in every browser, and the only
-  // escape was for the app to have already adopted <MFARequiredGate/>. Enrolling
-  // here means turning the dashboard toggle on cannot brick an app's sign-in.
-  //
-  // Checked before `challenge` because they are mutually exclusive: the challenge
-  // path belongs to a user who ALREADY has a factor, enrolment to one who has
-  // none.
-  if (mfaEnrolment !== 'clear') {
-    return (
-      <div key="signin-mfa-enrolment" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-mfa-enrolment" aria-busy={mfaEnrolment === 'confirming'}>
-        {branding}
-        {mfaEnrolment === 'pending' ? <MfaEnrollmentStep /> : <div className={slot('ba-skeleton')} />}
-        {badge}
-      </div>
-    );
-  }
-
-  // Second-factor challenge after a withheld password sign-in. Clearing it issues
-  // the session, so finish exactly as a direct sign-in would.
-  if (challenge) {
-    return (
-      <div key="signin-mfa" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-mfa">
-        {branding}
-        <MFAChallenge onVerified={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })} />
-        {badge}
-      </div>
-    );
-  }
-
-  // Inline "forgot password" step: only reachable when a reset page is configured.
-  if (view === 'forgot' && resetPasswordUrl) {
-    return (
-      <div key="signin-forgot" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-forgot">
-        {branding}
-        <h2 tabIndex={-1} className={slot('ba-title')}>{t('signIn.forgotTitle')}</h2>
-        <ForgotPassword resetPasswordUrl={resetPasswordUrl} onBack={back} />
-        {badge}
-      </div>
-    );
-  }
-
-  // Email-OTP second stage: verify the emailed code (shares the captured email).
-  if (view === 'otp-code') {
-    return (
-      <div key="signin-otp-code" ref={stepRef} role="status" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-otp-code">
-        {branding}
-        <h2 tabIndex={-1} className={slot('ba-title')}>{t('signIn.title')}</h2>
-        <OtpCodeForm
-          email={email}
-          code={otp}
-          onCodeChange={(value) => {
-            setOtp(value);
-            setError(null);
-          }}
-          pending={pending}
-          error={error}
-          onSubmit={() =>
-            void run(() => signInEmailOtp({ email, otp }), {
-              failure: t('emailOtp.error.invalidCode'),
-              onSuccess: () => {
-                recordSignInMethod('email-otp');
-                finishSignIn({ sessionStore, redirectTo, onSignedIn });
-              },
-            })
-          }
-          onChangeEmail={() => {
-            setOtp('');
-            setError(null);
-            back();
-          }}
-        />
-        {badge}
-      </div>
-    );
-  }
-
-  // Magic-link confirmation: no session is issued here (the link does it), so
-  // this is a terminal message with a way back.
-  if (view === 'magic-sent') {
-    return (
-      <div key="signin-magic-sent" ref={stepRef} role="status" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-magic-sent">
-        {branding}
-        <h2 tabIndex={-1} className={slot('ba-title')}>{t('signIn.title')}</h2>
-        <p className={slot('ba-muted')}>{t('magicLink.sent')}</p>
-        <button type="button" className={slot('ba-link-button')} onClick={back}>
-          <span className={slot('ba-icon-back')} aria-hidden="true">←</span> {t('forgotPassword.backToSignIn')}
-        </button>
-        {badge}
-      </div>
-    );
-  }
-
-  if (view === 'phone') {
-    return (
-      <div key="signin-phone" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-phone">
-        {branding}
-        <PhoneOTP
-          redirectTo={redirectTo}
-          onSignedIn={onPhoneOtpSignedIn}
-          onBack={back}
-          onMfaPasswordRequired={() => {
-            setSelected('password');
-            setCredentialMode('email');
-            setView('sign-in');
-            setError(t('serverError.TWO_FACTOR_REQUIRED'));
-          }}
-        />
-        {badge}
-      </div>
-    );
-  }
-
-  const hasEmailMethod = plan.password || plan.magicLink || plan.emailOtp || plan.sso;
-  const hasCredentialForm = hasEmailMethod || plan.username;
   const showDivider =
-    plan.social.length > 0 && (hasCredentialForm || plan.passkey || plan.phoneOtp);
+    plan.social.length > 0 && (tabMethods.length > 0 || plan.phoneOtp);
 
   const doPassword = () =>
     void run(() => authChallenge.run(
       AUTH_CHALLENGE_ACTIONS.signIn,
-      (options) => credentialMode === 'username'
+      (options) => usingUsername
         ? signInUsername({ username, password }, options)
         : signIn({ email, password }, options),
     ), {
@@ -296,7 +148,7 @@ export function SignIn({
         const data = res.data;
         // Password was right even when the session is withheld for a second
         // factor. That factor is not an alternative sign-in method.
-        recordSignInMethod(credentialMode === 'username' ? 'username' : 'password');
+        recordSignInMethod(usingUsername ? 'username' : 'password');
         if (data && 'twoFactorRedirect' in data && data.twoFactorRedirect) {
           setChallenge(true);
         } else {
@@ -336,141 +188,226 @@ export function SignIn({
         keepPendingOnSuccess: true,
       },
     );
-  const doPasskey = () => void run(() => signInPasskey(), {
-    failure: t('passkey.error.signInFailed'),
-    onSuccess: (res) => {
-      if (res.data) return finishSignIn({ sessionStore, redirectTo, onSignedIn: onPasskeySignedIn });
-    },
-  });
-  const PRIMARY_ACTION = { password: doPassword, magic: doMagic, otp: doRequestOtp, sso: doSso, passkey: doPasskey };
-
-  const tabLabels = {
-    password: t('common.passwordLabel'), magic: t('signIn.tab.emailLink'),
-    otp: t('signIn.tab.emailCode'), sso: t('signIn.tab.sso'), passkey: t('signIn.tab.passkey'),
+  const methods = {
+    password: { tab: t('common.passwordLabel'), submit: t('signIn.submit'), busy: t('signIn.submitPending'), action: doPassword },
+    magic: { tab: t('signIn.tab.emailLink'), submit: t('magicLink.submit'), busy: t('common.sending'), action: doMagic },
+    otp: { tab: t('signIn.tab.emailCode'), submit: t('emailOtp.requestSubmit'), busy: t('common.sending'), action: doRequestOtp },
+    sso: { tab: t('signIn.tab.sso'), submit: t('sso.continueWith'), busy: t('sso.redirecting'), action: doSso },
+    passkey: { tab: t('signIn.tab.passkey'), submit: t('passkey.signInButton'), busy: t('passkey.waiting'), action: doPasskey, unvalidated: true },
   };
-  const activeLabel = active === 'magic' ? t('magicLink.submit') : active === 'otp'
-    ? t('emailOtp.requestSubmit') : active === 'sso' ? t('sso.continueWith') : t('signIn.submit');
+  const method = active && methods[active];
+  const unvalidated = method && 'unvalidated' in method;
+
+  function renderStep() {
+    if (isLoading) {
+      return (
+        <>
+          <div className={slot('ba-skeleton')} />
+          <div className={slot('ba-skeleton')} />
+        </>
+      );
+    }
+
+    if (isError) {
+      return (
+        <PublicConfigError showBadge={showBadge} showBranding={showBranding} />
+      );
+    }
+
+    // Required-MFA enrolment, the OTHER way a password sign-in can succeed without
+    // producing a usable session. On a project with "Require MFA for everyone" a
+    // factor-less user's session is held at enrolment, and a held session reads as
+    // signed OUT - so <SignedOut> keeps this component mounted and, without this
+    // branch, we re-render the sign-in form on top of a sign-in that WORKED. To the
+    // user the page just blinks and nothing happens, in every browser, and the only
+    // escape was for the app to have already adopted <MFARequiredGate/>. Enrolling
+    // here means turning the dashboard toggle on cannot brick an app's sign-in.
+    //
+    // Checked before `challenge` because they are mutually exclusive: the challenge
+    // path belongs to a user who ALREADY has a factor, enrolment to one who has
+    // none.
+    if (mfaEnrolment !== 'clear') {
+      return mfaEnrolment === 'pending' ? <MfaEnrollmentStep /> : <div className={slot('ba-skeleton')} />;
+    }
+
+    // Second-factor challenge after a withheld password sign-in. Clearing it issues
+    // the session, so finish exactly as a direct sign-in would.
+    if (challenge) {
+      return (
+        <MFAChallenge onVerified={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })} />
+      );
+    }
+
+    // Inline "forgot password" step: only reachable when a reset page is configured.
+    if (view === 'forgot' && resetPasswordUrl) {
+      return (
+        <>
+          <h2 className={slot('ba-title')}>{t('signIn.forgotTitle')}</h2>
+          <ForgotPassword resetPasswordUrl={resetPasswordUrl} onBack={back} />
+        </>
+      );
+    }
+
+    // Email-OTP second stage: verify the emailed code (shares the captured email).
+    if (view === 'otp-code') {
+      return (
+        <>
+          <OtpCodeForm
+            email={email}
+            code={otp}
+            onCodeChange={(value) => {
+              setOtp(value);
+              setError(null);
+            }}
+            pending={locked}
+            error={error}
+            onSubmit={() =>
+              void run(() => signInEmailOtp({ email, otp }), {
+                failure: t('emailOtp.error.invalidCode'),
+                onSuccess: () => {
+                  recordSignInMethod('email-otp');
+                  finishSignIn({ sessionStore, redirectTo, onSignedIn });
+                },
+              })
+            }
+            onChangeEmail={() => {
+              setOtp('');
+              setError(null);
+              back();
+            }}
+          />
+        </>
+      );
+    }
+
+    // Magic-link confirmation: no session is issued here (the link does it), so
+    // this is a terminal message with a way back.
+    if (view === 'magic-sent') {
+      return (
+        <>
+          <p className={slot('ba-muted')}>{t('magicLink.sent')}</p>
+          <button type="button" className={slot('ba-link-button')} disabled={locked} onClick={back}>
+            <span className={slot('ba-icon-back')} aria-hidden="true">←</span> {t('forgotPassword.backToSignIn')}
+          </button>
+        </>
+      );
+    }
+
+    if (view === 'phone') {
+      return (
+        <PhoneOTP
+          redirectTo={redirectTo}
+          onSignedIn={onPhoneOtpSignedIn}
+          onBack={back}
+          onMfaPasswordRequired={() => {
+            setSelected('password');
+            setCredentialMode('email');
+            setView('sign-in');
+            setError(t('serverError.TWO_FACTOR_REQUIRED'));
+          }}
+        />
+      );
+    }
+
+    return (
+      <>
+        <InvitationBanner />
+        <SocialButtons providers={plan.social} lastUsed={lastUsed} />
+        {showDivider && <div className={slot('ba-divider')}>{t('common.orDivider')}</div>}
+        {tabMethods.length > 0 && (
+          <form
+            method="post"
+            noValidate={unvalidated}
+            className={slot('ba-fields')}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (locked || !active) return;
+              setSelected(active);
+              method?.action();
+            }}
+          >
+            {tabMethods.length > 1 && (
+              <MethodTabs id={tabId} methods={tabMethods} active={active!} labels={methods} onChange={(method) => { setSelected(method); setCredentialMode('email'); setError(null); }} />
+            )}
+            {plan.primary !== null && (
+              <AuthField
+                label={t(usingUsername ? 'common.usernameLabel' : 'common.emailLabel')}
+                type={usingUsername ? 'text' : 'email'}
+                autoComplete={usingUsername ? 'username' : emailAutocomplete(plan.autofillHost !== null)}
+                value={usingUsername ? username : email}
+                onChange={(e) => {
+                  (usingUsername ? setUsername : setEmail)(e.target.value);
+                  setError(null);
+                }}
+                required={!unvalidated}
+              />
+            )}
+            <div className={slot('ba-fields')} role={tabMethods.length > 1 ? 'tabpanel' : undefined} id={`${tabId}-panel`} aria-labelledby={tabMethods.length > 1 ? `${tabId}-tab-${active}` : undefined}>
+              {active === 'password' && (
+                <AuthField
+                  label={t('common.passwordLabel')}
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError(null);
+                  }}
+                  required
+                />
+              )}
+              {authChallenge.control}
+              <FormError>{error}</FormError>
+              <button id={`${tabId}-submit`} className={slot('ba-button')} type="submit" disabled={locked || (!unvalidated && authChallenge.configPending)} onClick={(event) => { if (document.activeElement === event.currentTarget) rememberOpener(event.currentTarget); }} aria-busy={pending || undefined}>
+                <Busy busy={pending} label={method?.busy}>{method?.submit}</Busy>
+              </button>
+              {active === 'password' && resetPasswordUrl && (
+                <button id={`${tabId}-forgot`} type="button" className={slot('ba-link-button')} disabled={locked} onClick={(event) => { rememberOpener(event.currentTarget); setView('forgot'); }}>{t('signIn.forgotLink')}</button>
+              )}
+            </div>
+            {plan.username && active === 'password' && (
+              <button
+                type="button"
+                className={slot('ba-link-button')}
+                disabled={locked}
+                onClick={() => {
+                  setError(null);
+                  setCredentialMode((current) =>
+                    current === 'email' ? 'username' : 'email');
+                }}
+              >
+                {!usingUsername
+                  ? t('signIn.useUsername')
+                  : t('signIn.useEmail')}
+              </button>
+            )}
+          </form>
+        )}
+        {plan.phoneOtp && (
+          <button
+            type="button"
+            className={slot('ba-link-button')}
+            id={`${tabId}-phone`}
+            disabled={locked}
+            onClick={(event) => { rememberOpener(event.currentTarget); setView('phone'); }}
+          >
+            {t('phoneOtp.usePhone')}
+          </button>
+        )}
+        {!plan.renderable && (
+          <p className={slot('ba-muted')}>
+            {plan.emptyReason === 'unsupported'
+              ? t('signIn.empty.unsupported')
+              : t('signIn.empty.none')}
+          </p>
+        )}
+      </>
+    );
+  }
 
   return (
-    <div key="signin-form" ref={stepRef} className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signin-form">
-      <header className={slot('ba-auth-header')}>
-        {branding}
-        <h2 tabIndex={-1} className={slot('ba-title')}>{t('signIn.title')}</h2>
-        <p className={slot('ba-subtitle')}>{t('signIn.subtitle')}</p>
-      </header>
-      <InvitationBanner />
-      <SocialButtons providers={plan.social} disabled={pending} onPendingChange={setSocialPending} />
-      {showDivider && <div className={slot('ba-divider')}>{t('common.orDivider')}</div>}
-      {tabMethods.length > 0 && (
-        <form
-          method="post"
-          noValidate={active === 'passkey'}
-          className={slot('ba-fields')}
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (locked || !active) return;
-            rememberOpener(document.activeElement as HTMLElement);
-            PRIMARY_ACTION[active]();
-          }}
-        >
-          {tabMethods.length > 1 && (
-            <MethodTabs pending={locked} id={tabId} methods={tabMethods} active={active} labels={tabLabels} onChange={(method) => { setSelected(method); setCredentialMode('email'); setError(null); }} />
-          )}
-          {hasCredentialForm && (credentialMode === 'email' ? (
-            <label className={slot('ba-label')}>
-              {t('common.emailLabel')}
-              <input
-                className={slot('ba-input')}
-                type="email"
-                autoComplete={emailAutocomplete(plan.autofillHost !== null)}
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setError(null);
-                }}
-                required={active !== 'passkey'}
-              />
-            </label>
-          ) : (
-            <label className={slot('ba-label')}>
-              {t('common.usernameLabel')}
-              <input
-                className={slot('ba-input')}
-                type="text"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value);
-                  setError(null);
-                }}
-                required={active !== 'passkey'}
-              />
-            </label>
-          ))}
-          <div className={slot('ba-fields')} role={tabMethods.length > 1 ? 'tabpanel' : undefined} id={`${tabId}-panel-${active}`} aria-labelledby={tabMethods.length > 1 ? `${tabId}-tab-${active}` : undefined}>
-          {active === 'password' && (
-            <label className={slot('ba-label')}>
-              {t('common.passwordLabel')}
-              <input
-                className={slot('ba-input')}
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setError(null);
-                }}
-                required
-              />
-            </label>
-          )}
-          {authChallenge.control}
-          <FormError>{error}</FormError>
-          <button id={`${tabId}-submit`} className={slot('ba-button')} type="submit" disabled={locked || (active !== 'passkey' && authChallenge.configPending)} aria-busy={pending || undefined}>
-            <Busy busy={pending} label={active === 'passkey' ? t('passkey.waiting') : active === 'password' ? t('signIn.submitPending') : active === 'sso' ? t('sso.redirecting') : t('common.sending')}>{active === 'passkey' ? t('passkey.signInButton') : activeLabel}</Busy>
-          </button>
-          {active === 'password' && resetPasswordUrl && (
-            <button id={`${tabId}-forgot`} type="button" className={slot('ba-link-button')} disabled={locked} onClick={(event) => { rememberOpener(event.currentTarget); setView('forgot'); }}>{t('signIn.forgotLink')}</button>
-          )}
-          </div>
-          {tabMethods.filter((method) => method !== active).map((method) => <div key={method} role="tabpanel" hidden id={`${tabId}-panel-${method}`} aria-labelledby={`${tabId}-tab-${method}`} />)}
-          {plan.username && active === 'password' && (
-            <button
-              type="button"
-              className={slot('ba-link-button')}
-              disabled={locked}
-              onClick={() => {
-                setError(null);
-                setCredentialMode((current) =>
-                  current === 'email' ? 'username' : 'email');
-              }}
-            >
-              {credentialMode === 'email'
-                ? t('signIn.useUsername')
-                : t('signIn.useEmail')}
-            </button>
-          )}
-        </form>
-      )}
-      {plan.phoneOtp && (
-        <button
-          type="button"
-          className={slot('ba-link-button')}
-          id={`${tabId}-phone`}
-          disabled={locked}
-          onClick={(event) => { rememberOpener(event.currentTarget); setView('phone'); }}
-        >
-          {t('phoneOtp.usePhone')}
-        </button>
-      )}
-      {!plan.renderable && (
-        <p className={slot('ba-muted')}>
-          {plan.emptyReason === 'unsupported'
-            ? t('signIn.empty.unsupported')
-            : t('signIn.empty.none')}
-        </p>
-      )}
-      {badge}
-    </div>
+    <StepCard lock={{ locked, setPending: setChildPending }} key={step} step={step} kind="signIn" stepRef={stepRef} showBadge={showBadge} showBranding={showBranding}>
+      {renderStep()}
+    </StepCard>
   );
 }

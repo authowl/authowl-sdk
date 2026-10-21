@@ -7,7 +7,7 @@ import { MethodTabs } from './MethodTabs';
 vi.mock('../i18n', () => ({ useT: () => (key: string) => key }));
 afterEach(cleanup);
 const methods = ['password', 'magic', 'otp', 'sso', 'passkey'] as const;
-const labels = { password: 'Password', magic: 'Email link', otp: 'Email code', sso: 'SSO', passkey: 'Passkey' };
+const labels = { password: { tab: 'Password' }, magic: { tab: 'Email link' }, otp: { tab: 'Email code' }, sso: { tab: 'SSO' }, passkey: { tab: 'Passkey' } };
 function Tabs() {
   const [active, setActive] = React.useState<(typeof methods)[number]>('password');
   return <MethodTabs id="test" methods={[...methods]} active={active} labels={labels} onChange={setActive} />;

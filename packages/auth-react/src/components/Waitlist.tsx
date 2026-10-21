@@ -1,5 +1,6 @@
 'use client';
 import { useStepFocus } from './use-step-focus';
+import { AuthField } from './AuthField';
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useWaitlist } from '../hooks';
@@ -31,24 +32,15 @@ export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistP
   const [email, setEmail] = React.useState('');
   const [joined, setJoined] = React.useState(false);
 
-  const { stepRef } = useStepFocus(joined ? 'joined' : 'request');
-
-  if (joined) {
-    return (
-      <div key="waitlist-accepted" ref={stepRef} className={slot('ba-form ba-step')} data-testid="waitlist-accepted" role="status">
-        {showBranding ? <AuthOwlBranding /> : null}
-        <h2 className={slot('ba-title')}>{t('waitlist.acceptedTitle')}</h2>
-        <p className={slot('ba-muted')}>{t('waitlist.acceptedDescription')}</p>
-        <AuthOwlBadge force={showBadge} />
-      </div>
-    );
-  }
+  const step = joined ? 'accepted' : 'form';
+  const { stepRef } = useStepFocus(step, true);
 
   return (
-    <div key="waitlist-form" ref={stepRef} className={slot('ba-form ba-step')} data-testid="waitlist-form">
+    <div key={step} ref={stepRef} className={slot('ba-form ba-step')} data-testid={`waitlist-${step}`} role={joined ? 'status' : undefined}>
       {showBranding ? <AuthOwlBranding /> : null}
-      <h2 className={slot('ba-title')}>{t('waitlist.title')}</h2>
-      <p className={slot('ba-muted')}>{t('waitlist.description')}</p>
+      <h2 className={slot('ba-title')}>{t(joined ? 'waitlist.acceptedTitle' : 'waitlist.title')}</h2>
+      <p className={slot('ba-muted')}>{t(joined ? 'waitlist.acceptedDescription' : 'waitlist.description')}</p>
+      {!joined && (
       <form
         method="post"
         className={slot('ba-fields')}
@@ -69,18 +61,15 @@ export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistP
           );
         }}
       >
-        <label className={slot('ba-label')}>
-          {t('common.emailLabel')}
-          <input
-            className={slot('ba-input')}
-            type="email"
-            value={email}
-            maxLength={320}
-            onChange={(event) => setEmail(event.target.value)}
-            autoComplete="email"
-            required
-          />
-        </label>
+        <AuthField
+          label={t('common.emailLabel')}
+          type="email"
+          value={email}
+          maxLength={320}
+          onChange={(event) => setEmail(event.target.value)}
+          autoComplete="email"
+          required
+        />
         {authChallenge.control}
         <FormError>{error}</FormError>
         <button
@@ -94,6 +83,7 @@ export function Waitlist({ onJoined, showBadge, showBranding = true }: WaitlistP
           </Busy>
         </button>
       </form>
+      )}
       <AuthOwlBadge force={showBadge} />
     </div>
   );

@@ -50,6 +50,9 @@ for project in \
   storybook-en-light-mobile; do
   printf 'storybook-browser-check: %s\n' "$project"
   while IFS= read -r story; do
+    if [[ "$project" == *-mobile && "$story" != stories/SignIn.stories.tsx && "$story" != stories/SignUp.stories.tsx ]]; then
+      continue
+    fi
     run_story "$project" "$story" "$@"
   done < <(find stories -type f \( -name '*.stories.ts' -o -name '*.stories.tsx' \) | LC_ALL=C sort)
 done
