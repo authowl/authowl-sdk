@@ -278,6 +278,37 @@ run_step() {
   printf 'result.%s=passed\n' "$name" >>"$completed_file"
 }
 
+# Vitest 4 toMatchScreenshot writes comparison output to .vitest-attachments,
+# independently of resolveScreenshotPath (which controls reference baselines).
+# The Docker /workspace bind mount survives container removal until cleanup.
+export_screenshot_failures() (
+  cd "$workspace"
+  local image
+  local destination
+  while IFS= read -r -d '' image; do
+    destination="$result_dir/screenshot-failures/${image#./}"
+    mkdir -p "${destination%/*}" || return
+    cp "$image" "$destination" || return
+  done < <(
+    find . -type d -name node_modules -prune -o \
+      -type f -path '*/.vitest-attachments/*' \
+      \( -name '*-actual.png' -o -name '*-diff.png' \) -print0
+  )
+)
+
+run_storybook_browser() {
+  local status=0
+  docker_sdk_offline env AUTHOWL_SCREENSHOTS=1 \
+    AUTHOWL_SCREENSHOT_THRESHOLD="${AUTHOWL_SCREENSHOT_THRESHOLD-0.06}" \
+    pnpm run test:storybook || status=$?
+  if [[ "$status" -ne 0 ]]; then
+    if ! export_screenshot_failures; then
+      echo 'SDK local-gate: screenshot failure export failed' >&2
+    fi
+  fi
+  return "$status"
+}
+
 prepare_immutable_repository() {
   (
     umask 022
@@ -705,7 +736,7 @@ run_step lint docker_sdk_offline pnpm run lint
 run_step typecheck docker_sdk_offline pnpm run typecheck
 run_step tests docker_sdk_offline pnpm run test
 run_step storybook-build docker_sdk_offline pnpm run build:storybook
-run_step storybook-browser docker_sdk_offline env AUTHOWL_SCREENSHOTS=1 AUTHOWL_SCREENSHOT_THRESHOLD="${AUTHOWL_SCREENSHOT_THRESHOLD-0.06}" pnpm run test:storybook
+run_step storybook-browser run_storybook_browser
 run_step tokens-browser docker_sdk_offline \
   pnpm --filter @authowl/tokens run test:browser
 run_step next-generator docker_sdk_offline --consumer-exec-tmp \

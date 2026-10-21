@@ -173,6 +173,8 @@ pnpm test:storybook  # real Chromium smoke, interaction, and axe checks
 
 ### Pixel baselines
 
+CI comparison failure images are available in the failed CI run’s `screenshot-failures` artifact for 7 days.
+
 Run `pnpm screenshots:update` to regenerate baselines with Linux Chromium inside
 exactly the pinned Docker image used by the canonical gate. This uses the current
 working tree; review and commit the generated PNGs before running the clean-tree
