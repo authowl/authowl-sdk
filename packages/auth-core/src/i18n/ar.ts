@@ -47,6 +47,7 @@ export const ar: Record<keyof typeof en, string> = {
   'common.loading': 'جارٍ التحميل…',
   'common.continue': 'متابعة',
   'common.cancel': 'إلغاء',
+  'common.error.tryAgain': 'تعذر إكمال الطلب. حاول مرة أخرى.',
   'common.error.passwordTooShort': 'يجب ألا تقل كلمة المرور عن {min} أحرف.',
 
   'publicConfig.error.title': 'المصادقة غير متاحة مؤقتًا',

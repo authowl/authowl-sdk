@@ -6,6 +6,7 @@ import type { PublicConfig } from '@authowl/core';
 
 const mocks = vi.hoisted(() => ({
   config: null as PublicConfig | null,
+  user: null as { email: string } | null,
   verifyTotp: vi.fn(),
   verifyBackupCode: vi.fn(),
   sendOtp: vi.fn(),
@@ -14,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../hooks', () => ({
   usePublicConfig: () => ({ config: mocks.config, isLoading: false, isError: false }),
-  useUser: () => ({ user: null }),
+  useUser: () => ({ user: mocks.user }),
   useMFA: () => mocks,
 }));
 
@@ -27,7 +28,7 @@ vi.mock('../i18n', () => ({
 
 import { MFAChallenge } from './MFAChallenge';
 
-afterEach(() => { cleanup(); vi.resetAllMocks(); });
+afterEach(() => { cleanup(); vi.resetAllMocks(); mocks.user = null; });
 
 describe('MFAChallenge trust-device control', () => {
   afterEach(() => {
@@ -194,10 +195,10 @@ it.each(['network', 'server'] as const)('offers a visible Verify retry after a %
   render(<MFAChallenge />);
   expect(screen.queryByRole('button', { name: 'mfa.challenge.submit' })).toBeNull();
   fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
-  await screen.findByRole('alert');
+  expect((await screen.findByRole('alert')).textContent).toBe('common.error.tryAgain');
   mocks.verifyTotp.mockResolvedValueOnce({ data: {}, error: null });
   fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
-  await screen.findByText('codeInput.verified');
+  await waitFor(() => expect(screen.getByRole('status').textContent).toBe('codeInput.verified'));
 });
 
 it('uses visible chip names and labels Other ways in as a group', () => {
@@ -224,6 +225,50 @@ it('keeps resend pending independent from verifying, and status excludes the res
   mocks.verifyOtp.mockReturnValueOnce(sending);
   fireEvent.change(screen.getByRole('textbox'), { target: { value: '654321' } });
   expect(screen.getByRole('status').textContent).toBe('common.verifying');
+  expect(screen.getByRole('status').hasAttribute('aria-busy')).toBe(false);
   expect(resend).toHaveProperty('disabled', true);
   expect(mocks.sendOtp).toHaveBeenCalledTimes(1);
+});
+
+
+it('places device trust before the code and includes the choice in auto-submit', async () => {
+  mocks.verifyTotp.mockResolvedValue({ data: {}, error: null });
+  render(<MFAChallenge />);
+  const checkbox = screen.getByRole('checkbox');
+  const input = screen.getByRole('textbox');
+  expect(checkbox.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  fireEvent.click(checkbox);
+  fireEvent.change(input, { target: { value: '123456' } });
+  await waitFor(() => expect(mocks.verifyTotp).toHaveBeenCalledExactlyOnceWith({ code: '123456', trustDevice: true }));
+});
+
+it.each([
+  ['sign-in', undefined, undefined],
+  ['sign-in', 'recipient@example.test', 'recipient@example.test'],
+  ['step-up', undefined, 'session@example.test'],
+  ['step-up', 'recipient@example.test', 'recipient@example.test'],
+] as const)('limits the session-email fallback for %s with explicit destination %s', async (variant, email, expected) => {
+  mocks.user = { email: 'session@example.test' };
+  mocks.sendOtp.mockResolvedValue({ data: {}, error: null });
+  render(<MFAChallenge variant={variant} email={email} />);
+  fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.otpLabel' }));
+  await screen.findByRole('textbox', { name: 'mfa.challenge.otpLabel' });
+  if (expected) expect(screen.getByText(expected).closest('strong')).not.toBeNull();
+  else expect(screen.getByText('mfa.challenge.otpHint')).toBeTruthy();
+  if (expected !== 'session@example.test') expect(screen.queryByText('session@example.test')).toBeNull();
+});
+
+it.each(['totp', 'backup', 'otp'] as const)('distinguishes thrown errors from rejected %s codes', async (mode) => {
+  const verify = mode === 'totp' ? mocks.verifyTotp : mode === 'backup' ? mocks.verifyBackupCode : mocks.verifyOtp;
+  verify.mockRejectedValueOnce(new Error('SDK or network failure'));
+  mocks.sendOtp.mockResolvedValue({ data: {}, error: null });
+  render(<MFAChallenge />);
+  if (mode !== 'totp') fireEvent.click(screen.getByRole('button', { name: `mfa.challenge.${mode === 'backup' ? 'backup' : 'otp'}Label` }));
+  const input = await screen.findByRole('textbox', { name: `mfa.challenge.${mode === 'totp' ? 'totp' : mode === 'backup' ? 'backup' : 'otp'}Label` });
+  fireEvent.change(input, { target: { value: '123456' } });
+  if (mode === 'backup') fireEvent.submit(screen.getByTestId('mfa-challenge'));
+  expect((await screen.findByRole('alert')).textContent).toBe('common.error.tryAgain');
+  verify.mockResolvedValueOnce({ data: null, error: { code: 'INVALID_CODE' } });
+  fireEvent.click(screen.getByRole('button', { name: 'mfa.challenge.submit' }));
+  await waitFor(() => expect(screen.getByRole('alert').textContent).toBe(`mfa.challenge.error.invalid${mode === 'totp' ? 'Totp' : mode === 'backup' ? 'Backup' : 'Otp'}`));
 });

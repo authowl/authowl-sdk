@@ -102,11 +102,12 @@ it('commits opted-in success before awaiting the handoff and clears it on the ne
 
 it.each(['throw', 'reject'] as const)('rolls back success when onSuccess %ss', async (failure) => {
   const { result } = renderHook(() => useSubmitAction());
+  let succeededDuringHandoff: boolean | undefined;
   await act(async () => {
     await result.current.run(async () => ({ data: null, error: null }), {
       failure: 'handoff failed', trackSuccess: true,
       onSuccess: () => {
-        expect(result.current.succeeded).toBe(true);
+        succeededDuringHandoff = result.current.succeeded;
         if (failure === 'throw') throw new Error('handoff');
         return Promise.reject(new Error('handoff'));
       },
@@ -114,6 +115,7 @@ it.each(['throw', 'reject'] as const)('rolls back success when onSuccess %ss', a
   });
   expect(result.current.succeeded).toBe(false);
   expect(result.current.pending).toBe(false);
+  expect(succeededDuringHandoff).toBe(true);
   expect(result.current.error).toBe('handoff failed');
 });
 

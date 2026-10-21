@@ -70,8 +70,8 @@ export function MFAChallenge({
   const [mode, setMode] = React.useState<'totp' | 'backup' | 'otp'>('totp');
   const [code, setCode] = React.useState('');
   const [trustDevice, setTrustDevice] = React.useState(false);
-  const destination = email || user?.email;
   const stepUp = variant === 'step-up';
+  const destination = email || (stepUp ? user?.email : undefined);
   // Additive flags default open for rolling compatibility. The server remains
   // the enforcement boundary when an older response does not carry them.
   //
@@ -132,17 +132,14 @@ export function MFAChallenge({
           ? () => verifyBackupCode({ code })
           : () => verifyOtp({ code, trustDevice });
     void run(action, {
-      failure:
-        mode === 'totp'
-          ? t('mfa.challenge.error.invalidTotp')
-          : mode === 'backup'
-            ? t('mfa.challenge.error.invalidBackup')
-            : t('mfa.challenge.error.invalidOtp'),
+      failure: t('common.error.tryAgain'),
       trackSuccess: true,
       mapError: (authError) => {
         const codeFailure = (authError.status ?? 400) < 500 && ['INVALID_CODE', 'INVALID_TOTP', 'INVALID_OTP', 'INVALID_BACKUP_CODE', 'OTP_EXPIRED', 'OTP_HAS_EXPIRED'].includes(authError.code ?? '');
         setRetryVerify(!codeFailure);
-        return null;
+        return codeFailure
+          ? t(mode === 'totp' ? 'mfa.challenge.error.invalidTotp' : mode === 'backup' ? 'mfa.challenge.error.invalidBackup' : 'mfa.challenge.error.invalidOtp')
+          : null;
       },
       onSuccess: () => onVerified?.(),
     });
@@ -161,6 +158,7 @@ export function MFAChallenge({
         ? t('mfa.challenge.backupLabel')
         : t('mfa.challenge.otpLabel');
 
+  const showResend = mode === 'otp' && canUseEmailOtp;
   return (
     <form method="post" className={slot('ba-fields ba-factor-form')} data-testid="mfa-challenge" onSubmit={submit}>
       <header className={slot('ba-factor-header')}>
@@ -171,6 +169,17 @@ export function MFAChallenge({
             : hint}
         </p>
       </header>
+      {mode !== 'backup' && canTrustDevice && (
+        <label className={slot('ba-consent ba-consent-centered ba-factor-trust')}>
+          <span className={slot('ba-checkbox-control')}>
+            <input className={slot('ba-checkbox')} type="checkbox" checked={trustDevice} disabled={blocked} onChange={(e) => setTrustDevice(e.target.checked)} />
+            <span className={slot('ba-checkbox-visual')} aria-hidden="true">
+              <span className={slot('ba-checkbox-check')} />
+            </span>
+          </span>
+          <span>{t('mfa.challenge.trustDevice', { days: 30 })}</span>
+        </label>
+      )}
       {mode === 'backup' ? (
         <label className={slot('ba-label')}>
           {label}
@@ -183,28 +192,24 @@ export function MFAChallenge({
           aria-label={label} aria-describedby={helperId} autoFocus readOnly={locked} disabled={success}
           state={success ? 'success' : error ? 'error' : 'idle'} />
       )}
-      <div className={slot('ba-code-status')}>
-        <span className={slot('ba-code-verifying')} role="status" aria-busy={verifying && !success || undefined}>
-          {success ? <><CodeSuccess />{t('codeInput.verified')}</> : <Busy busy={verifying} label={t('common.verifying')}>{null}</Busy>}
-        </span>
-        {mode === 'otp' && canUseEmailOtp && (
-          <button type="button" className={slot('ba-link-button')} disabled={blocked} aria-busy={resend.pending || undefined} onClick={requestOtp}>
-            {t('mfa.challenge.resendOtp')}
-          </button>
-        )}
-      </div>
-      {mode !== 'backup' && <p id={helperId} className={slot('ba-method-help')}>{t('codeInput.autoSubmitHint')}</p>}
-      {mode !== 'backup' && canTrustDevice && (
-        <label className={slot('ba-consent ba-consent-centered ba-factor-trust')}>
-          <span className={slot('ba-checkbox-control')}>
-            <input className={slot('ba-checkbox')} type="checkbox" checked={trustDevice} disabled={blocked} onChange={(e) => setTrustDevice(e.target.checked)} />
-            <span className={slot('ba-checkbox-visual')} aria-hidden="true">
-              <span className={slot('ba-checkbox-check')} />
-            </span>
+      {/* The live region stays mounted so its updates are announced; the
+          visible row renders only when it has something to show. */}
+      <span className={slot('ba-sr-only')} role="status">
+        {success ? t('codeInput.verified') : verifying ? t('common.verifying') : ''}
+      </span>
+      {(success || verifying || showResend) && (
+        <div className={slot('ba-code-status')}>
+          <span className={slot('ba-code-verifying')} aria-hidden="true">
+            {success ? <><CodeSuccess />{t('codeInput.verified')}</> : <Busy busy={verifying} label={t('common.verifying')}>{null}</Busy>}
           </span>
-          <span>{t('mfa.challenge.trustDevice', { days: 30 })}</span>
-        </label>
+          {showResend && (
+            <button type="button" className={slot('ba-link-button')} disabled={blocked} aria-busy={resend.pending || undefined} onClick={requestOtp}>
+              {t('mfa.challenge.resendOtp')}
+            </button>
+          )}
+        </div>
       )}
+      {mode !== 'backup' && <p id={helperId} className={slot('ba-method-help')}>{t('codeInput.autoSubmitHint')}</p>}
       <FormError>{error}</FormError>
       {(mode === 'backup' || verifyError && retryVerify) && (
         <button className={slot('ba-button')} type="submit" disabled={blocked || !code} aria-busy={verifying || undefined}>

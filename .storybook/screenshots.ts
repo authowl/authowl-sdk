@@ -15,6 +15,10 @@ export async function captureStory(storyId: string, { waitForIdle = true }: { wa
   style.textContent = `
     *, *::before, *::after {
       transition: none !important;
+      /* The capture frame never advances pending animations, so a fill mode
+         would freeze them on their first keyframe; capture the resting style. */
+      animation-fill-mode: none !important;
+      animation-delay: 0s !important;
       caret-color: transparent !important;
     }
   `;

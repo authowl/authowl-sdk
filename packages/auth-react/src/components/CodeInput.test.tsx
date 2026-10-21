@@ -117,13 +117,11 @@ it('appends a short paste, regardless of the caret position', () => {
   expect(change).toHaveBeenCalledExactlyOnceWith('1234');
 });
 
-it('keeps a failed value and its error through no-op pastes', () => {
+it('keeps a failed value and its error through an identical paste', () => {
   const change = vi.fn();
   render(<CodeInput value="123456" onChange={change} state="error" />);
   const input = screen.getByRole('textbox');
-  for (const text of ['123-456', 'letters', '12']) {
-    fireEvent.paste(input, { clipboardData: { getData: () => text } });
-  }
+  fireEvent.paste(input, { clipboardData: { getData: () => '123-456' } });
   expect(change).not.toHaveBeenCalled();
   expect(input.getAttribute('aria-invalid')).toBe('true');
 });
@@ -146,19 +144,80 @@ it('keeps the caret at the end on focus, click, selection and arrow keys', () =>
   const input = screen.getByRole('textbox') as HTMLInputElement;
   for (const type of ['focus', 'click', 'select', 'keyDown'] as const) {
     input.setSelectionRange(0, 0);
-    fireEvent[type](input, { key: 'ArrowLeft' });
+    if (type === 'select') fireEvent(input, new Event('select', { bubbles: true }));
+    else fireEvent[type](input, { key: 'ArrowLeft' });
     expect(input.selectionStart).toBe(3);
     expect(input.selectionEnd).toBe(3);
   }
 });
 
-it('submits its form by default once with the committed value', () => {
+it.each([false, true])('submits its form exactly once with requestSubmit missing: %s', (missing) => {
   const submit = vi.fn((event: React.FormEvent) => event.preventDefault());
   function Form() {
     const [value, setValue] = React.useState('');
     return <form method="post" onSubmit={submit}><CodeInput value={value} onChange={setValue} /></form>;
   }
-  render(<Form />);
-  fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
-  expect(submit).toHaveBeenCalledTimes(1);
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLFormElement.prototype, 'requestSubmit')!;
+  try {
+    if (missing) Reflect.deleteProperty(HTMLFormElement.prototype, 'requestSubmit');
+    render(<Form />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '123456' } });
+    expect(submit).toHaveBeenCalledTimes(1);
+  } finally {
+    Object.defineProperty(HTMLFormElement.prototype, 'requestSubmit', descriptor);
+  }
+});
+
+
+it.each([
+  ['Arabic-Indic', '١٢٣٤٥٦'],
+  ['Persian', '۱۲۳۴۵۶'],
+  ['full-width', '１２３４５６'],
+])('normalizes %s digits for typing, paste and autofill', (_range, digits) => {
+  const complete = vi.fn();
+  const { unmount } = render(<Entry onComplete={complete} />);
+  const input = screen.getByRole('textbox') as HTMLInputElement;
+  for (const digit of digits) fireEvent.input(input, { target: { value: input.value + digit }, inputType: 'insertText', data: digit });
+  expect(input.value).toBe('123456');
+  expect(complete).toHaveBeenCalledExactlyOnceWith('123456');
+  unmount();
+  const pasted = render(<Entry onComplete={complete} />);
+  complete.mockClear();
+  fireEvent.paste(screen.getByRole('textbox'), { clipboardData: { getData: () => digits } });
+  expect(screen.getByRole('textbox')).toHaveProperty('value', '123456');
+  expect(complete).toHaveBeenCalledExactlyOnceWith('123456');
+  pasted.unmount();
+  complete.mockClear();
+  render(<Entry onComplete={complete} />);
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: digits } });
+  expect(screen.getByRole('textbox')).toHaveProperty('value', '123456');
+  expect(complete).toHaveBeenCalledExactlyOnceWith('123456');
+});
+
+it.each(['keydown', 'beforeinput', 'input', 'composition', 'paste', 'partial paste', 'empty paste', 'Backspace', 'Delete'])('replaces a failed code on %s after focus and click collapse its selection', (action) => {
+  function FailedEntry() {
+    const [value, setValue] = React.useState('123456');
+    return <CodeInput value={value} onChange={setValue} state="error" />;
+  }
+  render(<FailedEntry />);
+  const input = screen.getByRole('textbox') as HTMLInputElement;
+  fireEvent.focus(input);
+  fireEvent.click(input);
+  fireEvent.keyDown(input, { key: 'ArrowLeft' });
+  input.setSelectionRange(6, 6);
+  if (action === 'beforeinput') fireEvent(input, new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: '٧' }));
+  else if (action === 'input') fireEvent.input(input, { target: { value: '123456٧' }, inputType: 'insertText', data: '٧' });
+  else if (action === 'composition') {
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: '123456７' } });
+    fireEvent.compositionEnd(input, { data: '７' });
+  }
+  else if (action.includes('paste')) fireEvent.paste(input, { clipboardData: { getData: () => action === 'paste' ? '٧٦٥٤٣٢' : action === 'partial paste' ? '٧٦' : 'letters' } });
+  else fireEvent.keyDown(input, { key: action === 'keydown' ? '7' : action });
+  const expected = action === 'paste' ? '765432' : action === 'partial paste' ? '76' : ['empty paste', 'Backspace', 'Delete'].includes(action) ? '' : '7';
+  expect(input.value).toBe(expected);
+  if (expected.length < 6) {
+    fireEvent.input(input, { target: { value: expected + '8' }, inputType: 'insertText', data: '8' });
+    expect(input.value).toBe(expected + '8');
+  }
 });

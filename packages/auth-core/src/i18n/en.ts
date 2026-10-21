@@ -47,6 +47,7 @@ export const en = {
   'common.loading': 'Loading…',
   'common.continue': 'Continue',
   'common.cancel': 'Cancel',
+  'common.error.tryAgain': 'We could not complete this request. Please try again.',
   'common.error.passwordTooShort': 'Password must be at least {min} characters.',
 
   'publicConfig.error.title': 'Authentication is temporarily unavailable',

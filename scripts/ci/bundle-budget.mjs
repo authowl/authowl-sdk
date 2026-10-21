@@ -273,14 +273,15 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // the passkey/email-code helper panels from review. The ceiling keeps 0.47kb
 // of headroom. Core is 25.80kb, within its 26kb cap.
 // AO-58(d) shared single-input code cells and two-factor surfaces (2026-10-21)
-// raises React 85.5->87.5. Same-machine slice-c baseline: 85.03kb; this slice:
-// 87.01kb (+1.98kb) after review fixes for autofill/paste/composition, factor
-// chips, card locking and hook-owned success feedback before finishing.
-// Core remains 25.80kb. The ceiling keeps 0.49kb of regression headroom.
+// raises React 85.5->88. Same-machine slice-c baseline: 85.03kb; this slice:
+// 87.44kb (+2.41kb) after two review rounds: autofill/paste/composition and
+// Arabic-Indic digits, failed-code replacement, factor chips, card locking,
+// hook-owned success feedback and a mounted status live region.
+// Core remains 25.80kb. The ceiling keeps 0.56kb of regression headroom.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 87.5,
+    maxGzipKb: 88,
     label: '@authowl/react (provider + hooks + components)',
   },
   {
