@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useSignIn } from '../hooks';
 import { useT } from '../i18n';
@@ -14,6 +15,7 @@ export type PasswordlessSignUpProps = {
 
 /** Prove an email and establish a passwordless account through the email OTP flow. */
 export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps) {
+  const slot = useSlot();
   const t = useT();
   const { sendEmailOtp, signInEmailOtp } = useSignIn();
   const { pending, error, setError, run } = useSubmitAction();
@@ -24,7 +26,7 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
 
   if (codeSent) {
     return (
-      <div className="ba-fields" data-testid="signup-emailotp-code">
+      <div className={slot('ba-fields')} data-testid="signup-emailotp-code">
         <OtpCodeForm
           email={email}
           code={code}
@@ -50,7 +52,7 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
   return (
     <form
       method="post"
-      className="ba-fields"
+      className={slot('ba-fields')}
       data-testid="signup-emailotp-request"
       onSubmit={(event) => {
         event.preventDefault();
@@ -60,10 +62,10 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
         });
       }}
     >
-      <label className="ba-label">
+      <label className={slot('ba-label')}>
         {t('common.emailLabel')}
         <input
-          className="ba-input"
+          className={slot('ba-input')}
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -74,7 +76,7 @@ export function PasswordlessSignUp({ onAuthenticated }: PasswordlessSignUpProps)
       {authChallenge.control}
       <FormError>{error}</FormError>
       <button
-        className="ba-button ba-button-secondary"
+        className={slot('ba-button ba-button-secondary')}
         type="submit"
         disabled={pending || authChallenge.configPending}
         aria-busy={pending || undefined}

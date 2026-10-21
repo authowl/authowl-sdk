@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useEmailVerification } from '../hooks';
 import { useT, richMessage, Bidi } from '../i18n';
@@ -25,6 +26,7 @@ export type VerifyEmailProps = {
  * failure offers a resend. Point `redirectTo` at your sign-in route.
  */
 export function VerifyEmail({ redirectTo, onVerified, callbackURL }: VerifyEmailProps) {
+  const slot = useSlot();
   const t = useT();
   const { sendVerificationEmail } = useEmailVerification();
   const { pending, error, run } = useSubmitAction();
@@ -46,15 +48,15 @@ export function VerifyEmail({ redirectTo, onVerified, callbackURL }: VerifyEmail
 
   if (!ready) {
     return (
-      <div className="ba-form" aria-busy="true">
-        <div className="ba-skeleton" />
+      <div className={slot('ba-form')} aria-busy="true">
+        <div className={slot('ba-skeleton')} />
       </div>
     );
   }
 
   if (!failed) {
     return (
-      <p className="ba-muted" data-testid="verify-success">
+      <p className={slot('ba-muted')} data-testid="verify-success">
         {t('verifyEmail.success')}
       </p>
     );
@@ -65,7 +67,7 @@ export function VerifyEmail({ redirectTo, onVerified, callbackURL }: VerifyEmail
   return (
     <form
       method="post"
-      className="ba-fields"
+      className={slot('ba-fields')}
       data-testid="verify-failed"
       onSubmit={(e) => {
         e.preventDefault();
@@ -78,15 +80,15 @@ export function VerifyEmail({ redirectTo, onVerified, callbackURL }: VerifyEmail
     >
       <FormError>{t('verifyEmail.invalidLink')}</FormError>
       {resent ? (
-        <p className="ba-muted">
+        <p className={slot('ba-muted')}>
           {richMessage(t('verifyEmail.resent'), { email: <Bidi>{email}</Bidi> })}
         </p>
       ) : (
         <>
-          <label className="ba-label">
+          <label className={slot('ba-label')}>
             {t('common.emailLabel')}
             <input
-              className="ba-input"
+              className={slot('ba-input')}
               type="email"
               autoComplete="email"
               value={email}
@@ -97,7 +99,7 @@ export function VerifyEmail({ redirectTo, onVerified, callbackURL }: VerifyEmail
           {authChallenge.control}
           <FormError>{error}</FormError>
           <button
-            className="ba-button"
+            className={slot('ba-button')}
             type="submit"
             disabled={pending || authChallenge.configPending}
             aria-busy={pending || undefined}

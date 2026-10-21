@@ -1,3 +1,4 @@
+import { useSlot } from '../elements';
 import * as React from 'react';
 
 /**
@@ -5,9 +6,9 @@ import * as React from 'react';
  * `currentColor` so they adapt to light/dark; Google keeps its multicolor mark.
  * Unknown providers render no icon (the text label still identifies them).
  */
-const S = { className: 'ba-social-icon', viewBox: '0 0 24 24', 'aria-hidden': true, focusable: false as const };
+const S = { className: 'ao-social-icon ba-social-icon', viewBox: '0 0 24 24', 'aria-hidden': true, focusable: false as const };
 
-const ICONS: Record<string, React.ReactNode> = {
+const ICONS: Record<string, React.ReactElement<{ className?: string }>> = {
   google: (
     <svg {...S}>
       <path
@@ -80,5 +81,7 @@ const ICONS: Record<string, React.ReactNode> = {
 
 /** The brand glyph for a provider id, or null when we have no icon for it. */
 export function ProviderIcon({ provider }: { provider: string }) {
-  return <>{ICONS[provider] ?? null}</>;
+  const slot = useSlot();
+  const icon = ICONS[provider];
+  return icon ? React.cloneElement(icon, { className: slot('ba-social-icon') }) : null;
 }

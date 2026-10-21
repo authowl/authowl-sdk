@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import {
   AKEDLY_PASSKEY_ALLOW,
@@ -38,6 +39,7 @@ export function HostedPhoneOtp({
   onStarted: (data: PhoneOtpStartData | null) => void;
   onChangePhone: () => void;
 }) {
+  const slot = useSlot();
   const t = useT();
   const { sessionStore } = useAuthClient();
   const { completePhoneOtp: complete, startPhoneOtp: start } = useSignIn();
@@ -161,9 +163,9 @@ export function HostedPhoneOtp({
 
   if (iframeUrl === null) {
     return (
-      <div className="ba-fields" data-testid="phoneotp-hosted">
+      <div className={slot('ba-fields')} data-testid="phoneotp-hosted">
         <FormError>{failedMessage}</FormError>
-        <button type="button" className="ba-link-button" onClick={onChangePhone}>
+        <button type="button" className={slot('ba-link-button')} onClick={onChangePhone}>
           {t('phoneOtp.changePhone')}
         </button>
       </div>
@@ -171,9 +173,9 @@ export function HostedPhoneOtp({
   }
 
   return (
-    <div className="ba-fields" data-testid="phoneotp-hosted">
-      <h2 className="ba-title">{t('phoneOtp.title')}</h2>
-      <div className="ba-hosted-frame">
+    <div className={slot('ba-fields')} data-testid="phoneotp-hosted">
+      <h2 className={slot('ba-title')}>{t('phoneOtp.title')}</h2>
+      <div className={slot('ba-hosted-frame')}>
         <iframe
           ref={iframeRef}
           data-testid="phoneotp-hosted-frame"
@@ -186,7 +188,7 @@ export function HostedPhoneOtp({
       {failed && (
         <button
           type="button"
-          className="ba-button"
+          className={slot('ba-button')}
           disabled={pending}
           aria-busy={pending || undefined}
           onClick={() => {
@@ -209,7 +211,7 @@ export function HostedPhoneOtp({
           </Busy>
         </button>
       )}
-      <button type="button" className="ba-link-button" onClick={onChangePhone}>
+      <button type="button" className={slot('ba-link-button')} onClick={onChangePhone}>
         {t('phoneOtp.changePhone')}
       </button>
     </div>

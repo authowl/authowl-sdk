@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useSession, useUser } from '../../hooks';
 import { Bidi, useT } from '../../i18n';
@@ -7,6 +8,7 @@ import { Busy } from '../Spinner';
 import { FormError } from '../FormError';
 
 export function DeleteAccountSection({ onDeleted }: { onDeleted?: () => void }) {
+  const slot = useSlot();
   const t = useT();
   const account = useAccount();
   const session = useSession();
@@ -34,19 +36,19 @@ export function DeleteAccountSection({ onDeleted }: { onDeleted?: () => void }) 
   };
 
   return (
-    <section className="ba-profile-section ba-profile-danger-zone" aria-labelledby={titleId}>
-      <header className="ba-profile-section-header">
-        <h2 id={titleId} className="ba-title">{t('userProfile.delete.title')}</h2>
-        <p className="ba-muted">{t('userProfile.delete.description')}</p>
+    <section className={slot('ba-profile-section ba-profile-danger-zone')} aria-labelledby={titleId}>
+      <header className={slot('ba-profile-section-header')}>
+        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.delete.title')}</h2>
+        <p className={slot('ba-muted')}>{t('userProfile.delete.description')}</p>
       </header>
-      <form method="post" className="ba-fields" onSubmit={submit}>
-        <p className="ba-profile-delete-warning">
+      <form method="post" className={slot('ba-fields')} onSubmit={submit}>
+        <p className={slot('ba-profile-delete-warning')}>
           {t('userProfile.delete.warning', { identifier })}
         </p>
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('userProfile.delete.confirmLabel')} <Bidi>{identifier}</Bidi>
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             type="text"
             dir="ltr"
             value={confirmation}
@@ -58,7 +60,7 @@ export function DeleteAccountSection({ onDeleted }: { onDeleted?: () => void }) 
         </label>
         <FormError>{error}</FormError>
         <button
-          className="ba-button ba-danger-button ba-profile-submit"
+          className={slot('ba-button ba-danger-button ba-profile-submit')}
           type="submit"
           disabled={pending || !confirmed}
           aria-busy={pending || undefined}

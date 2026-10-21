@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useSignIn } from '../hooks';
 import { useSignInMethodRecorder } from '../last-used-method';
@@ -36,6 +37,7 @@ export type SocialButtonsProps = {
  * both <SignIn/> and <SignUp/>.
  */
 export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
+  const slot = useSlot();
   const t = useT();
   const toServerError = useServerError();
   const { signInSocial } = useSignIn();
@@ -62,12 +64,12 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
   if (providers.length === 0) return null;
 
   return (
-    <div className="ba-social">
+    <div className={slot('ba-social')}>
       {providers.map((provider) => (
         <button
           key={provider}
           type="button"
-          className="ba-social-button"
+          className={slot('ba-social-button')}
           disabled={pending !== null}
           aria-busy={pending === provider || undefined}
           onClick={async () => {

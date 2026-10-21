@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useMFA, usePublicConfig, useSession, useUser } from '../../hooks';
 import { useT } from '../../i18n';
@@ -10,6 +11,7 @@ import { FormError } from '../FormError';
 import { resolveProjectCapabilities } from '../../project-capabilities';
 
 export function MfaSection() {
+  const slot = useSlot();
   const t = useT();
   const { user } = useUser();
   const session = useSession();
@@ -23,10 +25,10 @@ export function MfaSection() {
 
   if (!user?.twoFactorEnabled) {
     return (
-      <section className="ba-profile-section" aria-labelledby={titleId}>
-        <header className="ba-profile-section-header">
-          <h2 id={titleId} className="ba-title">{t('userProfile.mfa.title')}</h2>
-          <p className="ba-muted">
+      <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
+        <header className={slot('ba-profile-section-header')}>
+          <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.mfa.title')}</h2>
+          <p className={slot('ba-muted')}>
             {required
               ? t('userProfile.mfa.requiredDescription')
               : t('userProfile.mfa.description')}
@@ -65,14 +67,14 @@ export function MfaSection() {
   };
 
   return (
-    <section className="ba-profile-section" aria-labelledby={titleId}>
-      <header className="ba-profile-section-header">
-        <h2 id={titleId} className="ba-title">{t('userProfile.mfa.title')}</h2>
-        <p className="ba-muted">
+    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
+      <header className={slot('ba-profile-section-header')}>
+        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.mfa.title')}</h2>
+        <p className={slot('ba-muted')}>
           {required ? t('userProfile.mfa.requiredActive') : t('userProfile.mfa.active')}
         </p>
       </header>
-      <div className="ba-profile-status" role="status">
+      <div className={slot('ba-profile-status')} role="status">
         <strong>{t('userProfile.mfa.enabled')}</strong>
         <span>{t('userProfile.mfa.authenticator')}</span>
       </div>
@@ -85,21 +87,21 @@ export function MfaSection() {
         <MFAChallenge variant="step-up" onVerified={resume} onCancel={cancelDisable} />
       ) : !showDisable ? (
         <button
-          className="ba-button ba-button-secondary ba-profile-submit"
+          className={slot('ba-button ba-button-secondary ba-profile-submit')}
           type="button"
           onClick={() => setShowDisable(true)}
         >
           {required ? t('userProfile.mfa.replace') : t('userProfile.mfa.disable')}
         </button>
       ) : (
-        <form method="post" className="ba-fields ba-profile-security-form" onSubmit={submitDisable}>
-          <p className="ba-muted">
+        <form method="post" className={slot('ba-fields ba-profile-security-form')} onSubmit={submitDisable}>
+          <p className={slot('ba-muted')}>
             {required ? t('userProfile.mfa.replaceWarning') : t('userProfile.mfa.disableWarning')}
           </p>
-          <label className="ba-label">
+          <label className={slot('ba-label')}>
             {t('common.passwordLabel')}
             <input
-              className="ba-input"
+              className={slot('ba-input')}
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -108,9 +110,9 @@ export function MfaSection() {
             />
           </label>
           <FormError>{error}</FormError>
-          <span className="ba-profile-action-row">
+          <span className={slot('ba-profile-action-row')}>
             <button
-              className="ba-button ba-danger-button"
+              className={slot('ba-button ba-danger-button')}
               type="submit"
               disabled={pending || !password}
               aria-busy={pending || undefined}
@@ -120,7 +122,7 @@ export function MfaSection() {
               </Busy>
             </button>
             <button
-              className="ba-button ba-button-secondary"
+              className={slot('ba-button ba-button-secondary')}
               type="button"
               disabled={pending}
               onClick={cancelDisable}

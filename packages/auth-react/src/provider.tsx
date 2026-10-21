@@ -59,11 +59,9 @@ function LastUsedMethodSync(): null {
   return null;
 }
 
-export type Appearance = {
-  theme?: 'light' | 'dark' | 'system';
-  /** Primary accent color (CSS color). Falls back to project branding. */
-  primaryColor?: string;
-};
+export type { Appearance } from './appearance';
+import type { Appearance } from './appearance';
+import { ElementsContext } from './elements';
 
 /** Loading state of the fetched public config. */
 export type ConfigState = 'loading' | 'ready' | 'error';
@@ -223,7 +221,7 @@ export function AuthOwlProvider({
     <Context.Provider value={ctxValue}>
       {/* display:contents keeps the wrapper out of layout while still scoping
           the theme custom-properties + data attribute to the subtree. The RAW
-          theme goes in the attribute (light | dark | system) so it is identical
+          theme goes in the attribute (light | dark | system | inherit) so it is identical
           on server and client - `system` is resolved by a CSS media query in
           styles.css, avoiding a hydration mismatch and a light->dark flash.
           `dir` works on a display:contents element too: directionality is an
@@ -231,15 +229,18 @@ export function AuthOwlProvider({
       <div
         className="authowl-root"
         data-authowl-theme={merged.theme}
+        data-brand={merged.brand}
         // Not read by our CSS (RTL keys off [dir]) - a deliberate hook for
         // HOST stylesheets to target per-locale, like data-authowl-theme.
         data-authowl-locale={locale}
         dir={directionFor(locale)}
         style={{ display: 'contents', ...merged.style }}
       >
+        <ElementsContext.Provider value={appearance?.elements}>
         {children}
         <LastUsedMethodSync />
         {invitationPrompt ? <InvitationPrompt /> : null}
+        </ElementsContext.Provider>
       </div>
     </Context.Provider>
   );

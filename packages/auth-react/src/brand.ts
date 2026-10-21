@@ -286,23 +286,16 @@ export function deriveBrandRamp(primaryHex: string | undefined | null): BrandRam
   };
 }
 
-/**
- * Flatten a ramp set into the inline bridge custom-properties the provider emits
- * on `.authowl-root`. styles.css routes `-l` under light and `-d` under
- * dark/system-dark; `--ba-accent-solid` is `--ba-primary` verbatim (no bridge)
- * and `--ba-accent-fg` is theme-independent (one var). Keeping these as inline
- * `--ba-rt-*` bridges - rather than setting `--ba-accent*` directly - lets a host
- * stylesheet still override `--ba-accent`/`--ba-primary` on `.authowl-root`.
- */
+/** Flatten both scheme ramps into inline --ao-* properties for SSR first paint. */
 export function brandRampVars(set: BrandRampSet): Record<string, string> {
-  return {
-    '--ba-rt-solid-hover-l': set.light.accentSolidHover,
-    '--ba-rt-solid-hover-d': set.dark.accentSolidHover,
-    '--ba-rt-solid-active-l': set.light.accentSolidActive,
-    '--ba-rt-solid-active-d': set.dark.accentSolidActive,
-    '--ba-rt-accent-l': set.light.accent,
-    '--ba-rt-accent-d': set.dark.accent,
-    // Foreground is chosen against the solid fill, which is theme-independent.
-    '--ba-rt-accent-fg': set.light.accentFg,
-  };
+  const vars: Record<string, string> = {};
+  for (const scheme of ['light', 'dark'] as const) {
+    const ramp = set[scheme];
+    for (const [name, value] of Object.entries({
+      brand: ramp.accentSolid, 'brand-hover': ramp.accentSolidHover,
+      'brand-active': ramp.accentSolidActive, 'on-brand': ramp.accentFg,
+      'brand-text': ramp.accent, ring: ramp.accent,
+    })) vars[`--ao-${scheme}-${name}`] = value;
+  }
+  return vars;
 }

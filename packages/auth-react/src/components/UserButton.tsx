@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useUser, useSignOut } from '../hooks';
 import { useT } from '../i18n';
@@ -6,6 +7,7 @@ import { UserProfile } from './UserProfile';
 import { AuthOwlBadge } from './AuthOwlBadge';
 
 export function UserButton() {
+  const slot = useSlot();
   const t = useT();
   const { user, isLoaded } = useUser();
   const { signOut } = useSignOut();
@@ -19,30 +21,30 @@ export function UserButton() {
   const image = user.image ?? null;
 
   return (
-    <div className="ba-user-button" data-testid="user-button">
+    <div className={slot('ba-user-button')} data-testid="user-button">
       <button
         ref={triggerRef}
-        className="ba-user-button-trigger"
+        className={slot('ba-user-button-trigger')}
         aria-label={t('userButton.openMenuAria')}
         onClick={() => setOpen((v) => !v)}
       >
         {image && failedImage !== image ? (
           <img
-            className="ba-avatar"
+            className={slot('ba-avatar')}
             src={image}
             alt=""
             referrerPolicy="no-referrer"
             onError={() => setFailedImage(image)}
           />
         ) : (
-          <span className="ba-avatar ba-avatar-fallback">{identity[0]?.toUpperCase()}</span>
+          <span className={slot('ba-avatar ba-avatar-fallback')}>{identity[0]?.toUpperCase()}</span>
         )}
       </button>
       {open && (
-        <div className="ba-menu">
-          <p className="ba-menu-label">{identity}</p>
+        <div className={slot('ba-menu')}>
+          <p className={slot('ba-menu-label')}>{identity}</p>
           <button
-            className="ba-menu-item"
+            className={slot('ba-menu-item')}
             onClick={() => {
               setOpen(false);
               setProfileOpen(true);
@@ -50,10 +52,10 @@ export function UserButton() {
           >
             {t('userButton.manageAccount')}
           </button>
-          <button className="ba-menu-item" onClick={() => signOut()}>
+          <button className={slot('ba-menu-item')} onClick={() => signOut()}>
             {t('userButton.signOut')}
           </button>
-          <div className="ba-menu-badge">
+          <div className={slot('ba-menu-badge')}>
             <AuthOwlBadge />
           </div>
         </div>

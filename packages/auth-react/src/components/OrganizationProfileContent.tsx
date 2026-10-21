@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import type { OrganizationDetails } from '@authowl/core';
 import { useAuthClient, usePublicConfig, useSession, useUser } from '../hooks';
@@ -29,6 +30,7 @@ const SECTION_KEYS: Record<OrganizationProfileSection, MessageKey> = {
 const TeamsSection = React.lazy(() => import('./organization/TeamsSection'));
 
 export function OrganizationProfileContent({ organizationId, defaultSection = 'general', onDeleted, onLeft }: OrganizationProfileContentProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const toServerError = useServerError();
   const { config, isLoading: configLoading } = usePublicConfig();
@@ -77,23 +79,23 @@ export function OrganizationProfileContent({ organizationId, defaultSection = 'g
     };
   }, [load]);
 
-  if (configLoading || !isLoaded) return <div className="ba-skeleton" aria-label={t('organization.loading')} />;
+  if (configLoading || !isLoaded) return <div className={slot('ba-skeleton')} aria-label={t('organization.loading')} />;
   if (config?.organizations !== true) return null;
-  if (!isSignedIn || !user) return <p className="ba-muted">{t('organization.signedOut')}</p>;
-  if (wasRemoved) return <p className="ba-muted">{t('organization.profile.noActive')}</p>;
-  if (!requestedId) return <p className="ba-muted">{t('organization.profile.noActive')}</p>;
+  if (!isSignedIn || !user) return <p className={slot('ba-muted')}>{t('organization.signedOut')}</p>;
+  if (wasRemoved) return <p className={slot('ba-muted')}>{t('organization.profile.noActive')}</p>;
+  if (!requestedId) return <p className={slot('ba-muted')}>{t('organization.profile.noActive')}</p>;
   if (error) {
     return (
-      <div className="ba-inline-error">
+      <div className={slot('ba-inline-error')}>
         <FormError>{error}</FormError>
-        <button className="ba-link-button" type="button" onClick={() => void load()}>{t('organization.retry')}</button>
+        <button className={slot('ba-link-button')} type="button" onClick={() => void load()}>{t('organization.retry')}</button>
       </div>
     );
   }
-  if (!organization) return <div className="ba-skeleton" aria-label={t('organization.loading')} />;
+  if (!organization) return <div className={slot('ba-skeleton')} aria-label={t('organization.loading')} />;
 
   const membership = organization.members.find((member) => member.userId === user.id);
-  if (!membership) return <p className="ba-muted">{t('organization.profile.notMember')}</p>;
+  if (!membership) return <p className={slot('ba-muted')}>{t('organization.profile.notMember')}</p>;
   const canManage = canManageOrganization(membership);
   const visibleSections: OrganizationProfileSection[] = canManage
     ? ['general', 'members', 'teams', 'invitations', 'danger']
@@ -107,17 +109,17 @@ export function OrganizationProfileContent({ organizationId, defaultSection = 'g
   };
 
   return (
-    <article className="ba-organization-profile">
-      <header className="ba-organization-profile-heading">
-        <span className="ba-organization-avatar ba-organization-avatar-large" aria-hidden="true">{organization.name.trim().charAt(0).toUpperCase() || '?'}</span>
-        <span><h2 className="ba-title">{organization.name}</h2><p className="ba-muted">{organization.slug}</p></span>
+    <article className={slot('ba-organization-profile')}>
+      <header className={slot('ba-organization-profile-heading')}>
+        <span className={slot('ba-organization-avatar ba-organization-avatar-large')} aria-hidden="true">{organization.name.trim().charAt(0).toUpperCase() || '?'}</span>
+        <span><h2 className={slot('ba-title')}>{organization.name}</h2><p className={slot('ba-muted')}>{organization.slug}</p></span>
       </header>
-      <div className="ba-organization-profile-layout">
-        <nav className="ba-organization-profile-nav" aria-label={t('organization.profile.nav.label')}>
+      <div className={slot('ba-organization-profile-layout')}>
+        <nav className={slot('ba-organization-profile-nav')} aria-label={t('organization.profile.nav.label')}>
           {visibleSections.map((item) => (
             <button
               key={item}
-              className="ba-profile-nav-item"
+              className={slot('ba-profile-nav-item')}
               type="button"
               aria-current={activeSection === item ? 'page' : undefined}
               onClick={() => setSection(item)}
@@ -126,7 +128,7 @@ export function OrganizationProfileContent({ organizationId, defaultSection = 'g
             </button>
           ))}
         </nav>
-        <div className="ba-organization-profile-content">
+        <div className={slot('ba-organization-profile-content')}>
           {activeSection === 'general' && <GeneralSection organization={organization} canManage={canManage} onChanged={load} />}
           {activeSection === 'members' && <MembersSection organization={organization} userId={user.id} canManage={canManage} onChanged={load} />}
           {activeSection === 'teams' && (

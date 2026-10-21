@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useSignIn } from '../hooks';
 import { useT } from '../i18n';
@@ -21,6 +22,7 @@ export type MagicLinkFormProps = {
  * when the user follows the emailed link, so there is no redirect on submit.
  */
 export function MagicLinkForm({ callbackURL, webauthnAutofill }: MagicLinkFormProps) {
+  const slot = useSlot();
   const t = useT();
   const { signInMagicLink } = useSignIn();
   const { pending, error, run } = useSubmitAction();
@@ -30,7 +32,7 @@ export function MagicLinkForm({ callbackURL, webauthnAutofill }: MagicLinkFormPr
 
   if (sent) {
     return (
-      <p className="ba-muted" data-testid="magiclink-sent">
+      <p className={slot('ba-muted')} data-testid="magiclink-sent">
         {t('magicLink.sent')}
       </p>
     );
@@ -46,13 +48,13 @@ export function MagicLinkForm({ callbackURL, webauthnAutofill }: MagicLinkFormPr
           onSuccess: () => setSent(true),
         });
       }}
-      className="ba-fields"
+      className={slot('ba-fields')}
       data-testid="magiclink-form"
     >
-      <label className="ba-label">
+      <label className={slot('ba-label')}>
         {t('common.emailLabel')}
         <input
-          className="ba-input"
+          className={slot('ba-input')}
           type="email"
           autoComplete={emailAutocomplete(!!webauthnAutofill)}
           value={email}
@@ -63,7 +65,7 @@ export function MagicLinkForm({ callbackURL, webauthnAutofill }: MagicLinkFormPr
       {authChallenge.control}
       <FormError>{error}</FormError>
       <button
-        className="ba-button"
+        className={slot('ba-button')}
         type="submit"
         disabled={pending || authChallenge.configPending}
         aria-busy={pending || undefined}

@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { AuthOwlBadge } from './AuthOwlBadge';
 import { MfaEnrollmentStep, useConfirmedMfaPending } from './mfa-enrollment-step';
@@ -33,13 +34,14 @@ export type MFARequiredGateProps = {
  * `useConfirmedMfaPending`.
  */
 export function MFARequiredGate({ children, title }: MFARequiredGateProps) {
+  const slot = useSlot();
   const state = useConfirmedMfaPending();
 
   if (state === 'clear') return <>{children}</>;
   if (state === 'confirming') return null; // confirming, or stale flag being repaired
 
   return (
-    <div className="ba-form" data-testid="mfa-required-gate">
+    <div className={slot('ba-form')} data-testid="mfa-required-gate">
       <MfaEnrollmentStep title={title} />
       <AuthOwlBadge />
     </div>

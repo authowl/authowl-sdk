@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useEmailVerification } from '../hooks';
 import { useT, richMessage, Bidi } from '../i18n';
@@ -25,6 +26,7 @@ export function VerificationPending({
   callbackURL,
   method = 'link',
 }: VerificationPendingProps) {
+  const slot = useSlot();
   const t = useT();
   const {
     sendVerificationEmail,
@@ -39,7 +41,7 @@ export function VerificationPending({
 
   if (verified) {
     return (
-      <p className="ba-success" role="status" data-testid="verify-code-success">
+      <p className={slot('ba-success')} role="status" data-testid="verify-code-success">
         {t('verifyEmail.success')}
       </p>
     );
@@ -49,7 +51,7 @@ export function VerificationPending({
     return (
       <form
         method="post"
-        className="ba-fields"
+        className={slot('ba-fields')}
         data-testid="verify-code-pending"
         onSubmit={(event) => {
           event.preventDefault();
@@ -62,7 +64,7 @@ export function VerificationPending({
           );
         }}
       >
-        <p className="ba-muted">
+        <p className={slot('ba-muted')}>
           {richMessage(t('verifyPending.codeBody'), {
             email: (
               <strong>
@@ -71,10 +73,10 @@ export function VerificationPending({
             ),
           })}
         </p>
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('verifyPending.codeLabel')}
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             value={code}
             onChange={(event) => setCode(event.target.value.trim())}
             inputMode="numeric"
@@ -82,11 +84,11 @@ export function VerificationPending({
             required
           />
         </label>
-        {resent && <p className="ba-muted">{t('verifyPending.resent')}</p>}
+        {resent && <p className={slot('ba-muted')}>{t('verifyPending.resent')}</p>}
         {authChallenge.control}
         <FormError>{error}</FormError>
         <button
-          className="ba-button"
+          className={slot('ba-button')}
           type="submit"
           disabled={pending || !code}
           aria-busy={pending || undefined}
@@ -97,7 +99,7 @@ export function VerificationPending({
         </button>
         <button
           type="button"
-          className="ba-link-button"
+          className={slot('ba-link-button')}
           disabled={pending || authChallenge.configPending}
           onClick={() =>
             void run(
@@ -122,8 +124,8 @@ export function VerificationPending({
   }
 
   return (
-    <div className="ba-fields" data-testid="verify-pending">
-      <p className="ba-muted">
+    <div className={slot('ba-fields')} data-testid="verify-pending">
+      <p className={slot('ba-muted')}>
         {richMessage(t('verifyPending.body'), {
           email: (
             <strong>
@@ -132,12 +134,12 @@ export function VerificationPending({
           ),
         })}
       </p>
-      {resent && <p className="ba-muted">{t('verifyPending.resent')}</p>}
+      {resent && <p className={slot('ba-muted')}>{t('verifyPending.resent')}</p>}
       {authChallenge.control}
       <FormError>{error}</FormError>
       <button
         type="button"
-        className="ba-link-button"
+        className={slot('ba-link-button')}
         disabled={pending || authChallenge.configPending}
         aria-busy={pending || undefined}
         onClick={() =>

@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 
 /**
@@ -8,7 +9,8 @@ import * as React from 'react';
  * assistive tech. RTL-safe and reduced-motion-aware via CSS in `styles.css`.
  */
 export function Spinner() {
-  return <span className="ba-spinner" aria-hidden="true" />;
+  const slot = useSlot();
+  return <span className={slot('ba-spinner')} aria-hidden="true" />;
 }
 
 export type BusyProps = {

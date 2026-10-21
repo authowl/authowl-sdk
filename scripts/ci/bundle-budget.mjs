@@ -261,10 +261,15 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // Deriving each tint and shadow from its base colour was chosen over plain
 // literals, so a colour change can never split from its tint; this row caps
 // that cost instead of leaving it unmeasured. CSS-only consumers ship no JS.
+// AO-58(b) palette plumbing (2026-10-21) raises React 80.5->83.
+// Same-machine baseline: 80.33kb; generated palette + typed element slots and
+// class merging: 82.16kb (+1.83kb). Tokens remain build-only, so their runtime
+// is absent from React. Core (25.63kb) and tokens (3.88kb) are unchanged.
+// The new ceiling retains about 0.84kb of explicit regression headroom.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 80.5,
+    maxGzipKb: 83,
     label: '@authowl/react (provider + hooks + components)',
   },
   {

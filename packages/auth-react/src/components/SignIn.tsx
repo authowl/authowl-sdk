@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useHandoffCompletion } from './use-handoff-completion';
 import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
@@ -51,6 +52,7 @@ export function SignIn({
   showBadge,
   showBranding = true,
 }: SignInProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const { sessionStore } = useAuthClient();
   const {
@@ -118,9 +120,9 @@ export function SignIn({
 
   if (isLoading) {
     return (
-      <div className="ba-form" data-testid="signin-loading" aria-busy="true">
-        <div className="ba-skeleton" />
-        <div className="ba-skeleton" />
+      <div className={slot('ba-form ba-card')} data-testid="signin-loading" aria-busy="true">
+        <div className={slot('ba-skeleton')} />
+        <div className={slot('ba-skeleton')} />
       </div>
     );
   }
@@ -143,9 +145,9 @@ export function SignIn({
   // none.
   if (mfaEnrolment !== 'clear') {
     return (
-      <div className="ba-form" data-testid="signin-mfa-enrolment" aria-busy={mfaEnrolment === 'confirming'}>
+      <div className={slot('ba-form ba-card')} data-testid="signin-mfa-enrolment" aria-busy={mfaEnrolment === 'confirming'}>
         {branding}
-        {mfaEnrolment === 'pending' ? <MfaEnrollmentStep /> : <div className="ba-skeleton" />}
+        {mfaEnrolment === 'pending' ? <MfaEnrollmentStep /> : <div className={slot('ba-skeleton')} />}
         {badge}
       </div>
     );
@@ -155,7 +157,7 @@ export function SignIn({
   // the session, so finish exactly as a direct sign-in would.
   if (challenge) {
     return (
-      <div className="ba-form" data-testid="signin-mfa">
+      <div className={slot('ba-form ba-card')} data-testid="signin-mfa">
         {branding}
         <MFAChallenge onVerified={() => finishSignIn({ sessionStore, redirectTo, onSignedIn })} />
         {badge}
@@ -166,9 +168,9 @@ export function SignIn({
   // Inline "forgot password" step: only reachable when a reset page is configured.
   if (view === 'forgot' && resetPasswordUrl) {
     return (
-      <div className="ba-form" data-testid="signin-forgot">
+      <div className={slot('ba-form ba-card')} data-testid="signin-forgot">
         {branding}
-        <h2 className="ba-title">{t('signIn.forgotTitle')}</h2>
+        <h2 className={slot('ba-title')}>{t('signIn.forgotTitle')}</h2>
         <ForgotPassword resetPasswordUrl={resetPasswordUrl} onBack={() => setView('sign-in')} />
         {badge}
       </div>
@@ -178,9 +180,9 @@ export function SignIn({
   // Email-OTP second stage: verify the emailed code (shares the captured email).
   if (view === 'otp-code') {
     return (
-      <div className="ba-form" data-testid="signin-otp-code">
+      <div className={slot('ba-form ba-card')} data-testid="signin-otp-code">
         {branding}
-        <h2 className="ba-title">{t('signIn.title')}</h2>
+        <h2 className={slot('ba-title')}>{t('signIn.title')}</h2>
         <OtpCodeForm
           email={email}
           code={otp}
@@ -214,11 +216,11 @@ export function SignIn({
   // this is a terminal message with a way back.
   if (view === 'magic-sent') {
     return (
-      <div className="ba-form" data-testid="signin-magic-sent">
+      <div className={slot('ba-form ba-card')} data-testid="signin-magic-sent">
         {branding}
-        <h2 className="ba-title">{t('signIn.title')}</h2>
-        <p className="ba-muted">{t('magicLink.sent')}</p>
-        <button type="button" className="ba-link-button" onClick={() => setView('sign-in')}>
+        <h2 className={slot('ba-title')}>{t('signIn.title')}</h2>
+        <p className={slot('ba-muted')}>{t('magicLink.sent')}</p>
+        <button type="button" className={slot('ba-link-button')} onClick={() => setView('sign-in')}>
           {t('forgotPassword.backToSignIn')}
         </button>
         {badge}
@@ -228,7 +230,7 @@ export function SignIn({
 
   if (view === 'phone') {
     return (
-      <div className="ba-form" data-testid="signin-phone">
+      <div className={slot('ba-form ba-card')} data-testid="signin-phone">
         {branding}
         <PhoneOTP
           redirectTo={redirectTo}
@@ -338,16 +340,16 @@ export function SignIn({
   ] as const;
 
   return (
-    <div className="ba-form" data-testid="signin-form">
+    <div className={slot('ba-form ba-card')} data-testid="signin-form">
       {branding}
-      <h2 className="ba-title">{t('signIn.title')}</h2>
+      <h2 className={slot('ba-title')}>{t('signIn.title')}</h2>
       <InvitationBanner />
       <SocialButtons providers={plan.social} />
-      {showDivider && <div className="ba-divider">{t('common.orDivider')}</div>}
+      {showDivider && <div className={slot('ba-divider')}>{t('common.orDivider')}</div>}
       {hasCredentialForm && (
         <form
           method="post"
-          className="ba-fields"
+          className={slot('ba-fields')}
           onSubmit={(e) => {
             e.preventDefault();
             if (credentialMode === 'username') doPassword();
@@ -355,11 +357,11 @@ export function SignIn({
           }}
         >
           {credentialMode === 'email' ? (
-            <label className="ba-label">
+            <label className={slot('ba-label')}>
               {t('common.emailLabel')}
               <input
                 ref={emailRef}
-                className="ba-input"
+                className={slot('ba-input')}
                 type="email"
                 autoComplete={emailAutocomplete(plan.autofillHost !== null)}
                 value={email}
@@ -371,10 +373,10 @@ export function SignIn({
               />
             </label>
           ) : (
-            <label className="ba-label">
+            <label className={slot('ba-label')}>
               {t('common.usernameLabel')}
               <input
-                className="ba-input"
+                className={slot('ba-input')}
                 type="text"
                 autoComplete="username"
                 value={username}
@@ -387,10 +389,10 @@ export function SignIn({
             </label>
           )}
           {plan.password && (
-            <label className="ba-label">
+            <label className={slot('ba-label')}>
               {t('common.passwordLabel')}
               <input
-                className="ba-input"
+                className={slot('ba-input')}
                 type="password"
                 autoComplete="current-password"
                 value={password}
@@ -407,7 +409,7 @@ export function SignIn({
           {plan.password && (
             <>
               <button
-                className="ba-button"
+                className={slot('ba-button')}
                 type="submit"
                 disabled={pending || authChallenge.configPending}
                 aria-busy={(pending && inFlight === 'password') || undefined}
@@ -419,7 +421,7 @@ export function SignIn({
               {resetPasswordUrl && (
                 <button
                   type="button"
-                  className="ba-link-button"
+                  className={slot('ba-link-button')}
                   onClick={() => setView('forgot')}
                 >
                   {t('signIn.forgotLink')}
@@ -435,7 +437,7 @@ export function SignIn({
                 <button
                   key={key}
                   type={isPrimary ? 'submit' : 'button'}
-                  className={isPrimary ? 'ba-button' : 'ba-button ba-button-secondary'}
+                  className={slot(isPrimary ? 'ba-button' : 'ba-button ba-button-secondary')}
                   disabled={pending || authChallenge.configPending}
                   aria-busy={(pending && inFlight === key) || undefined}
                   onClick={isPrimary ? undefined : withEmail(action)}
@@ -449,7 +451,7 @@ export function SignIn({
           {plan.username && (
             <button
               type="button"
-              className="ba-link-button"
+              className={slot('ba-link-button')}
               disabled={pending}
               onClick={() => {
                 setError(null);
@@ -470,14 +472,14 @@ export function SignIn({
       {plan.phoneOtp && (
         <button
           type="button"
-          className="ba-button ba-button-secondary"
+          className={slot('ba-button ba-button-secondary')}
           onClick={() => setView('phone')}
         >
           {t('phoneOtp.usePhone')}
         </button>
       )}
       {!plan.renderable && (
-        <p className="ba-muted">
+        <p className={slot('ba-muted')}>
           {plan.emptyReason === 'unsupported'
             ? t('signIn.empty.unsupported')
             : t('signIn.empty.none')}

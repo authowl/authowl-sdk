@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useHandoffCompletion } from './use-handoff-completion';
 import { createIdempotencyKey, readInvitationClaim } from '@authowl/core';
@@ -54,6 +55,7 @@ export function SignUp({
   onWaitlisted,
   showBranding = true,
 }: SignUpProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const locale = useLocale();
   const toServerError = useServerError();
@@ -165,9 +167,9 @@ export function SignUp({
 
   if (isLoading) {
     return (
-      <div className="ba-form" data-testid="signup-loading" aria-busy="true">
-        <div className="ba-skeleton" />
-        <div className="ba-skeleton" />
+      <div className={slot('ba-form ba-card')} data-testid="signup-loading" aria-busy="true">
+        <div className={slot('ba-skeleton')} />
+        <div className={slot('ba-skeleton')} />
       </div>
     );
   }
@@ -178,9 +180,9 @@ export function SignUp({
 
   if (mfaEnrollment !== 'clear') {
     return (
-      <div className="ba-form" data-testid="signup-mfa-enrolment" aria-busy={mfaEnrollment === 'confirming'}>
+      <div className={slot('ba-form ba-card')} data-testid="signup-mfa-enrolment" aria-busy={mfaEnrollment === 'confirming'}>
         {showBranding ? <AuthOwlBranding /> : null}
-        {mfaEnrollment === 'pending' ? <MfaEnrollmentStep /> : <div className="ba-skeleton" />}
+        {mfaEnrollment === 'pending' ? <MfaEnrollmentStep /> : <div className={slot('ba-skeleton')} />}
         <AuthOwlBadge force={showBadge} />
       </div>
     );
@@ -192,7 +194,7 @@ export function SignUp({
 
   if (pendingEmail) {
     return (
-      <div className="ba-form" data-testid="signup-verify-pending">
+      <div className={slot('ba-form ba-card')} data-testid="signup-verify-pending">
         {showBranding ? <AuthOwlBranding /> : null}
         <VerificationPending
           email={pendingEmail}
@@ -237,7 +239,7 @@ export function SignUp({
 
   if (completeWithPasskey) {
     return (
-      <div className="ba-form" data-testid="signup-passkey-step">
+      <div className={slot('ba-form ba-card')} data-testid="signup-passkey-step">
         {showBranding ? <AuthOwlBranding /> : null}
         <PasskeyOffer variant="sign-up" onComplete={finishSignUp} />
         <AuthOwlBadge force={showBadge} />
@@ -246,21 +248,21 @@ export function SignUp({
   }
 
   return (
-    <div className="ba-form" data-testid="signup-form">
+    <div className={slot('ba-form ba-card')} data-testid="signup-form">
       {showBranding ? <AuthOwlBranding /> : null}
-      <h2 className="ba-title">{t('signUp.title')}</h2>
+      <h2 className={slot('ba-title')}>{t('signUp.title')}</h2>
       <InvitationBanner />
       <SocialButtons providers={social} />
       {showPassword && social.length > 0 && (
-        <div className="ba-divider">{t('common.orDivider')}</div>
+        <div className={slot('ba-divider')}>{t('common.orDivider')}</div>
       )}
       {showPassword && (
-        <form method="post" onSubmit={onSubmit} className="ba-fields">
+        <form method="post" onSubmit={onSubmit} className={slot('ba-fields')}>
           {capabilities.legacyNameField && (
-            <label className="ba-label">
+            <label className={slot('ba-label')}>
               {t('signUp.nameLabel')}
               <input
-                className="ba-input"
+                className={slot('ba-input')}
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
@@ -273,10 +275,10 @@ export function SignUp({
           )}
           {capabilities.firstLastName && (
             <>
-              <label className="ba-label">
+              <label className={slot('ba-label')}>
                 {t('signUp.firstNameLabel')}
                 <input
-                  className="ba-input"
+                  className={slot('ba-input')}
                   value={firstName}
                   onChange={(e) => {
                     setFirstName(e.target.value);
@@ -285,10 +287,10 @@ export function SignUp({
                   autoComplete="given-name"
                 />
               </label>
-              <label className="ba-label">
+              <label className={slot('ba-label')}>
                 {t('signUp.lastNameLabel')}
                 <input
-                  className="ba-input"
+                  className={slot('ba-input')}
                   value={lastName}
                   onChange={(e) => {
                     setLastName(e.target.value);
@@ -300,10 +302,10 @@ export function SignUp({
             </>
           )}
           {capabilities.collectUsername && (
-            <label className="ba-label">
+            <label className={slot('ba-label')}>
               {t('common.usernameLabel')}
               <input
-                className="ba-input"
+                className={slot('ba-input')}
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value);
@@ -314,10 +316,10 @@ export function SignUp({
               />
             </label>
           )}
-          <label className="ba-label">
+          <label className={slot('ba-label')}>
             {t('common.emailLabel')}
             <input
-              className="ba-input"
+              className={slot('ba-input')}
               type="email"
               value={email}
               onChange={(e) => {
@@ -328,10 +330,10 @@ export function SignUp({
               required
             />
           </label>
-          <label className="ba-label">
+          <label className={slot('ba-label')}>
             {t('common.passwordLabel')}
             <input
-              className="ba-input"
+              className={slot('ba-input')}
               type="password"
               value={password}
                 onChange={(e) => {
@@ -370,7 +372,7 @@ export function SignUp({
           )}
           <FormError>{error}</FormError>
           <button
-            className="ba-button"
+            className={slot('ba-button')}
             type="submit"
             disabled={submitting || consentBlocked || authChallenge.configPending}
             aria-busy={submitting || undefined}
@@ -380,7 +382,7 @@ export function SignUp({
         </form>
       )}
       {showPasswordless && (showPassword || social.length > 0) && (
-        <div className="ba-divider">{t('common.orDivider')}</div>
+        <div className={slot('ba-divider')}>{t('common.orDivider')}</div>
       )}
       {showPasswordless && (
         <PasswordlessSignUp
@@ -391,7 +393,7 @@ export function SignUp({
         />
       )}
       {!renderable && (
-        <p className="ba-muted">
+        <p className={slot('ba-muted')}>
           {publicSignupAllowed && methods.length > 0
             ? t('signUp.empty.unsupported')
             : t('signUp.empty.none')}

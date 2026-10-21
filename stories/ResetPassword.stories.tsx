@@ -28,8 +28,3 @@ export const Default: Story = {
     await expect(canvas.findByTestId('reset-form')).resolves.toBeTruthy();
   },
 };
-
-// NOTE: the invalid-link state is intentionally not storied. It renders only the
-// bare `.ba-error` message, whose hardcoded red (#ef4444) fails WCAG AA contrast
-// (~3.8:1 on any surface) and would trip the a11y matrix. Storying it needs a
-// component-level error-color fix, which is out of scope for this patch.

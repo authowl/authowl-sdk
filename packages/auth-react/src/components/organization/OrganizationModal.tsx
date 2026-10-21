@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useT } from '../../i18n';
 import { ModalSurface } from '../ModalSurface';
@@ -14,6 +15,7 @@ export function OrganizationModal({
   returnFocusRef?: React.RefObject<HTMLElement | null>;
   children: React.ReactNode;
 }) {
+  const slot = useSlot();
   const t = useT();
   const titleId = React.useId();
 
@@ -25,10 +27,10 @@ export function OrganizationModal({
       returnFocusRef={returnFocusRef}
       onClose={onClose}
     >
-        <div className="ba-organization-modal-header">
-          <h2 id={titleId} className="ba-title">{title}</h2>
+        <div className={slot('ba-organization-modal-header')}>
+          <h2 id={titleId} className={slot('ba-title')}>{title}</h2>
           <button
-            className="ba-profile-close"
+            className={slot('ba-profile-close')}
             type="button"
             aria-label={t('organization.close')}
             onClick={onClose}
@@ -37,7 +39,7 @@ export function OrganizationModal({
             ×
           </button>
         </div>
-        <div className="ba-organization-modal-body">{children}</div>
+        <div className={slot('ba-organization-modal-body')}>{children}</div>
     </ModalSurface>
   );
 }

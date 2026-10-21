@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useAuthClient, usePublicConfig, useSignIn } from '../hooks';
 import { passkeyBlockingDomain } from '../signin-methods';
@@ -21,6 +22,7 @@ export type PasskeyButtonProps = {
  * <SignIn/> - the button always works even where autofill is unavailable.
  */
 export function PasskeyButton({ redirectTo, onSignedIn }: PasskeyButtonProps) {
+  const slot = useSlot();
   const t = useT();
   const { sessionStore } = useAuthClient();
   const { signInPasskey } = useSignIn();
@@ -36,10 +38,10 @@ export function PasskeyButton({ redirectTo, onSignedIn }: PasskeyButtonProps) {
   if (configPending || blocked) return null;
 
   return (
-    <div className="ba-fields">
+    <div className={slot('ba-fields')}>
       <button
         type="button"
-        className="ba-social-button"
+        className={slot('ba-social-button')}
         disabled={pending}
         aria-busy={pending || undefined}
         data-testid="passkey-button"

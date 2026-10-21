@@ -1,4 +1,6 @@
 'use client';
+import { useSlot } from '../elements';
+
 
 import * as React from 'react';
 import { offeredRightTypes } from '@authowl/core';
@@ -38,6 +40,7 @@ export type PrivacyCenterContentProps = {
 };
 
 export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const locale = useLocale();
   const toServerError = useServerError();
@@ -70,12 +73,12 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
 
   if (!isLoaded || loading) {
     return (
-      <section className={classes('ba-profile-section ba-privacy-center', className)} aria-busy="true">
-        <div className="ba-skeleton" /><div className="ba-skeleton" /><div className="ba-skeleton" />
+      <section className={slot(classes('ba-profile-section ba-privacy-center', className))} aria-busy="true">
+        <div className={slot('ba-skeleton')} /><div className={slot('ba-skeleton')} /><div className={slot('ba-skeleton')} />
       </section>
     );
   }
-  if (!isSignedIn) return <p className="ba-muted">{t('privacy.signedOut')}</p>;
+  if (!isSignedIn) return <p className={slot('ba-muted')}>{t('privacy.signedOut')}</p>;
 
   const privacy = config?.privacy;
   const offeredRights = offeredRightTypes(privacy?.availableRightTypes);
@@ -113,35 +116,35 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
   }
 
   return (
-    <section className={classes('ba-profile-section ba-privacy-center', className)} aria-labelledby="ba-privacy-title">
-      <header className="ba-profile-section-header ba-privacy-center-header">
-        <p className="ba-eyebrow">{t('privacy.dataUse')}</p>
-        <h2 className="ba-title" id="ba-privacy-title">{t('privacy.title')}</h2>
-        <p className="ba-muted">{t('privacy.description')}</p>
+    <section className={slot(classes('ba-profile-section ba-privacy-center', className))} aria-labelledby="ba-privacy-title">
+      <header className={slot('ba-profile-section-header ba-privacy-center-header')}>
+        <p className={slot('ba-eyebrow')}>{t('privacy.dataUse')}</p>
+        <h2 className={slot('ba-title')} id="ba-privacy-title">{t('privacy.title')}</h2>
+        <p className={slot('ba-muted')}>{t('privacy.description')}</p>
       </header>
       <FormError>{error}</FormError>
 
-      <div className="ba-privacy-center-block">
-        <div className="ba-privacy-center-block-heading">
+      <div className={slot('ba-privacy-center-block')}>
+        <div className={slot('ba-privacy-center-block-heading')}>
           <h3>{t('privacy.choices.title')}</h3>
           <p>{t('privacy.choices.description')}</p>
         </div>
         {(privacy?.consentPurposes.length ?? 0) === 0 ? (
-          <p className="ba-privacy-empty">{t('privacy.choices.empty')}</p>
+          <p className={slot('ba-privacy-empty')}>{t('privacy.choices.empty')}</p>
         ) : (
-          <div className="ba-privacy-center-choices">
+          <div className={slot('ba-privacy-center-choices')}>
             {privacy!.consentPurposes.map((purpose) => {
               const granted = preferenceByCode.get(purpose.code)?.state === 'granted';
               const pending = pendingPurpose === purpose.code;
               return (
-                <div className="ba-privacy-center-choice" key={purpose.purposeVersionId}>
+                <div className={slot('ba-privacy-center-choice')} key={purpose.purposeVersionId}>
                   <span>
                     <strong>{purpose.title[locale]}</strong>
                     <small>{purpose.description[locale]}</small>
                   </span>
                   <button
                     type="button"
-                    className="ba-privacy-toggle"
+                    className={slot('ba-privacy-toggle')}
                     role="switch"
                     aria-checked={granted}
                     aria-label={purpose.title[locale]}
@@ -158,19 +161,19 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
         )}
       </div>
 
-      <div className="ba-privacy-center-block">
-        <div className="ba-privacy-center-block-heading">
+      <div className={slot('ba-privacy-center-block')}>
+        <div className={slot('ba-privacy-center-block-heading')}>
           <h3>{t('privacy.rights.title')}</h3>
           <p>{t('privacy.rights.description')}</p>
         </div>
         {offeredRights.length === 0 ? (
-          <p className="ba-privacy-empty">{t('privacy.rights.unavailable')}</p>
+          <p className={slot('ba-privacy-empty')}>{t('privacy.rights.unavailable')}</p>
         ) : (
-          <div className="ba-privacy-right-grid">
+          <div className={slot('ba-privacy-right-grid')}>
             {offeredRights.map((right) => (
               <button
                 type="button"
-                className={right === 'erasure' ? 'ba-privacy-right ba-privacy-right-danger' : 'ba-privacy-right'}
+                className={slot(right === 'erasure' ? 'ba-privacy-right ba-privacy-right-danger' : 'ba-privacy-right')}
                 key={right}
                 disabled={pendingRight !== null}
                 onClick={() => void createRequest(right)}
@@ -182,15 +185,15 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
         )}
       </div>
 
-      <div className="ba-privacy-center-block">
-        <div className="ba-privacy-center-block-heading">
+      <div className={slot('ba-privacy-center-block')}>
+        <div className={slot('ba-privacy-center-block-heading')}>
           <h3>{t('privacy.requests.title')}</h3>
           <p>{t('privacy.requests.description')}</p>
         </div>
         {requests.length === 0 ? (
-          <p className="ba-privacy-empty">{t('privacy.requests.empty')}</p>
+          <p className={slot('ba-privacy-empty')}>{t('privacy.requests.empty')}</p>
         ) : (
-          <ol className="ba-privacy-request-list">
+          <ol className={slot('ba-privacy-request-list')}>
             {requests.map((request) => (
               <li key={request.id}>
                 <span><strong>{t(RIGHT_KEYS[request.rightType])}</strong><small>{formatRequestDate(request.receivedAt, locale)}</small></span>
@@ -202,14 +205,14 @@ export function PrivacyCenterContent({ className }: PrivacyCenterContentProps = 
       </div>
 
       {(privacy?.notices.length ?? 0) > 0 && (
-        <div className="ba-privacy-center-block">
-          <div className="ba-privacy-center-block-heading">
+        <div className={slot('ba-privacy-center-block')}>
+          <div className={slot('ba-privacy-center-block-heading')}>
             <h3>{t('privacy.notices.title')}</h3>
             <p>{t('privacy.notices.description')}</p>
           </div>
-          <div className="ba-privacy-notices">
+          <div className={slot('ba-privacy-notices')}>
             {privacy!.notices.map((notice) => (
-              <details className="ba-privacy-notice" key={notice.noticeVersionId}>
+              <details className={slot('ba-privacy-notice')} key={notice.noticeVersionId}>
                 <summary>{notice.title[locale]}</summary>
                 <p>{notice.body[locale]}</p>
               </details>

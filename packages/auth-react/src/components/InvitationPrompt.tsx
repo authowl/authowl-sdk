@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useOrganizationInvitation, useSignOut } from '../hooks';
 import { useServerError, useT } from '../i18n';
@@ -22,6 +23,7 @@ import { ModalSurface } from './ModalSurface';
  * stylesheet, so the default modal would render unstyled for them.
  */
 export function InvitationPrompt() {
+  const slot = useSlot();
   const t = useT();
   const toMessage = useServerError();
   const { invitation, status, error, accept, dismiss, retry } = useOrganizationInvitation();
@@ -58,27 +60,27 @@ export function InvitationPrompt() {
       testId="authowl-invitation-prompt"
       onClose={dismiss}
     >
-      <h2 id={headingId} className="ba-title">
+      <h2 id={headingId} className={slot('ba-title')}>
         {t('organization.invitationPrompt.title')}
       </h2>
       {invitation ? (
-        <p className="ba-subtitle">
+        <p className={slot('ba-subtitle')}>
           {t('organization.invitationPrompt.body', { organization: invitation.organizationName })}
         </p>
       ) : null}
       {message ? (
-        <p className="ba-error" role="alert">
+        <p className={slot('ba-error')} role="alert">
           {message}
         </p>
       ) : null}
-      <div className="ba-invitation-actions">
+      <div className={slot('ba-invitation-actions')}>
         {status === 'error' && !invitation && (
-          <button type="button" className="ba-button" onClick={retry}>{t('organization.retry')}</button>
+          <button type="button" className={slot('ba-button')} onClick={retry}>{t('organization.retry')}</button>
         )}
         {canAccept ? (
           <button
             type="button"
-            className="ba-button"
+            className={slot('ba-button')}
             onClick={() => void accept()}
             disabled={joining}
           >
@@ -91,11 +93,11 @@ export function InvitationPrompt() {
           // Deliberately keeps the claim: the invitation is still live and still
           // theirs to accept from the right account, so it must survive the
           // sign-out and reappear after they sign back in.
-          <button type="button" className="ba-button ba-button-secondary" onClick={() => void signOut()}>
+          <button type="button" className={slot('ba-button ba-button-secondary')} onClick={() => void signOut()}>
             {t('organization.invitationPrompt.signOut')}
           </button>
         ) : null}
-        <button type="button" className="ba-button ba-button-secondary" onClick={dismiss}>
+        <button type="button" className={slot('ba-button ba-button-secondary')} onClick={dismiss}>
           {t('organization.invitationPrompt.dismiss')}
         </button>
       </div>

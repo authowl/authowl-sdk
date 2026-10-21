@@ -78,7 +78,7 @@ in the dashboard replaces it automatically, and an explicit provider override
 wins over the project setting:
 
 ```tsx
-<AuthOwlProvider appearance={{ primaryColor: '#0EA5A4' }} {...config} />
+<AuthOwlProvider appearance={{ variables: { colorPrimary: '#0EA5A4' } }} {...config} />
 ```
 
 When phone OTP is enabled, `<SignIn />` adds the localized phone flow automatically.
@@ -117,3 +117,13 @@ configuration, hooks, component contracts, localization, theming, and errors.
 ## License
 
 MIT
+
+## Appearance and Tailwind
+
+See the [appearance migration guide](../../docs/react-appearance-migration.md) for
+the theme, brand, variables and typed elements API. The default theme is now
+`inherit`. Tailwind hosts should import the stylesheet in a layer:
+
+```css
+@import '@authowl/react/styles.css' layer(components);
+```

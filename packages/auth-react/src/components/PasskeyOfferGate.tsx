@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { AuthOwlBadge } from './AuthOwlBadge';
 import { PasskeyOffer } from './PasskeyOffer';
@@ -36,6 +37,7 @@ export type PasskeyOfferGateProps = {
  * another bootstrap blank-flash to a surface that already has one.
  */
 export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
+  const slot = useSlot();
   const { subject, shouldOffer, remember } = usePasskeyOffer();
   // WHO and WHICH SESSION the offer is for, not merely THAT there is one. A
   // user id alone still reuses an old decision when a fast A -> B -> A switch
@@ -70,7 +72,7 @@ export function PasskeyOfferGate({ children, title }: PasskeyOfferGateProps) {
   if (subject === null || offerFor !== subject.sessionKey) return <>{children}</>;
 
   return (
-    <div className="ba-form" data-testid="passkey-offer-gate">
+    <div className={slot('ba-form')} data-testid="passkey-offer-gate">
       <PasskeyOffer
         variant="sign-in"
         title={title}

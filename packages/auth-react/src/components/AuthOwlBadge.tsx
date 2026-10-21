@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { usePublicConfig } from '../hooks';
 import { useT, richMessage } from '../i18n';
@@ -16,8 +17,9 @@ export type AuthOwlBadgeProps = {
 
 /** Small owl mark in AuthOwl gold - reads on both light and dark grounds. */
 function OwlMark() {
+  const slot = useSlot();
   return (
-    <svg className="ba-badge-mark" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <svg className={slot('ba-badge-mark')} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <circle cx="12" cy="12" r="11" fill="#F5B84C" />
       <circle cx="8.4" cy="10" r="3" fill="#fff" />
       <circle cx="15.6" cy="10" r="3" fill="#fff" />
@@ -40,12 +42,13 @@ function OwlMark() {
  * posture every embeddable auth widget takes.
  */
 export function AuthOwlBadge({ href = 'https://authowl.dev', force }: AuthOwlBadgeProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const { config } = usePublicConfig();
   if (!force && !config?.badge) return null;
   return (
     <a
-      className="ba-badge"
+      className={slot('ba-badge')}
       href={href}
       target="_blank"
       rel="noopener noreferrer"
@@ -54,7 +57,7 @@ export function AuthOwlBadge({ href = 'https://authowl.dev', force }: AuthOwlBad
       <OwlMark />
       <span>
         {richMessage(t('badge.securedBy'), {
-          brand: <span className="ba-badge-brand">AuthOwl</span>,
+          brand: <span className={slot('ba-badge-brand')}>AuthOwl</span>,
         })}
       </span>
     </a>

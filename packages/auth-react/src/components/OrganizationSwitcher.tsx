@@ -1,4 +1,6 @@
 'use client';
+import { useSlot } from '../elements';
+
 
 import * as React from 'react';
 import type { Organization } from '@authowl/core';
@@ -15,9 +17,10 @@ export type OrganizationSwitcherProps = {
 
 /** Organization workspace switcher, loaded when the host renders it. */
 export function OrganizationSwitcher(props: OrganizationSwitcherProps = {}) {
+  const slot = useSlot();
   return (
     <React.Suspense
-      fallback={<div className="ba-skeleton ba-organization-switcher-skeleton" aria-busy="true" />}
+      fallback={<div className={slot('ba-skeleton ba-organization-switcher-skeleton')} aria-busy="true" />}
     >
       <OrganizationSwitcherContent {...props} />
     </React.Suspense>

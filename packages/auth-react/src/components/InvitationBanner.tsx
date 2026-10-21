@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { readInvitationClaim } from '@authowl/core';
 import { useT } from '../i18n';
@@ -18,6 +19,7 @@ import { useT } from '../i18n';
  * the markup disagree with itself at hydration.
  */
 export function InvitationBanner() {
+  const slot = useSlot();
   const t = useT();
   const [pending, setPending] = React.useState(false);
 
@@ -27,7 +29,7 @@ export function InvitationBanner() {
 
   if (!pending) return null;
   return (
-    <p className="ba-muted" data-testid="authowl-invitation-banner">
+    <p className={slot('ba-muted')} data-testid="authowl-invitation-banner">
       {t('organization.invitationBanner')}
     </p>
   );

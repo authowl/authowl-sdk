@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import type { AuthPasskey } from '@authowl/core';
 import { usePasskeys, usePublicConfig, useUser } from '../hooks';
@@ -26,18 +27,19 @@ export type PasskeyManagerProps = {
  * state, or another account's passkeys on the new user's UI.
  */
 export function PasskeyManager({ title, allowAdd = true }: PasskeyManagerProps = {}) {
+  const slot = useSlot();
   const t = useT();
   const { user, isLoaded, isSignedIn } = useUser();
 
   if (!isLoaded) {
     return (
-      <div className="ba-form" data-testid="passkey-manager-loading" aria-busy="true">
-        <div className="ba-skeleton" />
+      <div className={slot('ba-form')} data-testid="passkey-manager-loading" aria-busy="true">
+        <div className={slot('ba-skeleton')} />
       </div>
     );
   }
   if (!isSignedIn || !user) {
-    return <p className="ba-muted">{t('passkeys.signedOut')}</p>;
+    return <p className={slot('ba-muted')}>{t('passkeys.signedOut')}</p>;
   }
   return <PasskeyManagerBody key={user.id} title={title} allowAdd={allowAdd} />;
 }
@@ -49,6 +51,7 @@ function PasskeyManagerBody({
   title: string | null | undefined;
   allowAdd: boolean;
 }) {
+  const slot = useSlot();
   const t = useT();
   const toServerError = useServerError();
   // The underlying client hands back fresh method references per render (they are
@@ -130,19 +133,19 @@ function PasskeyManagerBody({
   }
 
   return (
-    <div className="ba-form" data-testid="passkey-manager">
-      {title !== null && <h2 className="ba-title">{title ?? t('passkeys.title')}</h2>}
+    <div className={slot('ba-form')} data-testid="passkey-manager">
+      {title !== null && <h2 className={slot('ba-title')}>{title ?? t('passkeys.title')}</h2>}
       {passkeys === null ? (
-        error ? null : <div className="ba-skeleton" />
+        error ? null : <div className={slot('ba-skeleton')} />
       ) : (
-        <ul className="ba-passkey-list">
+        <ul className={slot('ba-passkey-list')}>
           {(passkeys ?? []).map((pk) => (
-            <li key={pk.id} className="ba-passkey-item">
-              <span className="ba-passkey-name">{pk.name?.trim() || t('passkeys.unnamed')}</span>
-              <span className="ba-passkey-actions">
+            <li key={pk.id} className={slot('ba-passkey-item')}>
+              <span className={slot('ba-passkey-name')}>{pk.name?.trim() || t('passkeys.unnamed')}</span>
+              <span className={slot('ba-passkey-actions')}>
                 <button
                   type="button"
-                  className="ba-link-button"
+                  className={slot('ba-link-button')}
                   disabled={pending}
                   onClick={() => onRename(pk.id, pk.name)}
                 >
@@ -150,7 +153,7 @@ function PasskeyManagerBody({
                 </button>
                 <button
                   type="button"
-                  className="ba-link-button ba-danger"
+                  className={slot('ba-link-button ba-danger')}
                   disabled={pending}
                   onClick={() => onRemove(pk.id, pk.name)}
                 >
@@ -160,15 +163,15 @@ function PasskeyManagerBody({
             </li>
           ))}
           {passkeys !== null && passkeys.length === 0 && (
-            <li className="ba-muted">{t('passkeys.empty')}</li>
+            <li className={slot('ba-muted')}>{t('passkeys.empty')}</li>
           )}
         </ul>
       )}
       {error && (
-        <div className="ba-inline-error">
+        <div className={slot('ba-inline-error')}>
           <FormError>{error}</FormError>
           {passkeys === null && (
-            <button className="ba-link-button" type="button" onClick={() => void load()}>
+            <button className={slot('ba-link-button')} type="button" onClick={() => void load()}>
               {t('userProfile.retry')}
             </button>
           )}
@@ -178,12 +181,12 @@ function PasskeyManagerBody({
         // The add button is HIDDEN, not disabled, and the list stays: a user
         // may hold passkeys enrolled on the relying-party origin and must
         // still be able to rename or remove them from here.
-        <p className="ba-muted" data-testid="passkey-add-elsewhere">
+        <p className={slot('ba-muted')} data-testid="passkey-add-elsewhere">
           {t('passkeys.addElsewhere', { domain: blockedBy })}
         </p>
       ) : (
         <button
-          className="ba-button"
+          className={slot('ba-button')}
           type="button"
           disabled={pending}
           aria-busy={pending || undefined}

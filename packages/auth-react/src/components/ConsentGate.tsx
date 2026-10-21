@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useConsent } from '../hooks';
 import { useT, richMessage } from '../i18n';
@@ -27,6 +28,7 @@ export type ConsentGateProps = {
  * without an active consent gate always pass through.
  */
 export function ConsentGate({ children, title }: ConsentGateProps) {
+  const slot = useSlot();
   const t = useT();
   const { needsConsent, status, accept } = useConsent();
   const { pending, error, run } = useSubmitAction();
@@ -34,16 +36,16 @@ export function ConsentGate({ children, title }: ConsentGateProps) {
   if (!needsConsent) return <>{children}</>;
 
   return (
-    <div className="ba-form" data-testid="consent-gate">
-      <h2 className="ba-title">{title ?? t('consent.gateTitle')}</h2>
-      <p className="ba-muted">
+    <div className={slot('ba-form')} data-testid="consent-gate">
+      <h2 className={slot('ba-title')}>{title ?? t('consent.gateTitle')}</h2>
+      <p className={slot('ba-muted')}>
         {richMessage(t('consent.gateBody'), {
           links: <ConsentDocLinks termsUrl={status?.termsUrl} privacyUrl={status?.privacyUrl} />,
         })}
       </p>
       <FormError>{error}</FormError>
       <button
-        className="ba-button"
+        className={slot('ba-button')}
         type="button"
         disabled={pending}
         aria-busy={pending || undefined}

@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { captureApplicationInvitationProof, clearApplicationInvitationProof, type ApplicationInvitationDetails } from '@authowl/core';
 import { useAuthClient, usePublicConfig, useUser, useSignOut } from '../hooks';
@@ -19,6 +20,7 @@ export function AcceptApplicationInvitation(props: AcceptApplicationInvitationPr
   return <MFARequiredGate><ApplicationInvitationJourney {...props} /></MFARequiredGate>;
 }
 function ApplicationInvitationJourney({ onJoined, verifyEmailUrl, resetPasswordUrl }: AcceptApplicationInvitationProps) {
+  const slot = useSlot();
   const client = useAuthClient();
   const { config, isError, retry } = usePublicConfig();
   const user = useUser();
@@ -50,26 +52,26 @@ function ApplicationInvitationJourney({ onJoined, verifyEmailUrl, resetPasswordU
     }).catch(() => { if (active) { setError(t('applicationInvitation.retryError')); setLoaded(true); } });
     return () => { active = false; };
   }, [client, environment, attempt, t, toMessage]);
-  if (isError) return <div className="ba-fields"><FormError>{t('applicationInvitation.retryError')}</FormError><button type="button" className="ba-button" onClick={retry}>{t('organization.retry')}</button></div>;
-  if (!loaded || !user.isLoaded) return <p aria-busy="true" className="ba-muted">{t('common.loading')}</p>;
+  if (isError) return <div className={slot('ba-fields')}><FormError>{t('applicationInvitation.retryError')}</FormError><button type="button" className={slot('ba-button')} onClick={retry}>{t('organization.retry')}</button></div>;
+  if (!loaded || !user.isLoaded) return <p aria-busy="true" className={slot('ba-muted')}>{t('common.loading')}</p>;
   if (joined) return <p role="status">{t('applicationInvitation.success')}</p>;
-  if (!proof || !details) return <div className="ba-fields"><FormError>{error ?? t('applicationInvitation.unavailable')}</FormError><button type="button" className="ba-button" onClick={() => setAttempt(n => n + 1)}>{t('organization.retry')}</button></div>;
-  if (!user.isSignedIn) return <div className="ba-fields">
-    <h1 className="ba-title">{t('applicationInvitation.title')}</h1>
-    <p className="ba-subtitle" style={{ overflowWrap: 'anywhere' }}>{richMessage(t('applicationInvitation.recipient'), { email: <Bidi>{details.email}</Bidi> })}</p>
+  if (!proof || !details) return <div className={slot('ba-fields')}><FormError>{error ?? t('applicationInvitation.unavailable')}</FormError><button type="button" className={slot('ba-button')} onClick={() => setAttempt(n => n + 1)}>{t('organization.retry')}</button></div>;
+  if (!user.isSignedIn) return <div className={slot('ba-fields')}>
+    <h1 className={slot('ba-title')}>{t('applicationInvitation.title')}</h1>
+    <p className={slot('ba-subtitle')} style={{ overflowWrap: 'anywhere' }}>{richMessage(t('applicationInvitation.recipient'), { email: <Bidi>{details.email}</Bidi> })}</p>
     {mode === 'signup' && details.status === 'pending'
       ? <SignUp applicationInvitationProof={proof} initialEmail={details.email} verifyEmailUrl={verifyEmailUrl} showBranding={false} />
       : <SignIn resetPasswordUrl={resetPasswordUrl} showBranding={false} />}
-    {details.status === 'pending' && <button type="button" className="ba-link-button" onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}>{t(mode === 'signup' ? 'organization.invitationPage.signin' : 'organization.invitationPage.signup')}</button>}
+    {details.status === 'pending' && <button type="button" className={slot('ba-link-button')} onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}>{t(mode === 'signup' ? 'organization.invitationPage.signin' : 'organization.invitationPage.signup')}</button>}
   </div>;
   const wrongAccount = user.user?.email?.toLowerCase() !== details.email.toLowerCase();
-  if (wrongAccount) return <div className="ba-fields"><FormError>{t('organization.invitationPrompt.error.wrongAccount')}</FormError><button className="ba-button" type="button" onClick={() => void signOut()}>{t('organization.invitationPrompt.signOut')}</button></div>;
+  if (wrongAccount) return <div className={slot('ba-fields')}><FormError>{t('organization.invitationPrompt.error.wrongAccount')}</FormError><button className={slot('ba-button')} type="button" onClick={() => void signOut()}>{t('organization.invitationPrompt.signOut')}</button></div>;
   if (!user.user?.emailVerified) return <VerificationPending email={details.email} callbackURL={verifyEmailUrl} method={config?.emailVerification?.method} />;
-  return <section className="ba-fields" data-testid="application-invitation-page">
-    <h1 className="ba-title">{t('applicationInvitation.title')}</h1>
-    <p className="ba-subtitle" style={{ overflowWrap: 'anywhere' }}>{richMessage(t('applicationInvitation.recipient'), { email: <Bidi>{details.email}</Bidi> })}</p>
+  return <section className={slot('ba-fields')} data-testid="application-invitation-page">
+    <h1 className={slot('ba-title')}>{t('applicationInvitation.title')}</h1>
+    <p className={slot('ba-subtitle')} style={{ overflowWrap: 'anywhere' }}>{richMessage(t('applicationInvitation.recipient'), { email: <Bidi>{details.email}</Bidi> })}</p>
     <FormError>{error}</FormError>
-    <button type="button" className="ba-button" disabled={busy} onClick={async () => {
+    <button type="button" className={slot('ba-button')} disabled={busy} onClick={async () => {
       setBusy(true); setError(null);
       try {
         const result = await client.applicationInvitations.accept(proof);

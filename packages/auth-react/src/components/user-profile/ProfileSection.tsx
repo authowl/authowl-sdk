@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useSession, useUser } from '../../hooks';
 import { useT } from '../../i18n';
@@ -15,6 +16,7 @@ export function ProfileSection({
   usernameEnabled: boolean;
   legacyNameField: boolean;
 }) {
+  const slot = useSlot();
   const t = useT();
   const account = useAccount();
   const { user } = useUser();
@@ -56,19 +58,19 @@ export function ProfileSection({
   };
 
   return (
-    <section className="ba-profile-section" aria-labelledby={titleId}>
-      <header className="ba-profile-section-header">
-        <h2 id={titleId} className="ba-title">
+    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
+      <header className={slot('ba-profile-section-header')}>
+        <h2 id={titleId} className={slot('ba-title')}>
           {t('userProfile.profile.title')}
         </h2>
-        <p className="ba-muted">{t('userProfile.profile.description')}</p>
+        <p className={slot('ba-muted')}>{t('userProfile.profile.description')}</p>
       </header>
-      <form method="post" className="ba-fields" onSubmit={submit}>
+      <form method="post" className={slot('ba-fields')} onSubmit={submit}>
         {legacyNameField && (
-          <label className="ba-label">
+          <label className={slot('ba-label')}>
             {t('signUp.nameLabel')}
             <input
-              className="ba-input"
+              className={slot('ba-input')}
               value={name}
               onChange={(event) => setName(event.target.value)}
               autoComplete="name"
@@ -78,19 +80,19 @@ export function ProfileSection({
         )}
         {firstLastName && (
           <>
-            <label className="ba-label">
+            <label className={slot('ba-label')}>
               {t('signUp.firstNameLabel')}
               <input
-                className="ba-input"
+                className={slot('ba-input')}
                 value={firstName}
                 onChange={(event) => setFirstName(event.target.value)}
                 autoComplete="given-name"
               />
             </label>
-            <label className="ba-label">
+            <label className={slot('ba-label')}>
               {t('signUp.lastNameLabel')}
               <input
-                className="ba-input"
+                className={slot('ba-input')}
                 value={lastName}
                 onChange={(event) => setLastName(event.target.value)}
                 autoComplete="family-name"
@@ -99,20 +101,20 @@ export function ProfileSection({
           </>
         )}
         {usernameEnabled && (
-          <label className="ba-label">
+          <label className={slot('ba-label')}>
             {t('common.usernameLabel')}
             <input
-              className="ba-input"
+              className={slot('ba-input')}
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               autoComplete="username"
             />
           </label>
         )}
-        <label className="ba-label">
+        <label className={slot('ba-label')}>
           {t('userProfile.profile.imageLabel')}
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             value={image}
             onChange={(event) => setImage(event.target.value)}
             inputMode="url"
@@ -120,9 +122,9 @@ export function ProfileSection({
           />
         </label>
         <FormError>{error}</FormError>
-        {saved && <p className="ba-success" role="status">{t('userProfile.profile.saved')}</p>}
+        {saved && <p className={slot('ba-success')} role="status">{t('userProfile.profile.saved')}</p>}
         <button
-          className="ba-button ba-profile-submit"
+          className={slot('ba-button ba-profile-submit')}
           type="submit"
           disabled={pending || (legacyNameField && !name.trim())}
           aria-busy={pending || undefined}

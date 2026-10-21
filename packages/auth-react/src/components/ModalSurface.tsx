@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 
@@ -21,6 +22,7 @@ export function ModalSurface({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const slot = useSlot();
   const ownerRef = React.useRef<HTMLSpanElement>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
   const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
@@ -75,12 +77,12 @@ export function ModalSurface({
   }, [portalTarget]);
 
   const surface = (
-    <div className={overlayClassName} role="presentation" onMouseDown={(event) => {
+    <div className={slot(overlayClassName)} role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
       <div
         ref={panelRef}
-        className={panelClassName}
+        className={slot(panelClassName)}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}

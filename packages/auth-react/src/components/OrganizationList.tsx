@@ -1,4 +1,6 @@
 'use client';
+import { useSlot } from '../elements';
+
 
 import * as React from 'react';
 import type { Organization } from '@authowl/core';
@@ -14,8 +16,9 @@ export type OrganizationListProps = {
 
 /** Organization directory and invitation management, loaded on demand. */
 export function OrganizationList(props: OrganizationListProps = {}) {
+  const slot = useSlot();
   return (
-    <React.Suspense fallback={<div className="ba-skeleton" aria-busy="true" />}>
+    <React.Suspense fallback={<div className={slot('ba-skeleton')} aria-busy="true" />}>
       <OrganizationListContent {...props} />
     </React.Suspense>
   );

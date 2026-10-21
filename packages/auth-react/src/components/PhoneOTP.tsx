@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import {
   createIdempotencyKey,
@@ -44,6 +45,7 @@ export function PhoneOTP({
   onBack,
   onMfaPasswordRequired,
 }: PhoneOTPProps) {
+  const slot = useSlot();
   const t = useT();
   const { sessionStore } = useAuthClient();
   const { config, isLoading } = usePublicConfig();
@@ -116,9 +118,9 @@ export function PhoneOTP({
 
   if (isLoading) {
     return (
-      <div className="ba-fields" data-testid="phoneotp-loading" aria-busy="true">
-        <div className="ba-skeleton" />
-        <div className="ba-skeleton" />
+      <div className={slot('ba-fields')} data-testid="phoneotp-loading" aria-busy="true">
+        <div className={slot('ba-skeleton')} />
+        <div className={slot('ba-skeleton')} />
       </div>
     );
   }
@@ -127,7 +129,7 @@ export function PhoneOTP({
     return (
       <form
         method="post"
-        className="ba-fields"
+        className={slot('ba-fields')}
         data-testid="phoneotp-code"
         onSubmit={(event) => {
           event.preventDefault();
@@ -151,11 +153,11 @@ export function PhoneOTP({
           );
         }}
       >
-        <h2 className="ba-title">{t('phoneOtp.title')}</h2>
-        <label className="ba-label">
+        <h2 className={slot('ba-title')}>{t('phoneOtp.title')}</h2>
+        <label className={slot('ba-label')}>
           {t('phoneOtp.codeLabel')} <Bidi>{phoneNumber}</Bidi>
           <input
-            className="ba-input"
+            className={slot('ba-input')}
             inputMode="numeric"
             autoComplete="one-time-code"
             value={code}
@@ -171,7 +173,7 @@ export function PhoneOTP({
         </label>
         <FormError>{error}</FormError>
         <button
-          className="ba-button"
+          className={slot('ba-button')}
           type="submit"
           disabled={pending || code.length !== 6}
           aria-busy={pending || undefined}
@@ -180,7 +182,7 @@ export function PhoneOTP({
         </button>
         <button
           type="button"
-          className="ba-link-button"
+          className={slot('ba-link-button')}
           onClick={() => {
             changePhone();
           }}
@@ -193,7 +195,7 @@ export function PhoneOTP({
 
   if (stage === 'hosted' && hostedAttempt) {
     return (
-      <React.Suspense fallback={<div className="ba-skeleton" aria-busy="true" />}>
+      <React.Suspense fallback={<div className={slot('ba-skeleton')} aria-busy="true" />}>
         <HostedPhoneOtp
           key={hostedAttempt.attempt.attemptId}
           attempt={hostedAttempt.attempt}
@@ -213,7 +215,7 @@ export function PhoneOTP({
   return (
     <form
       method="post"
-      className="ba-fields"
+      className={slot('ba-fields')}
       data-testid="phoneotp-phone"
       onSubmit={(event) => {
         event.preventDefault();
@@ -268,11 +270,11 @@ export function PhoneOTP({
         );
       }}
     >
-      <h2 className="ba-title">{t('phoneOtp.title')}</h2>
-      <label className="ba-label">
+      <h2 className={slot('ba-title')}>{t('phoneOtp.title')}</h2>
+      <label className={slot('ba-label')}>
         {t('phoneOtp.phoneLabel')}
         <input
-          className="ba-input"
+          className={slot('ba-input')}
           type="tel"
           inputMode="tel"
           autoComplete="tel"
@@ -305,14 +307,14 @@ export function PhoneOTP({
       {guardState.status === 'error' && (
         <button
           type="button"
-          className="ba-link-button"
+          className={slot('ba-link-button')}
           onClick={() => { void loadGuard(); }}
         >
           {t('phoneOtp.retryHumanCheck')}
         </button>
       )}
       <button
-        className="ba-button"
+        className={slot('ba-button')}
         type="submit"
         // Stays disabled until the server has told us which challenge applies:
         // `guard === null` is "unknown", not "no challenge required".
@@ -327,7 +329,7 @@ export function PhoneOTP({
         <Busy busy={pending} label={t('common.sending')}>{t('phoneOtp.sendSubmit')}</Busy>
       </button>
       {onBack && (
-        <button type="button" className="ba-link-button" onClick={onBack}>
+        <button type="button" className={slot('ba-link-button')} onClick={onBack}>
           {t('phoneOtp.backToSignIn')}
         </button>
       )}

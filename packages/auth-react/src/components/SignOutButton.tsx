@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { useSignOut } from '../hooks';
 import { useT } from '../i18n';
@@ -21,6 +22,7 @@ export type SignOutButtonProps = {
  * <UserButton/> instead.
  */
 export function SignOutButton({ children, redirectTo, onSignedOut, className }: SignOutButtonProps) {
+  const slot = useSlot();
   const t = useT();
   const { signOut } = useSignOut();
   const [pending, setPending] = React.useState(false);
@@ -30,7 +32,7 @@ export function SignOutButton({ children, redirectTo, onSignedOut, className }: 
   return (
     <button
       type="button"
-      className={className ?? 'ba-button'}
+      className={slot(className ?? 'ba-button')}
       disabled={pending}
       aria-busy={pending || undefined}
       data-testid="signout-button"

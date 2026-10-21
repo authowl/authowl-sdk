@@ -32,9 +32,9 @@ describe('AuthOwlProvider brand ramp emission', () => {
     // This is the regression the silent-prop-shadow class of bugs would hit: the
     // resolved ramp must actually reach the wrapper's inline style attribute.
     expect(root.style.getPropertyValue('--ba-primary')).toBe('#F5B84C');
-    expect(root.style.getPropertyValue('--ba-rt-accent-l')).toMatch(/^#[0-9a-f]{6}$/);
-    expect(root.style.getPropertyValue('--ba-rt-solid-hover-d')).toMatch(/^#[0-9a-f]{6}$/);
-    expect(root.style.getPropertyValue('--ba-rt-accent-fg')).toBe('#18181b');
+    expect(root.style.getPropertyValue('--ao-light-brand-text')).toMatch(/^#[0-9a-f]{6}$/);
+    expect(root.style.getPropertyValue('--ao-dark-brand-hover')).toMatch(/^#[0-9a-f]{6}$/);
+    expect(root.style.getPropertyValue('--ao-light-on-brand')).toBe('#18181b');
   });
 
   it('emits no brand vars when no color is set (host --ba-primary override stays in control)', () => {
@@ -45,7 +45,7 @@ describe('AuthOwlProvider brand ramp emission', () => {
     );
     const root = container.querySelector('.authowl-root') as HTMLElement;
     expect(root.style.getPropertyValue('--ba-primary')).toBe('');
-    expect(root.style.getPropertyValue('--ba-rt-accent-l')).toBe('');
+    expect(root.style.getPropertyValue('--ao-light-brand-text')).toBe('');
   });
 
   it('reads the framework-neutral pending snapshot during SSR without fetching', () => {
@@ -105,4 +105,22 @@ describe('AuthOwlProvider brand ramp emission', () => {
     expect(publicConfigCalls).toBe(2);
     warning.mockRestore();
   });
+});
+
+it('renders theme, brand, variables and element classes in SSR HTML without fetching', async () => {
+  const { FormError } = await import('./components/FormError');
+  const fetchSpy = vi.fn() as unknown as typeof fetch;
+  const html = renderToString(
+    <AuthOwlProvider publishableKey={PK} apiUrl={API_URL} fetch={fetchSpy}
+      appearance={{ theme: 'system', brand: 'hitsend', variables: { colorPrimary: '#123456', controlHeight: '2rem' }, elements: { error: 'host-error' } }}>
+      <FormError>Wrong password</FormError>
+    </AuthOwlProvider>,
+  );
+  expect(html).toContain('data-authowl-theme="system"');
+  expect(html).toContain('data-brand="hitsend"');
+  expect(html).toContain('--ao-light-brand:#123456');
+  expect(html).toContain('--ao-dark-brand:#123456');
+  expect(html).toContain('--ao-control-height:2rem');
+  expect(html).toContain('ao-error ba-error host-error');
+  expect(fetchSpy).not.toHaveBeenCalled();
 });

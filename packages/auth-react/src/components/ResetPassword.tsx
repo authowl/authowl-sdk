@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { usePasswordReset, usePublicConfig } from '../hooks';
 import { resolveProjectCapabilities } from '../project-capabilities';
@@ -24,6 +25,7 @@ export type ResetPasswordProps = {
  * `redirectTo` (same-origin/relative only).
  */
 export function ResetPassword({ token: tokenProp, redirectTo, onReset }: ResetPasswordProps) {
+  const slot = useSlot();
   const t = useT();
   const { resetPassword } = usePasswordReset();
   const { config } = usePublicConfig();
@@ -47,7 +49,7 @@ export function ResetPassword({ token: tokenProp, redirectTo, onReset }: ResetPa
   }, [tokenProp]);
 
   if (!ready) {
-    return <div className="ba-form" aria-busy="true"><div className="ba-skeleton" /></div>;
+    return <div className={slot('ba-form')} aria-busy="true"><div className={slot('ba-skeleton')} /></div>;
   }
 
   if (!token) {
@@ -58,7 +60,7 @@ export function ResetPassword({ token: tokenProp, redirectTo, onReset }: ResetPa
 
   if (done) {
     return (
-      <p className="ba-muted" data-testid="reset-done">
+      <p className={slot('ba-muted')} data-testid="reset-done">
         {t('resetPassword.done')}
       </p>
     );
@@ -67,7 +69,7 @@ export function ResetPassword({ token: tokenProp, redirectTo, onReset }: ResetPa
   return (
     <form
       method="post"
-      className="ba-fields"
+      className={slot('ba-fields')}
       data-testid="reset-form"
       onSubmit={(e) => {
         e.preventDefault();
@@ -90,10 +92,10 @@ export function ResetPassword({ token: tokenProp, redirectTo, onReset }: ResetPa
         });
       }}
     >
-      <label className="ba-label">
+      <label className={slot('ba-label')}>
         {t('resetPassword.newPasswordLabel')}
         <input
-          className="ba-input"
+          className={slot('ba-input')}
           type="password"
           autoComplete="new-password"
           value={password}
@@ -106,10 +108,10 @@ export function ResetPassword({ token: tokenProp, redirectTo, onReset }: ResetPa
           required
         />
       </label>
-      <label className="ba-label">
+      <label className={slot('ba-label')}>
         {t('resetPassword.confirmPasswordLabel')}
         <input
-          className="ba-input"
+          className={slot('ba-input')}
           type="password"
           autoComplete="new-password"
           value={confirm}
@@ -123,7 +125,7 @@ export function ResetPassword({ token: tokenProp, redirectTo, onReset }: ResetPa
         />
       </label>
       <FormError>{error}</FormError>
-      <button className="ba-button" type="submit" disabled={pending} aria-busy={pending || undefined}>
+      <button className={slot('ba-button')} type="submit" disabled={pending} aria-busy={pending || undefined}>
         <Busy busy={pending} label={t('resetPassword.submitPending')}>{t('resetPassword.submit')}</Busy>
       </button>
     </form>

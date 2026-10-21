@@ -1,4 +1,6 @@
 'use client';
+import { useSlot } from '../elements';
+
 
 import * as React from 'react';
 
@@ -27,14 +29,15 @@ export function PrivacyCenter(props: PrivacyCenterProps = {}) {
 }
 
 function PrivacyCenterFallback({ className }: PrivacyCenterProps) {
+  const slot = useSlot();
   return (
     <section
-      className={['ba-profile-section ba-privacy-center', className].filter(Boolean).join(' ')}
+      className={slot(['ba-profile-section ba-privacy-center', className].filter(Boolean).join(' '))}
       aria-busy="true"
     >
-      <div className="ba-skeleton" />
-      <div className="ba-skeleton" />
-      <div className="ba-skeleton" />
+      <div className={slot('ba-skeleton')} />
+      <div className={slot('ba-skeleton')} />
+      <div className={slot('ba-skeleton')} />
     </section>
   );
 }

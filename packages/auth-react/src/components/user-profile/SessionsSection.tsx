@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useAccount, useSession } from '../../hooks';
 import { useLocale, useT } from '../../i18n';
@@ -8,6 +9,7 @@ import { useAccountResource } from './use-account-resource';
 import { FormError } from '../FormError';
 
 export function SessionsSection() {
+  const slot = useSlot();
   const t = useT();
   const locale = useLocale();
   const account = useAccount();
@@ -38,21 +40,21 @@ export function SessionsSection() {
   };
 
   return (
-    <section className="ba-profile-section" aria-labelledby={titleId}>
-      <header className="ba-profile-section-header">
-        <h2 id={titleId} className="ba-title">{t('userProfile.sessions.title')}</h2>
-        <p className="ba-muted">{t('userProfile.sessions.description')}</p>
+    <section className={slot('ba-profile-section')} aria-labelledby={titleId}>
+      <header className={slot('ba-profile-section-header')}>
+        <h2 id={titleId} className={slot('ba-title')}>{t('userProfile.sessions.title')}</h2>
+        <p className={slot('ba-muted')}>{t('userProfile.sessions.description')}</p>
       </header>
       {resource.data === null ? (
         resource.loading
-          ? <div className="ba-profile-list-skeleton" aria-busy="true"><div className="ba-skeleton" /><div className="ba-skeleton" /></div>
+          ? <div className={slot('ba-profile-list-skeleton')} aria-busy="true"><div className={slot('ba-skeleton')} /><div className={slot('ba-skeleton')} /></div>
           : null
       ) : (
-        <ul className="ba-profile-list">
+        <ul className={slot('ba-profile-list')}>
           {sessions.map((session) => {
             const label = session.userAgent?.trim() || t('userProfile.sessions.unknownDevice');
             return (
-              <li className="ba-profile-list-item" key={session.id}>
+              <li className={slot('ba-profile-list-item')} key={session.id}>
                 <span>
                   <strong>{label}</strong>
                   <small>
@@ -60,18 +62,18 @@ export function SessionsSection() {
                     {formatSessionTime(session.updatedAt, locale)}
                   </small>
                 </span>
-                <button className="ba-link-button ba-danger" type="button" disabled={mutation.pending} onClick={() => revoke(session.id, label)}>
+                <button className={slot('ba-link-button ba-danger')} type="button" disabled={mutation.pending} onClick={() => revoke(session.id, label)}>
                   {t('userProfile.sessions.revoke')}
                 </button>
               </li>
             );
           })}
-          {sessions.length === 0 && <li className="ba-muted">{t('userProfile.sessions.empty')}</li>}
+          {sessions.length === 0 && <li className={slot('ba-muted')}>{t('userProfile.sessions.empty')}</li>}
         </ul>
       )}
       {sessions.some((session) => session.id !== currentId) && (
         <button
-          className="ba-button ba-button-secondary ba-profile-submit"
+          className={slot('ba-button ba-button-secondary ba-profile-submit')}
           type="button"
           disabled={mutation.pending}
           onClick={() => {
@@ -86,9 +88,9 @@ export function SessionsSection() {
         </button>
       )}
       {resource.error && (
-        <div className="ba-profile-inline-error">
+        <div className={slot('ba-profile-inline-error')}>
           <FormError>{resource.error}</FormError>
-          <button className="ba-link-button" type="button" onClick={() => void resource.load()}>{t('userProfile.retry')}</button>
+          <button className={slot('ba-link-button')} type="button" onClick={() => void resource.load()}>{t('userProfile.retry')}</button>
         </div>
       )}
       <FormError>{mutation.error}</FormError>

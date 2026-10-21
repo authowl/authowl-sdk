@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../../elements';
 import * as React from 'react';
 import { useT } from '../../i18n';
 import { ModalSurface } from '../ModalSurface';
@@ -13,6 +14,7 @@ export function UserProfileModal({
   onClose: () => void;
   branding?: React.ReactNode;
 }) {
+  const slot = useSlot();
   const t = useT();
   const titleId = React.useId();
 
@@ -24,7 +26,7 @@ export function UserProfileModal({
       testId="user-profile-modal"
       onClose={onClose}
     >
-        <div className="ba-profile-modal-header">
+        <div className={slot('ba-profile-modal-header')}>
           <span>
             {branding}
             <h1 id={titleId}>{t('userProfile.title')}</h1>
@@ -32,7 +34,7 @@ export function UserProfileModal({
           </span>
           <button
             type="button"
-            className="ba-profile-close"
+            className={slot('ba-profile-close')}
             aria-label={t('userProfile.close')}
             onClick={onClose}
             autoFocus
@@ -48,7 +50,7 @@ export function UserProfileModal({
           </button>
         </div>
         {children}
-        <footer className="ba-profile-modal-footer">
+        <footer className={slot('ba-profile-modal-footer')}>
           <AuthOwlBadge />
         </footer>
     </ModalSurface>

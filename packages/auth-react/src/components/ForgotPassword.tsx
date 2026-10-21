@@ -1,4 +1,5 @@
 'use client';
+import { useSlot } from '../elements';
 import * as React from 'react';
 import { usePasswordReset } from '../hooks';
 import { useT, richMessage, Bidi } from '../i18n';
@@ -24,6 +25,7 @@ export type ForgotPasswordProps = {
  * so the UI must not reveal whether an account exists.
  */
 export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps) {
+  const slot = useSlot();
   const t = useT();
   const { requestPasswordReset } = usePasswordReset();
   const { pending, error, run } = useSubmitAction();
@@ -33,12 +35,12 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
 
   if (sent) {
     return (
-      <div className="ba-fields" data-testid="forgot-sent">
-        <p className="ba-muted">
+      <div className={slot('ba-fields')} data-testid="forgot-sent">
+        <p className={slot('ba-muted')}>
           {richMessage(t('forgotPassword.sent'), { email: <Bidi>{email}</Bidi> })}
         </p>
         {onBack && (
-          <button type="button" className="ba-link-button" onClick={onBack}>
+          <button type="button" className={slot('ba-link-button')} onClick={onBack}>
             {t('forgotPassword.backToSignIn')}
           </button>
         )}
@@ -49,7 +51,7 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
   return (
     <form
       method="post"
-      className="ba-fields"
+      className={slot('ba-fields')}
       data-testid="forgot-form"
       onSubmit={(e) => {
         e.preventDefault();
@@ -59,10 +61,10 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
         });
       }}
     >
-      <label className="ba-label">
+      <label className={slot('ba-label')}>
         {t('common.emailLabel')}
         <input
-          className="ba-input"
+          className={slot('ba-input')}
           type="email"
           autoComplete="email"
           value={email}
@@ -73,7 +75,7 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
       {authChallenge.control}
       <FormError>{error}</FormError>
       <button
-        className="ba-button"
+        className={slot('ba-button')}
         type="submit"
         disabled={pending || authChallenge.configPending}
         aria-busy={pending || undefined}
@@ -81,7 +83,7 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
         <Busy busy={pending} label={t('common.sending')}>{t('forgotPassword.submit')}</Busy>
       </button>
       {onBack && (
-        <button type="button" className="ba-link-button" onClick={onBack}>
+        <button type="button" className={slot('ba-link-button')} onClick={onBack}>
           {t('forgotPassword.backToSignIn')}
         </button>
       )}
