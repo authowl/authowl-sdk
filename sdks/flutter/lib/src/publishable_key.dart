@@ -3,8 +3,9 @@ library;
 
 import 'errors.dart';
 
-final RegExp _publishableKey =
-    RegExp(r'^(pk_(live|test))_([0-9a-fA-F-]{36})_([A-Za-z0-9]{20,})$');
+final RegExp _publishableKey = RegExp(
+  r'^(pk_(live|test))_(?:([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)_)?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})_([A-Za-z0-9]{20,})$',
+);
 final RegExp _secretKey = RegExp(r'^sk_', caseSensitive: false);
 
 /// The deployment a publishable key belongs to.
@@ -16,11 +17,13 @@ class PublishableKey {
     required this.prefix,
     required this.env,
     required this.projectId,
+    this.region,
   });
 
   final String prefix;
   final AuthOwlEnvironment env;
   final String projectId;
+  final String? region;
 }
 
 /// Validate a publishable key and extract its project id.
@@ -44,9 +47,11 @@ PublishableKey decodePublishableKey(String key) {
     );
   }
   final match = _publishableKey.firstMatch(key);
-  if (match == null) {
+  if (match == null ||
+      match.end != key.length ||
+      (match.group(3)?.length ?? 0) > 24) {
     throw const PublishableKeyException(
-      'publishableKey is malformed; expected pk_(live|test)_<uuid>_<base62>',
+      'publishableKey is malformed; expected pk_(live|test)_[<region>_]<uuid>_<base62>',
       PublishableKeyErrorReason.malformed,
     );
   }
@@ -59,6 +64,7 @@ PublishableKey decodePublishableKey(String key) {
     // `[0-9a-fA-F-]`, so an upper-case uuid is a VALID key, and returning it
     // verbatim yields an id that never matches the lowercase Postgres `uuid` the
     // server sends back or names its cookie after.
-    projectId: match.group(3)!.toLowerCase(),
+    projectId: match.group(4)!.toLowerCase(),
+    region: match.group(3)?.toLowerCase(),
   );
 }

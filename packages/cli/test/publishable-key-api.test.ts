@@ -20,8 +20,8 @@ function response(body: Record<string, unknown>, status = 200): Response {
 }
 
 describe("CLI publishable-key API client", () => {
-  it("issues only a validated publishable key", async () => {
-    const publishableKey = `pk_live_${projectId}_${"p".repeat(32)}`;
+  it.each(["", "eu-de_"])("issues a validated publishable key with region %s", async (region) => {
+    const publishableKey = `pk_live_${region}${projectId}_${"p".repeat(32)}`;
     await expect(
       issueCliPublishableKey(
         credential,
@@ -95,4 +95,14 @@ describe("CLI publishable-key API client", () => {
       }),
     ).rejects.toMatchObject({ code: "invalid_response" });
   });
+});
+
+it.each([
+  `pk_live_eu-de_22222222-2222-4222-8222-222222222222_${'p'.repeat(32)}`,
+  `pk_live_K_${projectId}_${'p'.repeat(32)}`,
+  `pk_live_eu-de_${projectId}_short`,
+])('rejects malformed or mismatched issued keys', async (key) => {
+  await expect(issueCliPublishableKey(credential, { projectId }, {
+    fetch: vi.fn<typeof fetch>().mockResolvedValue(response({ publishable_key: key }, 201)), now,
+  })).rejects.toMatchObject({ code: 'invalid_response' });
 });

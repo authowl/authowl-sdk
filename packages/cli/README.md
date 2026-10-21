@@ -56,7 +56,7 @@ uploaded. Set a project secret key with the `users:write` scope in the
 environment:
 
 ```bash
-export AUTHOWL_SECRET_KEY=sk_test_<project-id>_<random>
+export AUTHOWL_SECRET_KEY=sk_test_<region>_<project-id>_<random>
 ```
 
 Always run `--dry-run` first. `--project` must match the project encoded in the
@@ -102,3 +102,5 @@ Supported inputs:
 
 Sessions, MFA secrets, OAuth tokens, API secrets, and provider private keys are
 not migrated.
+
+Key issuance and import accept both legacy four-part keys and five-part keys with a region between the environment class and project id. Region does not change the configured API URL.

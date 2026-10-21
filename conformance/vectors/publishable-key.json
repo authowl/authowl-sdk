@@ -6,6 +6,7 @@
       "key": "pk_live_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
       "expect": {
         "ok": true,
+        "region": null,
         "prefix": "pk_live",
         "env": "live",
         "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
@@ -16,6 +17,7 @@
       "key": "pk_test_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
       "expect": {
         "ok": true,
+        "region": null,
         "prefix": "pk_test",
         "env": "test",
         "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
@@ -26,6 +28,7 @@
       "key": "pk_live_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0A1b2C3d4E5f6G7h8I9j0A1b2C3d4E5f6G7h8I9j0",
       "expect": {
         "ok": true,
+        "region": null,
         "prefix": "pk_live",
         "env": "live",
         "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
@@ -36,6 +39,7 @@
       "key": "pk_live_2F1C9A84-6B3D-4E57-9A10-5C8D7E2B4F60_A1b2C3d4E5f6G7h8I9j0",
       "expect": {
         "ok": true,
+        "region": null,
         "prefix": "pk_live",
         "env": "live",
         "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
@@ -119,6 +123,354 @@
       "expect": {
         "ok": false,
         "reason": "malformed"
+      }
+    },
+    {
+      "name": "region live",
+      "key": "pk_live_eu-de_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_live",
+        "env": "live",
+        "region": "eu-de",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
+      }
+    },
+    {
+      "name": "region test",
+      "key": "pk_test_eu-de_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_test",
+        "env": "test",
+        "region": "eu-de",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
+      }
+    },
+    {
+      "name": "region mixed uuid",
+      "key": "pk_live_eu-de_2F1C9A84-6B3D-4E57-9A10-5C8D7E2B4F60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_live",
+        "env": "live",
+        "region": "eu-de",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
+      }
+    },
+    {
+      "name": "region long tail",
+      "key": "pk_live_eu-de_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0A1b2C3d4E5f6G7h8I9j0A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_live",
+        "env": "live",
+        "region": "eu-de",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
+      }
+    },
+    {
+      "name": "region boundary",
+      "key": "pk_live_aaaaaaaaaaaaaaaaaaaaaaaa_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_live",
+        "env": "live",
+        "region": "aaaaaaaaaaaaaaaaaaaaaaaa",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
+      }
+    },
+    {
+      "name": "unknown region",
+      "key": "pk_live_xx-1_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_live",
+        "env": "live",
+        "region": "xx-1",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60"
+      }
+    },
+    {
+      "name": "invalid region ",
+      "key": "pk_live__2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "invalid region -eu",
+      "key": "pk_live_-eu_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "invalid region eu-",
+      "key": "pk_live_eu-_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "invalid region eu--de",
+      "key": "pk_live_eu--de_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "invalid region eu_de",
+      "key": "pk_live_eu_de_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "invalid region aaaaaaaaaaaaaaaaaaaaaaaaa",
+      "key": "pk_live_aaaaaaaaaaaaaaaaaaaaaaaaa_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "invalid region 2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60",
+      "key": "pk_live_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "invalid region K",
+      "key": "pk_live_K_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "invalid region eü",
+      "key": "pk_live_eü_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 0",
+      "key": "pk_live_eu-de_eu-de_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 1",
+      "key": "pk_live_eu-de_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 2",
+      "key": "pk_live_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_eu-de_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 3",
+      "key": "pk_live_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0\n",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 4",
+      "key": "pk_live_eu-de_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0\n",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 5",
+      "key": "pk_live_------------------------------------_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 6",
+      "key": "pk_live_x",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 7",
+      "key": "pk_test_change-me",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 8",
+      "key": "pk_live_change-me",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 9",
+      "key": "pk_test_not-a-uuid_secret",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 10",
+      "key": "pk_test_fixture",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "malformed boundary 11",
+      "key": "pk_live_00000000-0000-4000-8000-000000000000_PrefLightOnly",
+      "expect": {
+        "ok": false,
+        "reason": "malformed"
+      }
+    },
+    {
+      "name": "secret refusal 0",
+      "key": "sk_test_billow_e2e_bridge_fixture",
+      "expect": {
+        "ok": false,
+        "reason": "secret_key"
+      }
+    },
+    {
+      "name": "secret refusal 1",
+      "key": "sk_live_x",
+      "expect": {
+        "ok": false,
+        "reason": "secret_key"
+      }
+    },
+    {
+      "name": "secret refusal 2",
+      "key": "sk_live_example",
+      "expect": {
+        "ok": false,
+        "reason": "secret_key"
+      }
+    },
+    {
+      "name": "secret refusal 3",
+      "key": "sk_live_not-a-real-key",
+      "expect": {
+        "ok": false,
+        "reason": "secret_key"
+      }
+    },
+    {
+      "name": "secret refusal 4",
+      "key": "sk_test_billow_customer_profile",
+      "expect": {
+        "ok": false,
+        "reason": "secret_key"
+      }
+    },
+    {
+      "name": "secret refusal 5",
+      "key": "sk_live_eu-de_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_A1b2C3d4E5f6G7h8I9j0",
+      "expect": {
+        "ok": false,
+        "reason": "secret_key"
+      }
+    },
+    {
+      "name": "Hitsend test",
+      "key": "pk_test_00000000-0000-4000-8000-000000000000_AbCdEfGhIjKlMnOpQrSt",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_test",
+        "env": "test",
+        "projectId": "00000000-0000-4000-8000-000000000000",
+        "region": null
+      }
+    },
+    {
+      "name": "Hitsend live",
+      "key": "pk_live_00000000-0000-4000-8000-000000000000_AbCdEfGhIjKlMnOpQrSt",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_live",
+        "env": "live",
+        "projectId": "00000000-0000-4000-8000-000000000000",
+        "region": null
+      }
+    },
+    {
+      "name": "Billow",
+      "key": "pk_test_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_e2eaaaaaaaaaaaaaaaaaaaa",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_test",
+        "env": "test",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60",
+        "region": null
+      }
+    },
+    {
+      "name": "managed portal",
+      "key": "pk_live_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_live",
+        "env": "live",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60",
+        "region": null
+      }
+    },
+    {
+      "name": "dogfood",
+      "key": "pk_test_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_publicFixtureValue00",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_test",
+        "env": "test",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60",
+        "region": null
+      }
+    },
+    {
+      "name": "minted",
+      "key": "pk_live_2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60_ABCDEFGHJKLMNPQRSTUVWXYZabcdefghij",
+      "expect": {
+        "ok": true,
+        "prefix": "pk_live",
+        "env": "live",
+        "projectId": "2f1c9a84-6b3d-4e57-9a10-5c8d7e2b4f60",
+        "region": null
       }
     }
   ]

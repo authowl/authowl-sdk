@@ -739,17 +739,17 @@ const keyCases = [
   {
     name: 'live publishable key',
     key: `pk_live_${PROJECT_ID}_A1b2C3d4E5f6G7h8I9j0`,
-    expect: { ok: true, prefix: 'pk_live', env: 'live', projectId: PROJECT_ID },
+    expect: { ok: true, region: null, prefix: 'pk_live', env: 'live', projectId: PROJECT_ID },
   },
   {
     name: 'test publishable key',
     key: `pk_test_${PROJECT_ID}_A1b2C3d4E5f6G7h8I9j0`,
-    expect: { ok: true, prefix: 'pk_test', env: 'test', projectId: PROJECT_ID },
+    expect: { ok: true, region: null, prefix: 'pk_test', env: 'test', projectId: PROJECT_ID },
   },
   {
     name: 'a longer random suffix is accepted',
     key: `pk_live_${PROJECT_ID}_${'A1b2C3d4E5f6G7h8I9j0'.repeat(3)}`,
-    expect: { ok: true, prefix: 'pk_live', env: 'live', projectId: PROJECT_ID },
+    expect: { ok: true, region: null, prefix: 'pk_live', env: 'live', projectId: PROJECT_ID },
   },
   // A case-mangled uuid is a VALID key in every SDK's grammar, so the decoder
   // must canonicalise rather than hand back what it captured. The id is compared
@@ -760,7 +760,7 @@ const keyCases = [
   {
     name: 'a case-mangled uuid decodes to the canonical lowercase project id',
     key: `pk_live_${PROJECT_ID_MIXED_CASE}_A1b2C3d4E5f6G7h8I9j0`,
-    expect: { ok: true, prefix: 'pk_live', env: 'live', projectId: PROJECT_ID },
+    expect: { ok: true, region: null, prefix: 'pk_live', env: 'live', projectId: PROJECT_ID },
   },
   {
     name: 'a secret key is refused outright',
@@ -784,6 +784,35 @@ const keyCases = [
   { name: 'a suffix that is too short', key: `pk_live_${PROJECT_ID}_short`, expect: { ok: false, reason: 'malformed' } },
   { name: 'a missing suffix', key: `pk_live_${PROJECT_ID}`, expect: { ok: false, reason: 'malformed' } },
   { name: 'a suffix with a non-base62 character', key: `pk_live_${PROJECT_ID}_A1b2C3d4E5f6G7h8I9j-`, expect: { ok: false, reason: 'malformed' } },
+  ...[
+    ['region live', 'live', 'eu-de', PROJECT_ID, 'A1b2C3d4E5f6G7h8I9j0'],
+    ['region test', 'test', 'eu-de', PROJECT_ID, 'A1b2C3d4E5f6G7h8I9j0'],
+    ['region mixed uuid', 'live', 'eu-de', PROJECT_ID_MIXED_CASE, 'A1b2C3d4E5f6G7h8I9j0'],
+    ['region long tail', 'live', 'eu-de', PROJECT_ID, 'A1b2C3d4E5f6G7h8I9j0'.repeat(3)],
+    ['region boundary', 'live', 'a'.repeat(24), PROJECT_ID, 'A1b2C3d4E5f6G7h8I9j0'],
+    ['unknown region', 'live', 'xx-1', PROJECT_ID, 'A1b2C3d4E5f6G7h8I9j0'],
+  ].map(([name, env, region, id, tail]) => ({ name, key: `pk_${env}_${region}_${id}_${tail}`, expect: { ok: true, prefix: `pk_${env}`, env, region, projectId: PROJECT_ID } })),
+  ...['', '-eu', 'eu-', 'eu--de', 'eu_de', 'a'.repeat(25), PROJECT_ID, 'K', 'eü'].map((region) => ({ name: `invalid region ${region}`, key: `pk_live_${region}_${PROJECT_ID}_A1b2C3d4E5f6G7h8I9j0`, expect: { ok: false, reason: 'malformed' } })),
+  ...[
+    `pk_live_eu-de_eu-de_${PROJECT_ID}_A1b2C3d4E5f6G7h8I9j0`,
+    'pk_live_eu-de_A1b2C3d4E5f6G7h8I9j0',
+    `pk_live_${PROJECT_ID}_eu-de_A1b2C3d4E5f6G7h8I9j0`,
+    `pk_live_${PROJECT_ID}_A1b2C3d4E5f6G7h8I9j0\n`,
+    `pk_live_eu-de_${PROJECT_ID}_A1b2C3d4E5f6G7h8I9j0\n`,
+    'pk_live_------------------------------------_A1b2C3d4E5f6G7h8I9j0',
+    'pk_live_x', 'pk_test_change-me', 'pk_live_change-me', 'pk_test_not-a-uuid_secret', 'pk_test_fixture',
+    'pk_live_00000000-0000-4000-8000-000000000000_PrefLightOnly',
+  ].map((key, i) => ({ name: `malformed boundary ${i}`, key, expect: { ok: false, reason: 'malformed' } })),
+  ...['sk_test_billow_e2e_bridge_fixture', 'sk_live_x', 'sk_live_example', 'sk_live_not-a-real-key', 'sk_test_billow_customer_profile', `sk_live_eu-de_${PROJECT_ID}_A1b2C3d4E5f6G7h8I9j0`].map((key, i) => ({ name: `secret refusal ${i}`, key, expect: { ok: false, reason: 'secret_key' } })),
+  ...[
+    ['Hitsend test', 'test', '00000000-0000-4000-8000-000000000000', 'AbCdEfGhIjKlMnOpQrSt'],
+    ['Hitsend live', 'live', '00000000-0000-4000-8000-000000000000', 'AbCdEfGhIjKlMnOpQrSt'],
+    ['Billow', 'test', PROJECT_ID, 'e2eaaaaaaaaaaaaaaaaaaaa'],
+    ['managed portal', 'live', PROJECT_ID, 'a'.repeat(64)],
+    ['dogfood', 'test', PROJECT_ID, 'publicFixtureValue00'],
+    ['minted', 'live', PROJECT_ID, 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghij'],
+  ].map(([name, env, id, tail]) => ({ name, key: `pk_${env}_${id}_${tail}`, expect: { ok: true, prefix: `pk_${env}`, env, projectId: id, region: null } })),
+
 ];
 
 // ---------------------------------------------------------------------------

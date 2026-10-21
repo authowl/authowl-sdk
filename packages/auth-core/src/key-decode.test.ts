@@ -31,7 +31,7 @@ describe('decodePublishableKey prefix and env case', () => {
     ['pk_LIVE', `pk_LIVE_${PROJECT_ID}_${SUFFIX}`, 'pk_live', 'live'],
     ['PK_Live', `PK_Live_${PROJECT_ID}_${SUFFIX}`, 'pk_live', 'live'],
   ])('canonicalises a %s key', (_label, key, prefix, env) => {
-    expect(decodePublishableKey(key)).toEqual({ prefix, env, projectId: PROJECT_ID });
+    expect(decodePublishableKey(key)).toEqual({ prefix, env, projectId: PROJECT_ID, region: null });
   });
 
   it('reports the same env for a key that differs only in prefix case', () => {
@@ -41,4 +41,8 @@ describe('decodePublishableKey prefix and env case', () => {
       decodePublishableKey(`pk_test_${PROJECT_ID}_${SUFFIX}`).env,
     );
   });
+});
+
+it('canonicalises an ASCII uppercase region', () => {
+  expect(decodePublishableKey(`pk_LIVE_EU-DE_${PROJECT_ID}_${SUFFIX}`)).toEqual({ prefix: 'pk_live', env: 'live', projectId: PROJECT_ID, region: 'eu-de' });
 });

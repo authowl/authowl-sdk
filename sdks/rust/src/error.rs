@@ -92,7 +92,7 @@ pub enum KeyError {
     /// compromises the whole project, so the fix is to rotate it rather than
     /// correct a typo, and callers should be able to branch on that.
     SecretKeySupplied,
-    /// The key did not match `pk_(live|test)_<uuid>_<base62>`.
+    /// The key did not match `pk_(live|test)_[<region>_]<uuid>_<base62>`.
     Malformed,
 }
 
@@ -105,7 +105,7 @@ impl fmt::Display for KeyError {
                  never embed secret keys in client code",
             ),
             Self::Malformed => f.write_str(
-                "authowl: publishable key is malformed; expected pk_(live|test)_<uuid>_<base62>",
+                "authowl: publishable key is malformed; expected pk_(live|test)_[<region>_]<uuid>_<base62>",
             ),
         }
     }

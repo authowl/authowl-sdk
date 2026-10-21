@@ -1,3 +1,4 @@
+import { parseApiKey } from "./key-format";
 import {
   invalidCliResponse,
   isIsoDate,
@@ -34,13 +35,9 @@ export async function issueCliPublishableKey(
     dependencies,
   );
   const key = body.publishable_key;
-  const prefixes = [
-    `pk_live_${input.projectId}_`,
-    `pk_test_${input.projectId}_`,
-  ];
   if (typeof key !== "string") throw invalidCliResponse();
-  const prefix = prefixes.find((candidate) => key.startsWith(candidate));
-  if (!prefix || !/^[A-Za-z0-9]+$/.test(key.slice(prefix.length))) {
+  const parsed = parseApiKey(key);
+  if (!parsed || parsed.kind !== "pk" || parsed.projectId !== input.projectId.toLowerCase()) {
     throw invalidCliResponse();
   }
   return key;

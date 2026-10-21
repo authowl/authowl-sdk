@@ -309,3 +309,5 @@ See the full integration guide in the AuthOwl app repo (`INTEGRATION.md`).
 ## License
 
 MIT
+
+API keys accept both `{pk|sk}_{live|test}_<uuid>_<base62>` and `{pk|sk}_{live|test}_<region>_<uuid>_<base62>`. Regions are ASCII alphanumeric groups separated by single hyphens, at most 24 characters; tails contain at least 20 ASCII alphanumeric characters. `decodePublishableKey` exposes `region: string | null`, lowercases the region and UUID, and refuses secret keys. Region is a hint and does not change routing or the explicit `apiUrl`.

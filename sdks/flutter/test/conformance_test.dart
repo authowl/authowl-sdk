@@ -65,6 +65,7 @@ void main() {
           expect(decoded.prefix, expected['prefix']);
           expect(decoded.env.name, expected['env']);
           expect(decoded.projectId, expected['projectId']);
+          expect(decoded.region, expected['region']);
           return;
         }
 

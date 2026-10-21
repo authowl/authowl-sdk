@@ -157,6 +157,7 @@ def test_publishable_key(case: dict[str, Any]) -> None:
         assert decoded.prefix == expected["prefix"]
         assert decoded.env == expected["env"]
         assert decoded.project_id == expected["projectId"]
+        assert decoded.region == expected["region"]
         return
 
     # Collapse the raised type to the portable reason every SDK reports.
