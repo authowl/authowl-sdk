@@ -3,7 +3,6 @@ import React from 'react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { SignUp } from '@authowl/react';
 import { expectStoryMatrix } from './matrix';
-import { card } from './surface';
 
 // The preview fixture enables password registration plus Google/GitHub social,
 // so the default surface renders the full registration form and its dividers.
@@ -12,11 +11,7 @@ const meta = {
   component: SignUp,
   // A sign-up surface is shown to signed-out visitors.
   parameters: { authowl: { signedIn: false } },
-  render: (args) => (
-    <div style={card}>
-      <SignUp {...args} />
-    </div>
-  ),
+  render: (args) => <SignUp {...args} />,
 } satisfies Meta<typeof SignUp>;
 
 export default meta;

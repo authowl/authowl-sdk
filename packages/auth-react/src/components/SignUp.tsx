@@ -167,7 +167,7 @@ export function SignUp({
 
   if (isLoading) {
     return (
-      <div className={slot('ba-form ba-card')} data-testid="signup-loading" aria-busy="true">
+      <div key="signup-loading" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-loading" aria-busy="true">
         <div className={slot('ba-skeleton')} />
         <div className={slot('ba-skeleton')} />
       </div>
@@ -180,7 +180,7 @@ export function SignUp({
 
   if (mfaEnrollment !== 'clear') {
     return (
-      <div className={slot('ba-form ba-card')} data-testid="signup-mfa-enrolment" aria-busy={mfaEnrollment === 'confirming'}>
+      <div key="signup-mfa-enrolment" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-mfa-enrolment" aria-busy={mfaEnrollment === 'confirming'}>
         {showBranding ? <AuthOwlBranding /> : null}
         {mfaEnrollment === 'pending' ? <MfaEnrollmentStep /> : <div className={slot('ba-skeleton')} />}
         <AuthOwlBadge force={showBadge} />
@@ -194,7 +194,7 @@ export function SignUp({
 
   if (pendingEmail) {
     return (
-      <div className={slot('ba-form ba-card')} data-testid="signup-verify-pending">
+      <div key="signup-verify-pending" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-verify-pending">
         {showBranding ? <AuthOwlBranding /> : null}
         <VerificationPending
           email={pendingEmail}
@@ -239,7 +239,7 @@ export function SignUp({
 
   if (completeWithPasskey) {
     return (
-      <div className={slot('ba-form ba-card')} data-testid="signup-passkey-step">
+      <div key="signup-passkey-step" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-passkey-step">
         {showBranding ? <AuthOwlBranding /> : null}
         <PasskeyOffer variant="sign-up" onComplete={finishSignUp} />
         <AuthOwlBadge force={showBadge} />
@@ -248,9 +248,12 @@ export function SignUp({
   }
 
   return (
-    <div className={slot('ba-form ba-card')} data-testid="signup-form">
-      {showBranding ? <AuthOwlBranding /> : null}
-      <h2 className={slot('ba-title')}>{t('signUp.title')}</h2>
+    <div key="signup-form" className={slot('ba-form ba-card ba-auth-card ba-step')} data-testid="signup-form">
+      <header className={slot('ba-auth-header')}>
+        {showBranding ? <AuthOwlBranding /> : null}
+        <h2 className={slot('ba-title')}>{t('signUp.title')}</h2>
+        <p className={slot('ba-subtitle')}>{t('signUp.subtitle')}</p>
+      </header>
       <InvitationBanner />
       <SocialButtons providers={social} />
       {showPassword && social.length > 0 && (
@@ -274,7 +277,7 @@ export function SignUp({
             </label>
           )}
           {capabilities.firstLastName && (
-            <>
+            <div className={slot('ba-name-row')}>
               <label className={slot('ba-label')}>
                 {t('signUp.firstNameLabel')}
                 <input
@@ -299,7 +302,7 @@ export function SignUp({
                   autoComplete="family-name"
                 />
               </label>
-            </>
+            </div>
           )}
           {capabilities.collectUsername && (
             <label className={slot('ba-label')}>

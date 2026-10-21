@@ -121,17 +121,17 @@
 :where(.authowl-root) .ao-divider::after { margin-inline-start: 8px; }
 
 /* Loading skeleton */
-:where(.authowl-root) .ao-skeleton { height: 38px; border-radius: var(--ao-border-radius, 6px); background: linear-gradient(90deg, var(--ba-skeleton-a, var(--ao-skeleton-a)) 25%, var(--ba-skeleton-b, var(--ao-skeleton-b)) 37%, var(--ba-skeleton-a, var(--ao-skeleton-a)) 63%); background-size: 400% 100%; animation: ba-shimmer 1.4s ease infinite; }
+:where(.authowl-root) .ao-skeleton { height: 38px; border-radius: var(--ao-border-radius, 6px); background: linear-gradient(90deg, var(--ba-skeleton-a, var(--ao-skeleton-a)) 25%, var(--ba-skeleton-b, var(--ao-skeleton-b)) 37%, var(--ba-skeleton-a, var(--ao-skeleton-a)) 63%); background-size: 400% 100%; animation: ba-shimmer calc(var(--ao-duration-slow) * 4) ease infinite; }
 @keyframes ba-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 
 /* In-flight spinner (action buttons via <Busy>, session bootstrap via
    <AuthLoading>). `currentColor` picks up the right hue on filled/secondary/
    social buttons; `border-inline-end-color` + rotation is RTL-safe with no
    [dir] override. It sits inline in the button's existing flex gap. */
-:where(.authowl-root) .ao-spinner { width: 14px; height: 14px; flex: none; border: 2px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; animation: ba-spin 0.6s linear infinite; }
+:where(.authowl-root) .ao-spinner { width: 14px; height: 14px; flex: none; border: 2px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; animation: ba-spin calc(var(--ao-duration-slow) * 2) linear infinite; }
 @keyframes ba-spin { to { transform: rotate(360deg); } }
 :where(.authowl-root) .ao-auth-loading { display: flex; align-items: center; justify-content: center; padding: 24px; color: var(--ba-muted, var(--ao-muted)); }
-@media (prefers-reduced-motion: reduce) { :where(.authowl-root) .ao-spinner { animation-duration: 1.6s; } :where(.authowl-root) .ao-skeleton { animation: none; } }
+@media (prefers-reduced-motion: reduce) { :where(.authowl-root) .ao-spinner { animation: none; } :where(.authowl-root) .ao-skeleton { animation: none; } }
 
 :where(.authowl-root) .ao-user-button { position: relative; display: inline-block; }
 :where(.authowl-root) .ao-user-button-trigger { background: none; border: 0; padding: 0; cursor: pointer; }
@@ -369,3 +369,67 @@
 
 /* Only override native control fonts when the host actually supplies a font. */
 .authowl-root[style*="--ao-font-family:"] :is(.ao-input, .ao-button, .ao-social-button, .ao-link-button, .ao-profile button, .ao-profile input) { font-family: var(--ao-font-family); }
+
+/* AO-58 authentication surfaces. Hosts can replace the shell through elements. */
+:where(.authowl-root) .ao-auth-card { box-sizing: border-box; width: 400px; max-width: 100%; padding: 28px; gap: 18px; border: 1px solid var(--ba-border, var(--ao-border)); border-radius: var(--ao-border-radius, var(--ao-radius-xl)); background: var(--ba-surface, var(--ao-surface)); box-shadow: 0 12px 32px var(--ao-shadow-dialog-ink); }
+:where(.authowl-root) .ao-auth-card .ao-title { font-size: 18px; line-height: 24px; margin: 0; letter-spacing: -.01em; }
+:where(.authowl-root) .ao-auth-card .ao-subtitle { font-size: 13px; line-height: 1.5; margin: -10px 0 0; color: var(--ba-muted, var(--ao-muted)); }
+:where(.authowl-root) .ao-auth-card .ao-branding { margin: 0; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; }
+:where(.authowl-root) .ao-auth-card .ao-fields { gap: 14px; }
+:where(.authowl-root) .ao-auth-card :is(.ao-input, .ao-button, .ao-social-button) { box-sizing: border-box; min-width: 0; width: 100%; height: var(--ao-control-height, 40px); border-radius: var(--ao-border-radius, 10px); }
+:where(.authowl-root) .ao-auth-card .ao-input { padding-inline: 12px; }
+:where(.authowl-root) .ao-auth-card .ao-label { gap: 6px; font-weight: 500; }
+:where(.authowl-root) .ao-auth-card .ao-social { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+:where(.authowl-root) .ao-auth-card .ao-social-button { position: relative; font-size: 13px; }
+:where(.authowl-root) .ao-auth-card .ao-social > .ao-error { grid-column: 1 / -1; }
+:where(.authowl-root) .ao-auth-card .ao-badge { align-self: stretch; justify-content: center; border-block-start: 1px solid var(--ba-divider, var(--ao-divider)); padding-block-start: 16px; margin: 0; font-size: 11px; }
+:where(.authowl-root) .ao-last-used { position: absolute; inset-block-start: -8px; inset-inline-end: 8px; border: 1px solid var(--ao-border); border-radius: 6px; padding: 1px 5px; background: var(--ao-surface); color: var(--ao-muted); font-size: 9px; }
+:where(.authowl-root) .ao-method-tabs { display: grid; position: relative; padding: 4px; border-radius: 10px; background: var(--ao-hover); }
+:where(.authowl-root) .ao-method-tab { z-index: 1; height: 32px; padding-inline: 4px; border: 0; border-radius: 7px; background: transparent; color: var(--ao-muted); font: inherit; font-size: 12px; cursor: pointer; }
+:where(.authowl-root) .ao-method-tab[aria-selected=true] { color: var(--ao-fg); }
+:where(.authowl-root) .ao-method-tab:focus-visible { outline: 2px solid var(--ao-accent); outline-offset: 1px; }
+:where(.authowl-root) .ao-tab-indicator { position: absolute; height: 32px; border-radius: 7px; background: var(--ao-surface); box-shadow: 0 1px 3px var(--ao-shadow-dialog-ink); transition: inset-inline-start var(--ao-duration-base), inset-block-start var(--ao-duration-base); }
+:where(.authowl-root) .ao-step { animation: ao-in var(--ao-duration-base) both; }
+:where(.authowl-root) .ao-auth-card .ao-error { padding: 10px 12px; border: 1px solid var(--ao-danger-text); border-radius: 10px; background: color-mix(in srgb, var(--ao-danger-text) 8%, var(--ao-surface)); animation: ao-shake var(--ao-duration-slow) both; }
+:where(.authowl-root) .ao-auth-card :is(.ao-button, .ao-social-button) { transition: transform var(--ao-duration-fast), background var(--ao-duration-fast); -webkit-tap-highlight-color: transparent; }
+:where(.authowl-root) .ao-auth-card :is(.ao-button, .ao-social-button):active:not(:disabled) { transform: scale(.98); }
+:where(.authowl-root) .ao-busy-dots { display: none; gap: 4px; }
+:where(.authowl-root) .ao-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: ao-dot calc(var(--ao-duration-slow) * 3) infinite; }
+:where(.authowl-root) .ao-dot:nth-child(2) { animation-delay: var(--ao-duration-fast); }
+:where(.authowl-root) .ao-dot:nth-child(3) { animation-delay: calc(var(--ao-duration-fast) * 2); }
+:where(.authowl-root) .ao-icon-back { display: inline-block; }
+[dir=rtl] .ao-icon-back { transform: scaleX(-1); }
+@keyframes ao-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes ao-shake { 0%, 100% { transform: none; } 25% { transform: translateX(-3px); } 50% { transform: translateX(3px); } 75% { transform: translateX(-1.5px); } }
+@keyframes ao-dot { 0%, 100% { opacity: .25; transform: none; } 40% { opacity: 1; transform: translateY(-2px); } }
+@media (max-width: 480px) {
+  :where(.authowl-root) .ao-auth-card { width: 100%; max-width: none; margin-block-start: auto; padding: 24px 24px max(24px, env(safe-area-inset-bottom)); border-end-start-radius: 0; border-end-end-radius: 0; border-block-end: 0; }
+  :where(.authowl-root) .ao-auth-card :is(.ao-input, .ao-button, .ao-social-button) { height: var(--ao-control-height, 48px); min-height: 48px; }
+  :where(.authowl-root) .ao-auth-card .ao-input { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.authowl-root) .ao-busy-dots { display: none; }
+  :where(.authowl-root) .ao-dot { animation: none; }
+}
+:where(.authowl-root) .ao-auth-card .ao-busy-dots { display: inline-flex; }
+:where(.authowl-root) .ao-auth-card .ao-spinner { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  :where(.authowl-root) .ao-spinner, :where(.authowl-root) .ao-skeleton { animation: none; }
+  :where(.authowl-root) .ao-auth-card .ao-busy-dots { display: none; }
+}
+@media (max-width: 480px) {
+  :where(.authowl-root):has(> .ao-auth-card), :where(.authowl-root) :has(> .ao-auth-card) { display: flex; flex-direction: column; box-sizing: border-box; min-height: 100dvh; padding: 0; }
+}
+
+:where(.authowl-root) .ao-name-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
+:where(.authowl-root) .ao-auth-header { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; row-gap: 2px; align-items: center; }
+:where(.authowl-root) .ao-auth-header > .ao-branding { grid-row: 1 / 3; max-width: 80px; flex-direction: column; gap: 4px; }
+:where(.authowl-root) .ao-auth-header .ao-branding-identity { flex-direction: column; gap: 2px; max-width: 100%; }
+:where(.authowl-root) .ao-auth-header .ao-branding-name { max-width: 100%; font-size: 10px; }
+:where(.authowl-root) .ao-auth-header .ao-branding-logo { max-width: 80px; height: 36px; }
+:where(.authowl-root) .ao-auth-header .ao-branding-fallback { width: 36px; height: 36px; flex-basis: 36px; }
+:where(.authowl-root) .ao-auth-header .ao-environment { font-size: 9px; padding: 2px 4px; }
+:where(.authowl-root) .ao-auth-header > :is(.ao-title, .ao-subtitle) { grid-column: 2; margin: 0; }
+:where(.authowl-root) .ao-auth-header:not(:has(.ao-branding)) { grid-template-columns: minmax(0, 1fr); }
+:where(.authowl-root) .ao-auth-header:not(:has(.ao-branding)) > :is(.ao-title, .ao-subtitle) { grid-column: 1; }

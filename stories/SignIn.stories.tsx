@@ -3,7 +3,6 @@ import React from 'react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { SignIn } from '@authowl/react';
 import { expectStoryMatrix } from './matrix';
-import { card } from './surface';
 import type { PreviewSignInMethod } from '../examples/vite-react/src/PreviewAuth';
 
 // The preview fixture enables password + magic-link + passkey and Google/GitHub
@@ -13,14 +12,7 @@ const meta = {
   component: SignIn,
   // A sign-in surface is shown to signed-out visitors.
   parameters: { authowl: { signedIn: false } },
-  // The drop-in forms are designed to sit on a surface card (like the account
-  // and organization stories), which is also where their accent/link colors
-  // meet contrast - the same framing consumers use.
-  render: (args) => (
-    <div style={card}>
-      <SignIn {...args} />
-    </div>
-  ),
+  render: (args) => <SignIn {...args} />,
 } satisfies Meta<typeof SignIn>;
 
 export default meta;

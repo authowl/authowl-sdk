@@ -241,7 +241,7 @@ describe('SignIn under required MFA', () => {
 
     expect(screen.getByTestId('authowl-config-error')).toBeTruthy();
     expect(screen.queryByTestId('signin-form')).toBeNull();
-    expect(screen.queryByLabelText('common.passwordLabel')).toBeNull();
+    expect(document.querySelector('input[type=password]')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'publicConfig.retry' }));
     expect(mocks.retryPublicConfig).toHaveBeenCalledOnce();
@@ -349,9 +349,11 @@ describe('SignIn "Continue with SSO"', () => {
     Object.assign(mocks.config, { enabledMethods: ['password', 'sso'] });
     render(<SignIn />);
 
-    // One shared email field; SSO is an outlined alternate button.
+    // One shared email field stays outside the active panel.
     expect(screen.getAllByLabelText('common.emailLabel')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('tab', { name: 'signIn.tab.sso' }));
     expect(screen.getByRole('button', { name: 'sso.continueWith' })).toBeDefined();
+    expect(document.querySelector('input[type=password]')).toBeNull();
   });
 
   it('render-gates SSO off when the project has not enabled the sso method', () => {
@@ -381,19 +383,20 @@ describe('SignIn "Continue with SSO"', () => {
   });
 
   it('spins only the pressed button, not the idle alternates', async () => {
-    // password + sso: pressing SSO must busy ONLY the SSO alternate (inFlight targeting).
+    // Switching to SSO dispatches the shared form through the active method.
     Object.assign(mocks.config, { enabledMethods: ['password', 'sso'] });
     const { container } = render(<SignIn />);
 
     fireEvent.change(screen.getByLabelText('common.emailLabel'), {
       target: { value: 'user@acme.test' },
     });
+    fireEvent.click(screen.getByRole('tab', { name: 'signIn.tab.sso' }));
     fireEvent.click(screen.getByRole('button', { name: 'sso.continueWith' }));
 
     await waitFor(() => expect(mocks.signInSso).toHaveBeenCalled());
     // Exactly one spinner (the SSO button); the password submit stays idle.
     await waitFor(() => expect(container.querySelectorAll('.ba-spinner')).toHaveLength(1));
-    expect(screen.getByRole('button', { name: 'signIn.submit' }).getAttribute('aria-busy')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'common.passwordLabel' }).getAttribute('aria-busy')).toBeNull();
   });
 
   it('maps a bare 404 from the SSO endpoint to the "no connection" message', async () => {

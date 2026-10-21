@@ -12,8 +12,6 @@ export async function captureStory(storyId: string) {
   const style = document.createElement('style');
   style.textContent = `
     *, *::before, *::after {
-      animation: none !important;
-      transition: none !important;
       caret-color: transparent !important;
     }
   `;
@@ -31,7 +29,7 @@ export async function captureStory(storyId: string) {
       // glyph edge differently (measured: 16 pixels on one story); 64 pixels of
       // 691,200 absorbs that while a 1px layout change still moves thousands.
       comparatorOptions: { allowedMismatchedPixels: 64, threshold, includeAA: true },
-      screenshotOptions: { animations: 'disabled', caret: 'hide' },
+      screenshotOptions: { caret: 'hide' },
     });
   } finally {
     style.remove();

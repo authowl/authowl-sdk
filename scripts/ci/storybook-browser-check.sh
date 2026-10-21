@@ -46,7 +46,8 @@ for project in \
   storybook-en-light \
   storybook-en-dark \
   storybook-ar-light \
-  storybook-ar-dark; do
+  storybook-ar-dark \
+  storybook-en-light-mobile; do
   printf 'storybook-browser-check: %s\n' "$project"
   while IFS= read -r story; do
     run_story "$project" "$story" "$@"

@@ -1,0 +1,4 @@
+.authowl-story-surface { padding: 40px 20px; }
+@media (max-width: 480px) {
+  .authowl-story-surface:has(> .ao-auth-card) { padding: 0; display: flex; flex-direction: column; }
+}

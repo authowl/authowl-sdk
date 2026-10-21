@@ -2,7 +2,7 @@
 import { useSlot } from '../elements';
 import * as React from 'react';
 import { useSignIn } from '../hooks';
-import { useSignInMethodRecorder } from '../last-used-method';
+import { useSignInMethodRecorder, useLastUsedSignInMethod } from '../last-used-method';
 import { useT, useServerError } from '../i18n';
 import { ProviderIcon } from './social-icons';
 import { Busy } from './Spinner';
@@ -41,6 +41,7 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
   const t = useT();
   const toServerError = useServerError();
   const { signInSocial } = useSignIn();
+  const lastUsed = useLastUsedSignInMethod();
   const recordSignInMethod = useSignInMethodRecorder();
   const [pending, setPending] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -69,6 +70,7 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
         <button
           key={provider}
           type="button"
+          aria-label={pending === provider ? t('social.redirecting') : t('social.continueWith', { provider: label(provider) })}
           className={slot('ba-social-button')}
           disabled={pending !== null}
           aria-busy={pending === provider || undefined}
@@ -109,8 +111,9 @@ export function SocialButtons({ providers, callbackURL }: SocialButtonsProps) {
         >
           <Busy busy={pending === provider} label={t('social.redirecting')}>
             <ProviderIcon provider={provider} />
-            {t('social.continueWith', { provider: label(provider) })}
+            {label(provider)}
           </Busy>
+        {lastUsed === `social:${provider}` && <span className={slot('ba-last-used')}>{t('signIn.lastUsed')}</span>}
         </button>
       ))}
       <FormError>{error}</FormError>

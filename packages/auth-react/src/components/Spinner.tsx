@@ -34,9 +34,11 @@ export type BusyProps = {
  * `<button>` element itself (which stays per-site). Internal to the package.
  */
 export function Busy({ busy, label, children }: BusyProps) {
+  const slot = useSlot();
   return busy ? (
     <>
       <Spinner />
+      <span className={slot('ba-busy-dots')} aria-hidden="true">{[0, 1, 2].map((dot) => <span key={dot} className={slot('ba-dot')} />)}</span>
       {label}
     </>
   ) : (

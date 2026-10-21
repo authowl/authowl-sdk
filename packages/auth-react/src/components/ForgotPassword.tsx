@@ -41,7 +41,7 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
         </p>
         {onBack && (
           <button type="button" className={slot('ba-link-button')} onClick={onBack}>
-            {t('forgotPassword.backToSignIn')}
+            <span className={slot('ba-icon-back')} aria-hidden="true">←</span> {t('forgotPassword.backToSignIn')}
           </button>
         )}
       </div>
@@ -84,7 +84,7 @@ export function ForgotPassword({ resetPasswordUrl, onBack }: ForgotPasswordProps
       </button>
       {onBack && (
         <button type="button" className={slot('ba-link-button')} onClick={onBack}>
-          {t('forgotPassword.backToSignIn')}
+          <span className={slot('ba-icon-back')} aria-hidden="true">←</span> {t('forgotPassword.backToSignIn')}
         </button>
       )}
     </form>

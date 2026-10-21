@@ -13,8 +13,8 @@ if (screenshots && updating && (process.platform !== 'linux' || process.env.AUTH
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function storybookProject(locale: 'en' | 'ar', theme: 'light' | 'dark') {
-  const projectName = `storybook-${locale}-${theme}`;
+function storybookProject(locale: 'en' | 'ar', theme: 'light' | 'dark', viewport = { width: 1280, height: 900 }) {
+  const projectName = `storybook-${locale}-${theme}${viewport.width <= 480 ? '-mobile' : ''}`;
   return {
     extends: true as const,
     cacheDir: path.join(dirname, 'node_modules', '.vite', projectName),
@@ -37,7 +37,7 @@ function storybookProject(locale: 'en' | 'ar', theme: 'light' | 'dark') {
       browser: {
         enabled: true,
         headless: true,
-        viewport: { width: 1280, height: 900 },
+        viewport,
         expect: {
           toMatchScreenshot: {
             // Keep each locale/theme independent in Vitest's default layout.
@@ -46,7 +46,7 @@ function storybookProject(locale: 'en' | 'ar', theme: 'light' | 'dark') {
           } satisfies ToMatchScreenshotOptions,
         },
         provider: playwright({
-          contextOptions: { timezoneId: 'UTC', locale: 'en-US', deviceScaleFactor: 1 },
+          contextOptions: { reducedMotion: 'reduce', timezoneId: 'UTC', locale: 'en-US', deviceScaleFactor: 1 },
           launchOptions: {
             channel: 'chromium',
           },
@@ -66,6 +66,7 @@ export default defineConfig({
       storybookProject('en', 'dark'),
       storybookProject('ar', 'light'),
       storybookProject('ar', 'dark'),
+      storybookProject('en', 'light', { width: 390, height: 844 }),
     ],
   },
 });

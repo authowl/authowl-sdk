@@ -30,12 +30,11 @@ import { usePublicConfig } from './hooks';
 export function useLastUsedSignInMethod(): LastUsedSignInMethod | null {
   const { config } = usePublicConfig();
   const projectId = config?.environmentId ?? null;
-  // Read once per project rather than subscribing: this decides a hint, and a
-  // value that changed mid-render would move a control under the pointer.
-  return React.useMemo(
-    () => (projectId ? readLastUsedSignInMethod(projectId) : null),
-    [projectId],
-  );
+  const [hint, setHint] = React.useState<{ projectId: string; method: LastUsedSignInMethod | null } | null>(null);
+  React.useEffect(() => {
+    if (projectId) setHint({ projectId, method: readLastUsedSignInMethod(projectId) });
+  }, [projectId]);
+  return hint && hint.projectId === projectId ? hint.method : null;
 }
 
 /** Recorder bound to the active project, or a no-op before config resolves. */

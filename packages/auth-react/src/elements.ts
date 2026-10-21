@@ -2,6 +2,17 @@ import { createContext, useContext } from 'react';
 
 /** Stable class suffixes available through appearance.elements. */
 export type ELEMENT_SLOTS = [
+  'auth-header',
+  'name-row',
+  'auth-card',
+  'step',
+  'method-tabs',
+  'method-tab',
+  'tab-indicator',
+  'last-used',
+  'busy-dots',
+  'dot',
+  'icon-back',
   'auth-challenge',
   'auth-loading',
   'avatar',
