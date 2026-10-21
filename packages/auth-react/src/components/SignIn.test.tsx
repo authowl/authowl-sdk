@@ -256,10 +256,10 @@ describe('SignIn under required MFA', () => {
     mocks.needsMfaEnrollment = true;
     render(<SignIn />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('signin-mfa-enrolment')).toBeTruthy();
-    });
-    expect(screen.getByTestId('mfa-enrollment')).toBeTruthy();
+    // The wrapper renders while the session read confirms (a skeleton), then
+    // swaps in the enrolment step; wait for the step itself, not the wrapper.
+    expect(await screen.findByTestId('mfa-enrollment')).toBeTruthy();
+    expect(screen.getByTestId('signin-mfa-enrolment')).toBeTruthy();
     expect(screen.queryByTestId('signin-form')).toBeNull();
   });
 
