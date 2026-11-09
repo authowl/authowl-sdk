@@ -24,7 +24,7 @@ const APPROVED: Record<Scheme, Partial<Record<NeutralColor, string>>> = {
   light: {
     canvas: '#F7F7F5', surface: '#FFFFFF', raised: '#FAFAF8', inset: '#F2F2EF',
     line: '#E6E6E1', 'line-strong': '#D5D5CE', fg: '#17171A', 'fg-muted': '#5B5B64', 'fg-faint': '#6E6E76',
-    'chart-muted': '#8E8E86', warning: '#A8530C', danger: '#C4313B',
+    'chart-muted': '#8E8E86',
   },
   dark: {
     canvas: '#0A0A0B', surface: '#111113', raised: '#18181B', inset: '#0D0D0F',
@@ -39,8 +39,10 @@ const APPROVED: Record<Scheme, Partial<Record<NeutralColor, string>>> = {
  */
 const DEVIATIONS: Record<Scheme, Partial<Record<NeutralColor, { board: string | null; now: string }>>> = {
   light: {
-    // #14804A is 4.25:1 on its own tint (the Active pill).
-    success: { board: '#14804A', now: '#007742' },
+    // Status text needs 4.6:1 on its own tint over every surface.
+    success: { board: '#14804A', now: '#05713F' },
+    warning: { board: '#A8530C', now: '#A04D04' },
+    danger: { board: '#C4313B', now: '#BC2835' },
     // The hovered or selected item; the boards drew it with `raised`, which
     // is also every popover.
     highlight: { board: null, now: '#F2F2EF' },

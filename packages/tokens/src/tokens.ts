@@ -37,11 +37,10 @@ export type ColorToken = (typeof COLOR_TOKENS)[number];
 export const tint = (base: Oklch, alpha: number): Oklch => ({ ...base, alpha });
 
 const WHITE = oklch(1, 0, 0);
-// The board's #14804A read 4.25:1 on its own tint (the Active pill), under AA,
-// so light success is one step deeper: #007742.
-const LIGHT_SUCCESS = oklch(0.4999, 0.124, 154.84);
-const LIGHT_WARNING = oklch(0.5374, 0.1333, 52.12);
-const LIGHT_DANGER = oklch(0.5447, 0.183, 22.38);
+// Light status text stays above 4.6:1 on its own tint over every surface.
+const LIGHT_SUCCESS = oklch(0.483, 0.118, 154.84);
+const LIGHT_WARNING = oklch(0.5152, 0.1304, 52.12);
+const LIGHT_DANGER = oklch(0.5222, 0.183, 22.38);
 const DARK_SUCCESS = oklch(0.7794, 0.1655, 157.29);
 const DARK_WARNING = oklch(0.7827, 0.1312, 60.3);
 const DARK_DANGER = oklch(0.687, 0.1724, 18.98);
