@@ -80,16 +80,17 @@
     "toolchain whether or not we exist.",
     "",
     "GHSA-w3rx-r6r6-pgpr and GHSA-5p2g-fcmc-qvqq (image-size, ICNS and JXL/HEIF",
-    "denial of service) have no patched release. Reached",
-    "through metro at BUILD time, parsing an asset the developer added to their",
-    "own project. Revisit when image-size ships any fixed release.",
+    "denial of service) are fixed only in image-size 2.0.3, and metro requires",
+    "^1.0.2. Reached through metro at BUILD time, parsing an asset the developer",
+    "added to their own project. Revisit when metro moves to image-size 2.",
     "",
-    "GHSA-86w9-cpqp-85rv (node-forge PKCS#1 v1.5 signature parsing) and",
-    "GHSA-vfj7-8cjw-p6xm (braces stack exhaustion) have no patched release either.",
-    "Both are reached only through @expo/cli, the Expo developer CLI that",
-    "expo-secure-store pulls in: node-forge for local dev-server certificates,",
-    "braces through metro's file map. Neither runs in an app built with",
-    "@authowl/expo. Revisit when either ships a fixed release.",
+    "GHSA-vfj7-8cjw-p6xm (braces stack exhaustion) has no patched release, and",
+    "GHSA-mrhx-c7xc-m3w5 (zod memory exhaustion on an unbounded array) is fixed",
+    "only in zod 4.6.6 while @expo/cli requires zod ^3.25.76. Both are reached",
+    "only through @expo/cli, the Expo developer CLI that expo-secure-store pulls",
+    "in: braces through metro's file map, zod inside the CLI's own process.",
+    "Neither runs in an app built with @authowl/expo. Revisit when braces ships",
+    "a fix or @expo/cli moves to zod 4.",
     "",
     "Do not widen this list to whole packages or unpinned ranges. An advisory that",
     "reaches a published artifact is a release blocker, not an entry here."
@@ -106,6 +107,7 @@
       "compression@<1.8.2": "1.8.2",
       "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
       "nanoid@>=3.0.0 <3.3.18": "3.3.18",
+      "node-forge@<1.4.2": "1.4.2",
       "postcss": "8.5.23",
       "prettier": "3.9.4",
       "shell-quote@>=1.8.4 <1.11.0": "1.11.0",
@@ -116,8 +118,8 @@
       "ignoreGhsas": [
         "GHSA-w3rx-r6r6-pgpr",
         "GHSA-5p2g-fcmc-qvqq",
-        "GHSA-86w9-cpqp-85rv",
-        "GHSA-vfj7-8cjw-p6xm"
+        "GHSA-vfj7-8cjw-p6xm",
+        "GHSA-mrhx-c7xc-m3w5"
       ]
     }
   },
