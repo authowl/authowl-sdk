@@ -65,6 +65,8 @@ sdk_ci_run default env npm_config_offline=false \
 sdk_ci_run none pnpm rebuild -r
 sdk_ci_run none pnpm --filter @authowl/react... build
 sdk_ci_run none pnpm --filter @authowl/tokens build
+sdk_ci_run none pnpm --filter @authowl/next build
+sdk_ci_run none pnpm --filter @authowl/billing build
 sdk_ci_run none env AUTHOWL_SCREENSHOTS=1 AUTHOWL_SCREENSHOT_THRESHOLD="${AUTHOWL_SCREENSHOT_THRESHOLD-0.06}" AUTHOWL_SCREENSHOT_UPDATE=1 \
   bash scripts/ci/storybook-browser-check.sh --update
 # Copy only successful baseline output back. Review and commit these PNGs with

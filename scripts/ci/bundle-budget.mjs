@@ -289,16 +289,25 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // deprecated catalog keys kept until 1.0. Restoring all ten English/Arabic
 // override keys alongside the avatar fallback and fresh-code close guard
 // measures 89.60kb on this machine. The ceiling keeps 0.65kb of headroom.
-// Core remains 25.80kb, within its existing ceiling.
+// S12 (2026-11-14) raises React 90.25->90.75: React bundles @authowl/core, whose
+// client extension seam for @authowl/billing adds about 0.6kb to core; React
+// measures 90.28kb on this machine. The ceiling keeps 0.47kb of headroom.
+// S12 (2026-11-14) raises core 26.00->26.74 for the same client extension seam;
+// core measures 26.41kb on this machine. The ceiling keeps 0.33kb of headroom.
+// S12 S2 (2026-11-14) adds the @authowl/billing/react row: the React entry plus
+// the shared client store and decoders, with @authowl/core and @authowl/react
+// external because the app already ships both. It measures 2.66kb on this
+// machine; the ceiling keeps 0.50kb of headroom until the conductor re-pins it
+// from the pinned Linux gate.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
-    maxGzipKb: 90.25,
+    maxGzipKb: 90.75,
     label: '@authowl/react (provider + hooks + components)',
   },
   {
     entry: 'packages/auth-core/dist/index.js',
-    maxGzipKb: 26,
+    maxGzipKb: 26.74,
     label: '@authowl/core (framework-neutral fetch/state client)',
   },
   {
@@ -306,9 +315,15 @@ const BUDGETS = [
     maxGzipKb: 4.25,
     label: '@authowl/tokens (token data, colour maths, CSS generators)',
   },
+  {
+    entry: 'packages/billing/dist/react.js',
+    maxGzipKb: 3.16,
+    label: '@authowl/billing/react (client store + hooks + Protect)',
+    external: [...PEER_EXTERNALS, '@authowl/core', '@authowl/react'],
+  },
 ];
 
-async function measureGzipKb(entry) {
+async function measureGzipKb(entry, external = PEER_EXTERNALS) {
   const absoluteEntry = resolve(root, entry);
   const result = await build({
     absWorkingDir: root,
@@ -321,7 +336,7 @@ async function measureGzipKb(entry) {
     splitting: true,
     outdir: 'bundle-budget-output',
     metafile: true,
-    external: PEER_EXTERNALS,
+    external,
     logLevel: 'silent',
   });
 
@@ -362,14 +377,14 @@ if (!corePackage.dependencies?.['@akedly/shield'] || corePackage.peerDependencie
   console.error('bundle-budget: @akedly/shield must remain a direct @authowl/core dependency');
   failed = true;
 }
-console.log('bundle-budget (gzipped browser payload, react/react-dom external):');
+console.log('bundle-budget (gzipped browser payload, peers external):');
 for (const b of BUDGETS) {
   if (!existsSync(resolve(root, b.entry))) {
     console.error(`  MISSING  ${b.entry} - run \`pnpm run build\` first`);
     failed = true;
     continue;
   }
-  const kb = await measureGzipKb(b.entry);
+  const kb = await measureGzipKb(b.entry, b.external);
   const ok = kb <= b.maxGzipKb;
   console.log(`  [${ok ? 'OK  ' : 'OVER'}] ${b.label}: ${kb.toFixed(2)}kb / ${b.maxGzipKb}kb`);
   if (!ok) failed = true;

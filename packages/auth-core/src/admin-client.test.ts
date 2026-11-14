@@ -142,6 +142,7 @@ describe('createAdminClient', () => {
       'http://localhost:3010/api/v1/users?limit=25&cursor=next+value&query=Mona',
     );
     expect(init?.method).toBe('GET');
+    expect(init?.cache).toBe('no-store');
     expect(init?.redirect).toBe('error');
     expect(new Headers(init?.headers).get('authorization')).toBe(`Bearer ${SECRET_KEY}`);
   });

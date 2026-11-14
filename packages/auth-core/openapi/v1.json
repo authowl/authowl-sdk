@@ -57,6 +57,10 @@
       "description": "Provider-neutral one-to-one transactional SMS and WhatsApp delivery."
     },
     {
+      "name": "Billing",
+      "description": "Billing entitlement checks for application features."
+    },
+    {
       "name": "Webhooks",
       "description": "Outbound webhook endpoint configuration."
     },
@@ -2420,6 +2424,53 @@
         }
       }
     },
+    "/billing/check": {
+      "post": {
+        "operationId": "checkBillingFeature",
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Check a billing feature for a user or organization",
+        "x-authowl-scope": "billing:read",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCheckRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Entitlement decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCheck"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "503": {
+            "$ref": "#/components/responses/BillingUnavailable"
+          }
+        }
+      }
+    },
     "/webhooks": {
       "get": {
         "operationId": "listWebhookEndpoints",
@@ -3126,6 +3177,16 @@
           }
         }
       },
+      "BillingUnavailable": {
+        "description": "Billing could not answer safely",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
       "ImportValidationFailed": {
         "description": "The canonical stream envelope, encoding, or hard limits are invalid",
         "content": {
@@ -3271,6 +3332,113 @@
           }
         },
         "additionalProperties": true
+      },
+      "BillingSubject": {
+        "type": "object",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "user",
+              "organization"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BillingCheckRequest": {
+        "type": "object",
+        "required": [
+          "feature"
+        ],
+        "properties": {
+          "feature": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]{1,128}$"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "organizationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BillingCheck": {
+        "type": "object",
+        "required": [
+          "feature",
+          "allowed",
+          "kind",
+          "balance",
+          "reason",
+          "source",
+          "subject"
+        ],
+        "properties": {
+          "feature": {
+            "type": "string"
+          },
+          "allowed": {
+            "type": "boolean"
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "balance": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "not_connected",
+              "no_customer",
+              "erased",
+              "no_organization",
+              "not_granted",
+              null
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "snapshot",
+              "live",
+              "none"
+            ]
+          },
+          "subject": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/BillingSubject"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
       },
       "User": {
         "type": "object",

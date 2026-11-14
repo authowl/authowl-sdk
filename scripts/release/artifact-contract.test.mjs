@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
   appendFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -32,6 +35,10 @@ import { stripDelimitedSections } from '../notice-text.mjs';
 const fixtureRoot = mkdtempSync(join(tmpdir(), 'authowl-release-contract.'));
 const commit = '1'.repeat(40);
 const tree = '2'.repeat(40);
+
+assertGatePackListParity();
+assertPrivateOrListed();
+assertReleasePackagePin();
 
 try {
   const repository = join(fixtureRoot, 'repository');
@@ -345,4 +352,48 @@ function sourceDependencies(name) {
 
 function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function assertGatePackListParity() {
+  const gate = readFileSync('scripts/ci/local-gate.sh', 'utf8');
+  const start = gate.indexOf('prepare_consumer_workspace()');
+  const end = gate.indexOf('\n}', start);
+  assert.notEqual(start, -1, 'prepare_consumer_workspace is missing');
+  assert.notEqual(end, -1, 'prepare_consumer_workspace is incomplete');
+  const packed = new Set(
+    [...gate.slice(start, end).matchAll(/cd (packages\/[a-z0-9-]+)/g)]
+      .map((match) => match[1]),
+  );
+  assert.deepEqual(
+    [...packed].sort(),
+    RELEASE_PACKAGES.map((entry) => entry.directory).sort(),
+    'prepare_consumer_workspace must pack exactly RELEASE_PACKAGES',
+  );
+}
+
+function assertPrivateOrListed() {
+  const listed = new Set(RELEASE_PACKAGES.map((entry) => entry.directory));
+  for (const directory of readdirSync('packages')) {
+    const packageDirectory = `packages/${directory}`;
+    const manifestPath = `${packageDirectory}/package.json`;
+    if (!existsSync(manifestPath)) continue;
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const valid = manifest.private === true
+      ? !listed.has(packageDirectory)
+      : listed.has(packageDirectory);
+    assert.equal(
+      valid,
+      true,
+      `${manifest.name}: remove private and add it to RELEASE_PACKAGES and the gate's pack list in the same change`,
+    );
+  }
+}
+
+function assertReleasePackagePin() {
+  assert.equal(RELEASE_PACKAGES.length, 8, 'S12 must keep exactly eight release packages');
+  assert.equal(
+    RELEASE_PACKAGES.some((entry) => entry.name === '@authowl/billing'),
+    false,
+    'S12 must keep @authowl/billing outside RELEASE_PACKAGES',
+  );
 }

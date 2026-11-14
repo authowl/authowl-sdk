@@ -2,6 +2,7 @@ import React from 'react';
 import { AuthOwlProvider } from '@authowl/react';
 
 export type PreviewSignInMethod = 'password' | 'email_otp' | 'magic_link' | 'passkey' | 'phone_otp' | 'sso';
+export type PreviewBilling = 'loading' | 'denied' | 'allowed';
 
 const PREVIEW_PK = 'pk_live_11111111-1111-1111-1111-111111111111_abcdefghij0123456789';
 
@@ -92,7 +93,7 @@ const privacy = {
 
 function createPreviewFetch({
   signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled,
-  passkeyRelyingPartyId, signInMethod, mfaEnrollment, wrongPassword, invalidCode, codePending,
+  passkeyRelyingPartyId, signInMethod, mfaEnrollment, wrongPassword, invalidCode, codePending, billing,
 }: {
   signedIn: boolean;
   consentRequired: boolean;
@@ -105,6 +106,7 @@ function createPreviewFetch({
   wrongPassword: boolean;
   invalidCode: boolean;
   codePending: boolean;
+  billing?: PreviewBilling;
 }): typeof fetch {
   return async (input: RequestInfo | URL): Promise<Response> => {
     const url = new URL(String(input));
@@ -221,6 +223,30 @@ function createPreviewFetch({
     if (path.endsWith('/get-session')) {
       return Response.json(signedIn ? { user: { ...user, twoFactorEnabled: !mfaEnrollment }, session } : null);
     }
+    if (billing && (path.endsWith('/billing/entitlements') || path.endsWith('/billing/check'))) {
+      if (billing === 'loading') return new Promise<Response>(() => {});
+      const subject = { type: 'user', id: user.id };
+      if (path.endsWith('/billing/entitlements')) {
+        return Response.json({
+          status: 'ok',
+          subject,
+          source: 'snapshot',
+          fetchedAt: '2026-07-14T08:00:00.000Z',
+          entitlements: billing === 'allowed'
+            ? [{ feature: 'reports', kind: 'boolean', allowed: true, balance: null }]
+            : [],
+        });
+      }
+      return Response.json(billing === 'allowed'
+        ? {
+            feature: 'reports', allowed: true, kind: 'boolean', balance: null,
+            reason: null, source: 'snapshot', subject,
+          }
+        : {
+            feature: 'reports', allowed: false, kind: null, balance: null,
+            reason: 'not_granted', source: 'snapshot', subject,
+          });
+    }
     if (path.endsWith('/organization/list')) return Response.json(organizations);
     if (path.endsWith('/organization/get-full-organization')) {
       const id = url.searchParams.get('organizationId');
@@ -249,13 +275,13 @@ function createPreviewFetch({
   };
 }
 
-export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, signInMethod, mfaEnrollment = false, wrongPassword = false, invalidCode = false, codePending = false, mobileSheet = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; signInMethod?: PreviewSignInMethod; mfaEnrollment?: boolean; wrongPassword?: boolean; invalidCode?: boolean; codePending?: boolean; mobileSheet?: boolean; children: React.ReactNode }) {
+export function PreviewAuth({ locale, dark, signedIn = true, consentRequired = false, primaryColor = '#F5B84C', configUnavailable = false, privacyEnabled = false, passkeyRelyingPartyId, signInMethod, mfaEnrollment = false, wrongPassword = false, invalidCode = false, codePending = false, billing, mobileSheet = false, children }: { locale: 'en' | 'ar'; dark: boolean; signedIn?: boolean; consentRequired?: boolean; primaryColor?: string; configUnavailable?: boolean; privacyEnabled?: boolean; passkeyRelyingPartyId?: string; signInMethod?: PreviewSignInMethod; mfaEnrollment?: boolean; wrongPassword?: boolean; invalidCode?: boolean; codePending?: boolean; billing?: PreviewBilling; mobileSheet?: boolean; children: React.ReactNode }) {
   const previewFetch = React.useMemo(
     () => createPreviewFetch({
       signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled,
-      passkeyRelyingPartyId, signInMethod, mfaEnrollment, wrongPassword, invalidCode, codePending,
+      passkeyRelyingPartyId, signInMethod, mfaEnrollment, wrongPassword, invalidCode, codePending, billing,
     }),
-    [configUnavailable, consentRequired, passkeyRelyingPartyId, primaryColor, privacyEnabled, signedIn, signInMethod, mfaEnrollment, wrongPassword, invalidCode, codePending],
+    [billing, configUnavailable, consentRequired, passkeyRelyingPartyId, primaryColor, privacyEnabled, signedIn, signInMethod, mfaEnrollment, wrongPassword, invalidCode, codePending],
   );
   return (
     <AuthOwlProvider

@@ -173,6 +173,7 @@ export function createAdminClient(input: AdminClientConfig): AdminClient {
           method: operation.method,
           headers,
           body,
+          cache: 'no-store',
           signal: operationInput?.signal,
         },
         timeoutMs: ADMIN_REQUEST_TIMEOUT_MS,

@@ -142,8 +142,10 @@ function matchesString(value: string, schema: JsonSchema): boolean {
   }
 }
 
-function matchesKnownPattern(value: string, pattern: string): boolean {
+export function matchesKnownPattern(value: string, pattern: string): boolean {
   switch (pattern) {
+    case '^[a-z0-9_-]{1,128}$':
+      return /^[a-z0-9_-]{1,128}$/.test(value);
     case '^[a-z0-9]+(?:-[a-z0-9]+)*$':
       return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
     case '^[a-z][a-z0-9_-]*$':

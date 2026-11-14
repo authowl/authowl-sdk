@@ -74,6 +74,9 @@ await admin.updateUserMetadata({
 });
 ```
 
+Every Admin API request is sent with `cache: 'no-store'`, so a framework fetch cache never serves a stale admin
+answer. A runtime whose `fetch` rejects the `cache` option can pass its own `fetch` that drops it.
+
 Publishable keys (`pk_test_…` in development, `pk_live_…` in production) are
 safe to embed in client code; secret keys (`sk_test_…` / `sk_live_…`) are bearer
 credentials and must stay server-side.

@@ -71,6 +71,7 @@ const preview: Preview = {
           invalidCode={context.parameters.authowl?.invalidCode === true}
           codePending={context.parameters.authowl?.codePending === true}
           mfaEnrollment={context.parameters.authowl?.mfaEnrollment === true}
+          billing={context.parameters.authowl?.billing}
         >
           <main
             className="authowl-story-surface"
