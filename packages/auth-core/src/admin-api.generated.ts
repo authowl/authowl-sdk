@@ -710,6 +710,23 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/billing/check": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /** Check a billing feature for a user or organization */
+        readonly post: operations["checkBillingFeature"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/webhooks": {
         readonly parameters: {
             readonly query?: never;
@@ -907,6 +924,30 @@ export interface components {
             readonly code: string;
         } & {
             readonly [key: string]: unknown;
+        };
+        readonly BillingSubject: {
+            /** @enum {string} */
+            readonly type: "user" | "organization";
+            /** Format: uuid */
+            readonly id: string;
+        };
+        readonly BillingCheckRequest: {
+            readonly feature: string;
+            /** Format: uuid */
+            readonly userId?: string;
+            /** Format: uuid */
+            readonly organizationId?: string;
+        };
+        readonly BillingCheck: {
+            readonly feature: string;
+            readonly allowed: boolean;
+            readonly kind: string | null;
+            readonly balance: number | null;
+            /** @enum {string|null} */
+            readonly reason: "not_connected" | "no_customer" | "erased" | "no_organization" | "not_granted" | null;
+            /** @enum {string} */
+            readonly source: "snapshot" | "live" | "none";
+            readonly subject: components["schemas"]["BillingSubject"] | null;
         };
         readonly User: {
             readonly id: string;
@@ -1427,6 +1468,15 @@ export interface components {
                 readonly "X-RateLimit-Limit"?: number;
                 readonly "X-RateLimit-Remaining"?: number;
                 readonly "X-RateLimit-Reset"?: number;
+                readonly [name: string]: unknown;
+            };
+            content: {
+                readonly "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description Billing could not answer safely */
+        readonly BillingUnavailable: {
+            headers: {
                 readonly [name: string]: unknown;
             };
             content: {
@@ -3000,6 +3050,35 @@ export interface operations {
             readonly 401: components["responses"]["Unauthorized"];
             readonly 403: components["responses"]["Forbidden"];
             readonly 429: components["responses"]["RateLimited"];
+        };
+    };
+    readonly checkBillingFeature: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["BillingCheckRequest"];
+            };
+        };
+        readonly responses: {
+            /** @description Entitlement decision */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["BillingCheck"];
+                };
+            };
+            readonly 400: components["responses"]["InvalidRequest"];
+            readonly 401: components["responses"]["Unauthorized"];
+            readonly 403: components["responses"]["Forbidden"];
+            readonly 429: components["responses"]["RateLimited"];
+            readonly 503: components["responses"]["BillingUnavailable"];
         };
     };
     readonly listWebhookEndpoints: {

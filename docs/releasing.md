@@ -137,6 +137,11 @@ attached to it:
   published, so the `authowl` project can be created by the first workflow run.
 - **pub.dev** already serves `authowl`, so configure it now.
 
+`@authowl/billing` is private and outside the release list until its first
+release. That release removes the flag, adds it last to `RELEASE_PACKAGES` and
+the gate's pack list, and publishes its first version from a laptop like
+`@authowl/tokens`.
+
 ## Publishing npm from a laptop
 
 The hosted deploy is the normal path. The local path still works and is the

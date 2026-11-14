@@ -12,6 +12,7 @@ import type { OrganizationClient } from './organization-client';
 import type { OrganizationMembership } from './organization-membership';
 import { createAuthHttpClient } from './http-client';
 import { createPrivacyClient, type PrivacyClient } from './privacy-client';
+import { attachClientExtension } from './client-extension';
 
 /**
  * The narrow, portable surface of the underlying auth client that this SDK
@@ -1043,5 +1044,7 @@ export function createAuthOwlClient(config: ResolvedAuthConfig): AuthOwlClient {
     | 'phoneOtp'
     | 'signOut'
   >;
-  return { ...client, ...ownMethods } satisfies AuthOwlClient;
+  const result = { ...client, ...ownMethods } satisfies AuthOwlClient;
+  attachClientExtension(result, config);
+  return result;
 }

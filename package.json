@@ -7,6 +7,7 @@
     "admin:generate:check": "node scripts/generate-admin-api.mjs --check",
     "admin:verify-pack": "bash scripts/ci/admin-server-install-check.sh",
     "webhook:verify-docs": "bash scripts/ci/webhook-doc-examples-check.sh",
+    "doc-snippets:check": "node scripts/ci/doc-snippets-check.test.mjs && node scripts/ci/doc-snippets-check.mjs",
     "build": "pnpm -r --filter './packages/*' run build",
     "dev": "pnpm -r --filter './packages/*' --parallel run dev",
     "typecheck": "pnpm -r --filter './packages/*' run typecheck && pnpm cli:e2e:typecheck && pnpm typecheck:storybook",
@@ -14,7 +15,7 @@
     "lint": "eslint . --max-warnings=0",
     "security:semgrep": "bash scripts/ci/semgrep-check.sh",
     "ci:local": "bash scripts/ci/local-gate.sh",
-    "test": "pnpm release:contract:test && pnpm admin:generate:check && pnpm client-surface:check && pnpm dart-i18n:check && pnpm flutter:changelog:check && pnpm webhook:verify-docs && pnpm -r --filter './packages/*' run test",
+    "test": "pnpm release:contract:test && pnpm admin:generate:check && pnpm client-surface:check && pnpm dart-i18n:check && pnpm flutter:changelog:check && pnpm webhook:verify-docs && pnpm doc-snippets:check && pnpm -r --filter './packages/*' run test",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release:contract:test": "node scripts/release/artifact-contract.test.mjs",
@@ -38,6 +39,7 @@
     "flutter:changelog:check": "node scripts/generate-flutter-changelog.mjs --check"
   },
   "devDependencies": {
+    "@authowl/billing": "workspace:*",
     "@authowl/react": "workspace:*",
     "@authowl/tokens": "workspace:*",
     "@changesets/cli": "^2.31.1",

@@ -48,6 +48,7 @@ const RESPONSE_SCHEMA_TYPES = new Set([
 ]);
 const RESPONSE_SCHEMA_FORMATS = new Set(['date-time', 'email', 'uri', 'uuid']);
 const RESPONSE_SCHEMA_PATTERNS = new Set([
+  '^[a-z0-9_-]{1,128}$',
   '^[a-z0-9]+(?:-[a-z0-9]+)*$',
   '^[a-z][a-z0-9_-]*$',
   '^[A-Za-z0-9][A-Za-z0-9._:/-]*$',
