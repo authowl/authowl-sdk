@@ -48,7 +48,7 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "csv-parse": "7.0.2",
+    "csv-parse": "7.0.3",
     "stream-json": "3.6.0"
   }
 }
