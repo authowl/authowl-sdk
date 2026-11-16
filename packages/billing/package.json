@@ -1,6 +1,6 @@
 {
   "name": "@authowl/billing",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Entitlements, pricing, checkout and customer portal components for AuthOwl Billing.",
   "license": "MIT",
   "publishConfig": {
