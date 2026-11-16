@@ -542,7 +542,7 @@ export function PricingTable(props: PricingTableProps): React.JSX.Element | null
         {pricing.currencies.map((currency) => <option key={currency}>{currency}</option>)}
       </select>
     </label> : null}
-    {pricing.status === 'loading' ? <div aria-busy="true" aria-label={t('pricing.loading')} className={billingSlot('pricing-grid', props.appearance)}>
+    {pricing.status === 'loading' ? <div role="status" aria-busy="true" aria-label={t('pricing.loading')} className={billingSlot('pricing-grid', props.appearance)}>
       {[0, 1, 2].map((index) => <div key={index} className={`${shared('skeleton')} ${billingSlot('pricing-card', props.appearance)}`} />)}
     </div> : null}
     {pricing.status === 'error' ? <div className={billingSlot('pricing-status', props.appearance)}>
