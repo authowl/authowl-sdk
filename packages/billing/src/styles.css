@@ -1,33 +1,73 @@
 :where(.authowl-root) .ao-pricing-table {
+  box-sizing: border-box;
   width: 100%;
   container-type: inline-size;
-  color: var(--ao-fg);
-  font-family: var(--ao-font-family);
+  color: var(--ba-fg, var(--ao-fg));
+  font-family: var(--ao-font-family, var(--ao-font-sans));
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: start;
+}
+
+:where(.authowl-root) .ao-pricing-table *,
+:where(.authowl-root) .ao-pricing-table *::before,
+:where(.authowl-root) .ao-pricing-table *::after {
+  box-sizing: inherit;
+}
+
+:where(.authowl-root) .ao-pricing-test-mode {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  margin-block-end: 16px;
+  padding-block: 5px;
+  padding-inline: 9px;
+  border: 1px solid color-mix(in srgb, var(--ba-accent, var(--ao-brand-text)) 24%, transparent);
+  border-radius: 999px;
+  background: var(--ao-brand-soft);
+  color: var(--ba-accent, var(--ao-brand-text));
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+:where(.authowl-root) .ao-pricing-test-mode .ao-muted {
+  color: inherit;
+  font-size: inherit;
+  opacity: 0.78;
 }
 
 :where(.authowl-root) .ao-pricing-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: calc(var(--ao-control-height) / 4);
-  margin-block-end: calc(var(--ao-control-height) / 2);
-  color: var(--ao-fg-muted);
+  gap: 8px;
+  margin-block-end: 20px;
+  color: var(--ba-muted, var(--ao-fg-muted));
+  font-size: 13px;
+  font-weight: 500;
 }
 
 :where(.authowl-root) .ao-pricing-currency {
-  min-height: var(--ao-control-height);
-  border: 1px solid var(--ao-border);
-  border-radius: var(--ao-border-radius);
-  padding-inline: calc(var(--ao-control-height) / 4);
-  background: var(--ao-surface);
-  color: var(--ao-fg);
+  min-height: var(--ao-control-height, 40px);
+  border: 1px solid var(--ba-border, var(--ao-line-strong));
+  border-radius: var(--ao-border-radius, var(--ao-radius-md));
+  padding-block: 8px;
+  padding-inline: 12px 32px;
+  background: var(--ba-surface, var(--ao-surface));
+  color: var(--ba-fg, var(--ao-fg));
   font: inherit;
+  cursor: pointer;
 }
 
 :where(.authowl-root) .ao-pricing-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: calc(var(--ao-control-height) / 2);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
 }
 
 @container (min-width: 30rem) {
@@ -40,30 +80,39 @@
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: calc(var(--ao-control-height) * 7);
+  min-height: 320px;
+  height: 100%;
   flex-direction: column;
-  gap: calc(var(--ao-control-height) / 4);
-  padding: calc(var(--ao-control-height) / 2);
-  border: 1px solid var(--ao-border);
-  border-radius: var(--ao-radius-xl);
-  background: var(--ao-surface);
-  color: var(--ao-fg);
+  gap: 12px;
+  padding-block: 22px;
+  padding-inline: 22px;
+  border: 1px solid var(--ba-border, var(--ao-line-strong));
+  border-radius: var(--ao-border-radius, var(--ao-radius-xl));
+  background: var(--ba-surface, var(--ao-surface));
+  color: var(--ba-fg, var(--ao-fg));
   box-shadow: var(--ao-shadow-card);
+  text-align: start;
 }
 
 :where(.authowl-root) .ao-pricing-card-highlighted {
-  border-color: var(--ao-accent);
-  box-shadow: 0 0 0 1px var(--ao-accent), var(--ao-shadow-card);
+  border-color: var(--ba-accent, var(--ao-brand-text));
+  box-shadow: 0 0 0 1px var(--ba-accent, var(--ao-brand-text)), var(--ao-shadow-card);
 }
 
-:where(.authowl-root) .ao-pricing-badge,
-:where(.authowl-root) .ao-pricing-test-mode {
+:where(.authowl-root) .ao-pricing-badge {
+  display: inline-flex;
   width: fit-content;
+  align-items: center;
+  align-self: flex-start;
   margin: 0;
-}
-
-:where(.authowl-root) .ao-pricing-test-mode {
-  margin-block-end: calc(var(--ao-control-height) / 4);
+  padding-block: 4px;
+  padding-inline: 8px;
+  border-radius: 999px;
+  background: var(--ao-brand-soft);
+  color: var(--ba-accent, var(--ao-brand-text));
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 :where(.authowl-root) .ao-pricing-name,
@@ -75,73 +124,174 @@
 }
 
 :where(.authowl-root) .ao-pricing-name {
-  color: var(--ao-fg);
-  font: inherit;
+  color: var(--ba-fg, var(--ao-fg));
+  font-size: var(--ao-text-xl);
   font-weight: 700;
+  line-height: var(--ao-text-xl-line-height);
+  letter-spacing: var(--ao-text-xl-tracking);
 }
 
 :where(.authowl-root) .ao-pricing-price {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: calc(var(--ao-control-height) / 8);
+  column-gap: 8px;
+  row-gap: 2px;
 }
 
 :where(.authowl-root) .ao-pricing-amount {
-  color: var(--ao-fg);
-  font: inherit;
+  color: var(--ba-fg, var(--ao-fg));
+  font-size: var(--ao-text-2xl);
   font-weight: 700;
+  line-height: var(--ao-text-2xl-line-height);
+  letter-spacing: var(--ao-text-2xl-tracking);
 }
 
-:where(.authowl-root) .ao-pricing-interval,
-:where(.authowl-root) .ao-pricing-note,
-:where(.authowl-root) .ao-pricing-disclosure {
-  color: var(--ao-fg-muted);
+:where(.authowl-root) .ao-pricing-interval {
+  color: var(--ba-muted, var(--ao-fg-muted));
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 :where(.authowl-root) .ao-pricing-features {
   display: grid;
-  gap: calc(var(--ao-control-height) / 8);
-  margin-block: calc(var(--ao-control-height) / 4);
-  padding-inline-start: calc(var(--ao-control-height) / 2);
+  gap: 8px;
+  margin-block: 2px 4px;
+  margin-inline: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.authowl-root) .ao-pricing-feature {
+  position: relative;
+  min-width: 0;
+  padding-inline-start: 18px;
+  color: var(--ba-fg, var(--ao-fg));
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+:where(.authowl-root) .ao-pricing-feature::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 0.62em;
+  inset-inline-start: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ba-accent, var(--ao-brand-text));
+}
+
+:where(.authowl-root) :is(.ao-pricing-note, .ao-pricing-disclosure) {
+  color: var(--ba-muted, var(--ao-fg-muted));
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+:where(.authowl-root) .ao-pricing-disclosure {
+  max-width: 34rem;
 }
 
 :where(.authowl-root) .ao-pricing-cta {
+  display: inline-grid;
+  width: fit-content;
+  max-width: 100%;
+  justify-items: start;
+  gap: 6px;
+  vertical-align: top;
+}
+
+:where(.authowl-root) .ao-pricing-card .ao-pricing-cta {
   display: grid;
-  gap: calc(var(--ao-control-height) / 8);
+  width: auto;
+  justify-items: stretch;
+}
+
+:where(.authowl-root) .ao-pricing-card > .ao-pricing-cta {
   margin-block-start: auto;
 }
 
-:where(.authowl-root) .ao-pricing-cta > :is(a, button),
-:where(.authowl-root) .ao-checkout-button {
+:where(.authowl-root) .ao-pricing-card .ao-pricing-cta > :is(a, button),
+:where(.authowl-root) .ao-pricing-card .ao-checkout-button,
+:where(.authowl-root) .ao-pricing-card .ao-portal-link {
   width: 100%;
+}
+
+:where(.authowl-root) .ao-checkout-button,
+:where(.authowl-root) .ao-portal-link {
+  min-height: var(--ao-control-height, 40px);
+  border-radius: var(--ao-border-radius, var(--ao-radius-md));
+}
+
+:where(.authowl-root) .ao-checkout-button {
+  width: auto;
+  justify-self: start;
+}
+
+:where(.authowl-root) .ao-checkout-error {
+  margin: 0;
+  line-height: 1.45;
+}
+
+:where(.authowl-root) .ao-portal-link {
+  width: auto;
+  padding-block: 9px;
+  padding-inline: 14px;
+  border: 1px solid var(--ba-border, var(--ao-line-strong));
+  background: var(--ba-surface, var(--ao-surface));
+  color: var(--ba-fg, var(--ao-fg));
+  text-decoration: none;
+}
+
+:where(.authowl-root) .ao-portal-link:hover:not(:disabled) {
+  border-color: var(--ba-accent, var(--ao-brand-text));
+  background: var(--ba-hover, var(--ao-highlight));
+}
+
+:where(.authowl-root) .ao-portal-link ~ .ao-error {
+  margin-block-start: 8px;
 }
 
 :where(.authowl-root) .ao-pricing-status {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: calc(var(--ao-control-height) / 4);
-  margin-block-end: calc(var(--ao-control-height) / 2);
-  padding: calc(var(--ao-control-height) / 4);
-  border: 1px solid var(--ao-border);
-  border-radius: var(--ao-border-radius);
-  background: var(--ao-hover);
+  gap: 12px;
+  margin-block-end: 20px;
+  padding-block: 12px;
+  padding-inline: 14px;
+  border: 1px solid var(--ba-border, var(--ao-line-strong));
+  border-radius: var(--ao-border-radius, var(--ao-radius-md));
+  background: var(--ba-hover, var(--ao-highlight));
+  color: var(--ba-fg, var(--ao-fg));
 }
 
-:where(.authowl-root) .ao-portal-link {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--ao-accent);
-  text-decoration: underline;
-  text-underline-offset: calc(var(--ao-control-height) / 16);
+:where(.authowl-root) .ao-pricing-grid[aria-busy='true'] .ao-pricing-card {
+  height: auto;
+  min-height: 320px;
 }
 
-:where(.authowl-root) :is(.ao-checkout-button, .ao-portal-link):focus-visible,
-:where(.authowl-root) .ao-pricing-currency:focus-visible {
-  outline: 2px solid var(--ao-accent);
+:where(.authowl-root) :is(.ao-checkout-button, .ao-portal-link, .ao-pricing-currency):focus-visible {
+  outline: 2px solid var(--ba-accent, var(--ao-brand-text));
   outline-offset: 2px;
+}
+
+@container (max-width: 29.99rem) {
+  :where(.authowl-root) .ao-pricing-toolbar {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  :where(.authowl-root) .ao-pricing-currency {
+    width: 100%;
+  }
+
+  :where(.authowl-root) .ao-pricing-card {
+    min-height: 0;
+    padding-block: 20px;
+    padding-inline: 20px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
