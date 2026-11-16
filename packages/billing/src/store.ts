@@ -4,7 +4,6 @@ import {
   type ProjectJsonResult,
   type SessionState,
 } from '@authowl/core';
-import { createCommerceClient, type CommerceClient } from './commerce';
 import {
   decodeEntitlementCheck,
   decodeEntitlementList,
@@ -81,14 +80,14 @@ export class BillingRequestError extends Error {
 
 export type FeatureParams = Readonly<{ feature: string }>;
 
-export type BillingClient = Readonly<{
+export type EntitlementClient = Readonly<{
   has(params: FeatureParams): boolean;
   getSnapshot(): BillingSnapshot;
   getServerSnapshot(): BillingSnapshot;
   subscribe(listener: () => void): () => void;
   refresh(): Promise<void>;
   check(params: FeatureParams): Promise<EntitlementCheck>;
-}> & CommerceClient;
+}>;
 
 const EMPTY_ENTITLEMENTS = Object.freeze([]) as readonly EntitlementView[];
 const EMPTY = Object.freeze({
@@ -114,18 +113,8 @@ type QueuedRefresh = {
   reject: (error: unknown) => void;
 };
 
-export function createBillingStore(core: AuthOwlClient): BillingClient {
+export function createBillingStore(core: AuthOwlClient): EntitlementClient {
   const extension = clientExtension(core);
-  const commerce = createCommerceClient({
-    extension,
-    policy: BILLING_SDK_POLICY,
-    requestError,
-    normalizeError(error) {
-      return error instanceof BillingRequestError
-        ? error
-        : new BillingRequestError({ status: null });
-    },
-  });
   const listeners = new Set<() => void>();
   let current = SIGNED_OUT_SNAPSHOT;
   let identity: string | null = null;
@@ -391,7 +380,6 @@ export function createBillingStore(core: AuthOwlClient): BillingClient {
   }
 
   return Object.freeze({
-    ...commerce,
     has,
     getSnapshot: () => current,
     getServerSnapshot: () => SIGNED_OUT_SNAPSHOT,
@@ -437,7 +425,7 @@ function errorSnapshot(error: BillingRequestError): BillingSnapshot {
   return snapshot({ ...EMPTY, status: 'error', error });
 }
 
-function requestError(result: Extract<ProjectJsonResult<unknown>, { ok: false }>): BillingRequestError {
+export function requestError(result: Extract<ProjectJsonResult<unknown>, { ok: false }>): BillingRequestError {
   return new BillingRequestError({
     status: result.status,
     code: result.code,

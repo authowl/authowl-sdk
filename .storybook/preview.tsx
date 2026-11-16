@@ -3,7 +3,12 @@ import './preview.css';
 import type { Preview } from '@storybook/react-vite';
 import React from 'react';
 import '@authowl/react/styles.css';
+import '@authowl/billing/styles.css';
 import { PreviewAuth } from '../examples/vite-react/src/PreviewAuth';
+
+(globalThis as typeof globalThis & {
+  __AUTHOWL_BILLING_PREVIEW_NAVIGATE__?: (target: string) => void;
+}).__AUTHOWL_BILLING_PREVIEW_NAVIGATE__ = () => undefined;
 
 const preview: Preview = {
   tags: ['autodocs'],
@@ -72,6 +77,9 @@ const preview: Preview = {
           codePending={context.parameters.authowl?.codePending === true}
           mfaEnrollment={context.parameters.authowl?.mfaEnrollment === true}
           billing={context.parameters.authowl?.billing}
+          pricing={context.parameters.authowl?.pricing}
+          checkout={context.parameters.authowl?.checkout}
+          portal={context.parameters.authowl?.portal}
         >
           <main
             className="authowl-story-surface"

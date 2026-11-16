@@ -65,14 +65,15 @@ describe('billing package shape', () => {
     expect(billing.peerDependencies?.react).toBe('>=18');
   });
 
-  it('exports exactly the root, React, server and stylesheet entries', () => {
+  it('exports exactly the root, React, commerce, server and stylesheet entries', () => {
     expect(Object.keys(billing.exports ?? {})).toEqual([
       '.',
       './react',
+      './react/commerce',
       './server',
       './styles.css',
     ]);
-    for (const name of ['.', './react', './server']) {
+    for (const name of ['.', './react', './react/commerce', './server']) {
       const entry = billing.exports?.[name];
       if (typeof entry === 'string') throw new TypeError(`${name} must be conditional`);
       expect(Object.keys(entry ?? {}), name).toEqual(['import', 'require']);

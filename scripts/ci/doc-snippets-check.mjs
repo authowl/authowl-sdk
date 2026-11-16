@@ -9,6 +9,7 @@ const defaultReadme = path.join(repoRoot, 'packages/billing/README.md');
 const paths = {
   '@authowl/billing': [path.join(repoRoot, 'packages/billing/dist/index.d.ts')],
   '@authowl/billing/react': [path.join(repoRoot, 'packages/billing/dist/react.d.ts')],
+  '@authowl/billing/react/commerce': [path.join(repoRoot, 'packages/billing/dist/react-commerce.d.ts')],
   '@authowl/billing/server': [path.join(repoRoot, 'packages/billing/dist/server.d.ts')],
   '@authowl/core': [path.join(repoRoot, 'packages/auth-core/dist/index.d.ts')],
   '@authowl/core/server': [path.join(repoRoot, 'packages/auth-core/dist/server.d.ts')],
@@ -116,7 +117,9 @@ function run() {
       blockByFile.set(path.resolve(file), block);
       return file;
     });
-    const program = ts.createProgram(files, compilerOptions());
+    const ambient = path.join(temporary, 'styles.d.ts');
+    fs.writeFileSync(ambient, "declare module '@authowl/billing/styles.css';\n");
+    const program = ts.createProgram([...files, ambient], compilerOptions());
     const diagnostics = ts.getPreEmitDiagnostics(program);
     if (diagnostics.length > 0) {
       for (const diagnostic of diagnostics) {

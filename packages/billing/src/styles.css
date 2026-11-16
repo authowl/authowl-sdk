@@ -1,0 +1,153 @@
+:where(.authowl-root) .ao-pricing-table {
+  width: 100%;
+  container-type: inline-size;
+  color: var(--ao-fg);
+  font-family: var(--ao-font-family);
+}
+
+:where(.authowl-root) .ao-pricing-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--ao-control-height) / 4);
+  margin-block-end: calc(var(--ao-control-height) / 2);
+  color: var(--ao-fg-muted);
+}
+
+:where(.authowl-root) .ao-pricing-currency {
+  min-height: var(--ao-control-height);
+  border: 1px solid var(--ao-border);
+  border-radius: var(--ao-border-radius);
+  padding-inline: calc(var(--ao-control-height) / 4);
+  background: var(--ao-surface);
+  color: var(--ao-fg);
+  font: inherit;
+}
+
+:where(.authowl-root) .ao-pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: calc(var(--ao-control-height) / 2);
+}
+
+@container (min-width: 30rem) {
+  :where(.authowl-root) .ao-pricing-grid {
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+}
+
+:where(.authowl-root) .ao-pricing-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: calc(var(--ao-control-height) * 7);
+  flex-direction: column;
+  gap: calc(var(--ao-control-height) / 4);
+  padding: calc(var(--ao-control-height) / 2);
+  border: 1px solid var(--ao-border);
+  border-radius: var(--ao-radius-xl);
+  background: var(--ao-surface);
+  color: var(--ao-fg);
+  box-shadow: var(--ao-shadow-card);
+}
+
+:where(.authowl-root) .ao-pricing-card-highlighted {
+  border-color: var(--ao-accent);
+  box-shadow: 0 0 0 1px var(--ao-accent), var(--ao-shadow-card);
+}
+
+:where(.authowl-root) .ao-pricing-badge,
+:where(.authowl-root) .ao-pricing-test-mode {
+  width: fit-content;
+  margin: 0;
+}
+
+:where(.authowl-root) .ao-pricing-test-mode {
+  margin-block-end: calc(var(--ao-control-height) / 4);
+}
+
+:where(.authowl-root) .ao-pricing-name,
+:where(.authowl-root) .ao-pricing-price,
+:where(.authowl-root) .ao-pricing-note,
+:where(.authowl-root) .ao-pricing-disclosure,
+:where(.authowl-root) .ao-pricing-status p {
+  margin: 0;
+}
+
+:where(.authowl-root) .ao-pricing-name {
+  color: var(--ao-fg);
+  font: inherit;
+  font-weight: 700;
+}
+
+:where(.authowl-root) .ao-pricing-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: calc(var(--ao-control-height) / 8);
+}
+
+:where(.authowl-root) .ao-pricing-amount {
+  color: var(--ao-fg);
+  font: inherit;
+  font-weight: 700;
+}
+
+:where(.authowl-root) .ao-pricing-interval,
+:where(.authowl-root) .ao-pricing-note,
+:where(.authowl-root) .ao-pricing-disclosure {
+  color: var(--ao-fg-muted);
+}
+
+:where(.authowl-root) .ao-pricing-features {
+  display: grid;
+  gap: calc(var(--ao-control-height) / 8);
+  margin-block: calc(var(--ao-control-height) / 4);
+  padding-inline-start: calc(var(--ao-control-height) / 2);
+}
+
+:where(.authowl-root) .ao-pricing-cta {
+  display: grid;
+  gap: calc(var(--ao-control-height) / 8);
+  margin-block-start: auto;
+}
+
+:where(.authowl-root) .ao-pricing-cta > :is(a, button),
+:where(.authowl-root) .ao-checkout-button {
+  width: 100%;
+}
+
+:where(.authowl-root) .ao-pricing-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--ao-control-height) / 4);
+  margin-block-end: calc(var(--ao-control-height) / 2);
+  padding: calc(var(--ao-control-height) / 4);
+  border: 1px solid var(--ao-border);
+  border-radius: var(--ao-border-radius);
+  background: var(--ao-hover);
+}
+
+:where(.authowl-root) .ao-portal-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ao-accent);
+  text-decoration: underline;
+  text-underline-offset: calc(var(--ao-control-height) / 16);
+}
+
+:where(.authowl-root) :is(.ao-checkout-button, .ao-portal-link):focus-visible,
+:where(.authowl-root) .ao-pricing-currency:focus-visible {
+  outline: 2px solid var(--ao-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.authowl-root) .ao-pricing-table * {
+    scroll-behavior: auto;
+    transition-duration: 0s;
+    animation-duration: 0s;
+  }
+}

@@ -27,9 +27,9 @@ describe('billing source policy', () => {
     }
   });
 
-  it('keeps only the React entry client and framework-specific', () => {
+  it('keeps only the React entries client and framework-specific', () => {
     for (const [name, source] of sources) {
-      if (name === 'react.tsx') {
+      if (name === 'react.tsx' || name === 'react-base.tsx') {
         expect(source.startsWith("'use client';\n"), name).toBe(true);
       } else {
         expect(source, name).not.toContain("'use client'");

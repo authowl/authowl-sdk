@@ -10,7 +10,8 @@ err() { echo "  FAIL: $*"; fail=1; }
 
 echo "[1/2] React bundle preserves the Next.js client boundary..."
 for bundle in packages/auth-react/dist/index.js packages/auth-react/dist/index.cjs \
-  packages/billing/dist/react.js packages/billing/dist/react.cjs; do
+  packages/billing/dist/react.js packages/billing/dist/react.cjs \
+  packages/billing/dist/react-commerce.js packages/billing/dist/react-commerce.cjs; do
   head -n 3 "$bundle" | grep -Eq "^[\"']use client[\"'];$" || err "$bundle is missing its use client directive"
 done
 
