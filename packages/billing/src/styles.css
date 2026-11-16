@@ -27,16 +27,26 @@
   border: 1px solid color-mix(in srgb, var(--ba-accent, var(--ao-brand-text)) 24%, transparent);
   border-radius: 999px;
   background: var(--ao-brand-soft);
-  color: var(--ba-accent, var(--ao-brand-text));
+  /* Body text on the brand tint: brand-coloured text measured 4.3:1 at 12px, under WCAG AA. */
+  color: var(--ao-fg);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
 }
 
+:where(.authowl-root) .ao-pricing-test-mode::before {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--ba-accent, var(--ao-brand-text));
+}
+
 :where(.authowl-root) .ao-pricing-test-mode .ao-muted {
   color: inherit;
   font-size: inherit;
-  opacity: 0.78;
+  font-weight: 400;
 }
 
 :where(.authowl-root) .ao-pricing-toolbar {
