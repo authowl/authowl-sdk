@@ -1,22 +1,15 @@
 'use client';
 import * as React from 'react';
 import { useAuthClient } from '@authowl/react';
-import {
-  createBillingClient,
-  type BillingClient,
-  type BillingRequestError,
-  type BillingSnapshot,
-  type FeatureParams,
-} from './index';
+import type { BillingRequestError, BillingSnapshot, FeatureParams } from './index';
+import { createEntitlementClient } from './entitlement-client';
 import { hasEntitlement, isFreshSnapshot } from './store';
 import type { EntitlementCheck, EntitlementView } from './wire';
 
-export function useBillingClient(): BillingClient {
-  return createBillingClient(useAuthClient());
-}
-
 export type UseEntitlementsResult = Readonly<{
   entitlements: readonly EntitlementView[];
+  subscription: BillingSnapshot['subscription'];
+  canManage: boolean;
   has(params: FeatureParams): boolean;
   isLoading: boolean;
   isStale: boolean;
@@ -26,10 +19,11 @@ export type UseEntitlementsResult = Readonly<{
   check(params: FeatureParams): Promise<EntitlementCheck>;
 }>;
 
-/**
- * Read the current entitlement snapshot. `has` is only a UI hint for metered
- * features; use `check()` when the server must answer with current state.
- */
+/** Return the cached entitlement client used by the lightweight React entry. */
+export function useBillingClient() {
+  return createEntitlementClient(useAuthClient());
+}
+
 export function useEntitlements(): UseEntitlementsResult {
   const client = useBillingClient();
   const snapshot = React.useSyncExternalStore(
@@ -42,6 +36,8 @@ export function useEntitlements(): UseEntitlementsResult {
   const isStale = snapshot.status === 'ready' && !isFreshSnapshot(snapshot, Date.now());
   return React.useMemo(() => ({
     entitlements: snapshot.entitlements,
+    subscription: snapshot.subscription,
+    canManage: snapshot.canManage,
     has: (params: FeatureParams) => mounted
       && hasEntitlement(snapshot, params.feature, Date.now()),
     isLoading: !mounted || snapshot.status === 'loading',
@@ -59,12 +55,6 @@ export type ProtectProps = Readonly<{
   children: React.ReactNode;
 }>;
 
-/**
- * Advisory UI only. Enforce access with a server-side entitlement check or the
- * Admin API check. The fallback renders while loading, on error, when stale,
- * signed out, for every reason, and when denied. `@authowl/react`'s `Protect`
- * gates roles and permissions, so alias one import when both are used.
- */
 export function Protect({
   feature,
   fallback = null,

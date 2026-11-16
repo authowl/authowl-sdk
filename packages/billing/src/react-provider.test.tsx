@@ -4,7 +4,7 @@ import * as React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { AuthOwlProvider } from '@authowl/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Protect, useEntitlements } from './react';
+import { Protect, useEntitlements } from './react-base';
 import { ALLOWED_LIST } from './test-fixtures';
 
 const PROJECT_ID = '00000000-0000-4000-8000-000000000001';

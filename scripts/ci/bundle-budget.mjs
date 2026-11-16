@@ -299,6 +299,10 @@ const PEER_EXTERNALS = ['react', 'react-dom', 'react/jsx-runtime'];
 // external because the app already ships both. It measures 2.66kb on this
 // machine; the ceiling keeps 0.50kb of headroom until the conductor re-pins it
 // from the pinned Linux gate.
+// 2026-11-16, S13 commerce components; entitlement-only consumers measured at
+// 2.95 kb via tree-shaking. The commerce entry measures 9.95kb and keeps 0.50kb
+// of regression headroom while the original entitlement entry stays below its
+// existing ceiling.
 const BUDGETS = [
   {
     entry: 'packages/auth-react/dist/index.js',
@@ -319,6 +323,12 @@ const BUDGETS = [
     entry: 'packages/billing/dist/react.js',
     maxGzipKb: 3.16,
     label: '@authowl/billing/react (client store + hooks + Protect)',
+    external: [...PEER_EXTERNALS, '@authowl/core', '@authowl/react'],
+  },
+  {
+    entry: 'packages/billing/dist/react-commerce.js',
+    maxGzipKb: 10.45,
+    label: '@authowl/billing/react/commerce (PricingTable, CheckoutButton, CustomerPortalLink)',
     external: [...PEER_EXTERNALS, '@authowl/core', '@authowl/react'],
   },
 ];

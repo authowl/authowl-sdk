@@ -32,6 +32,7 @@
 | **Backend** | [`@authowl/core/server`](./packages/auth-core), [Go](./sdks/go), [Python](./sdks/python), [PHP](./sdks/php), and [Rust](./sdks/rust). |
 | **Tooling** | [`authowl`](./packages/cli), the CLI for secure browser login, project detection, transactional setup, and user migration. |
 | **Design** | [`@authowl/tokens`](./packages/tokens), the design tokens shared by AuthOwl, Billow and Hitsend: OKLCH colours, type, space, radius, elevation and motion as CSS variables and a Tailwind 4 theme. |
+| **Billing** | [`@authowl/billing`](./packages/billing), the pricing, checkout, customer portal and feature entitlement client for AuthOwl Billing. |
 
 ## Install
 

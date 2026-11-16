@@ -1,12 +1,18 @@
-import type { AuthOwlClient } from '@authowl/core';
+import { clientExtension, type AuthOwlClient } from '@authowl/core';
+import { createCommerceClient, type CommerceClient } from './commerce';
+import { createEntitlementClient } from './entitlement-client';
 import {
-  createBillingStore,
-  type BillingClient,
+  BILLING_SDK_POLICY,
+  normalizeBillingError,
+  requestError,
+  type EntitlementClient,
 } from './store';
+
+export type BillingClient = EntitlementClient & CommerceClient;
 
 // Keep one cache when multiple copies load in one realm. Bump the key whenever
 // BillingClient gains or changes a member.
-const BILLING_CLIENTS = Symbol.for('authowl.billing.clients.v1');
+const BILLING_CLIENTS = Symbol.for('authowl.billing.clients.v2');
 type ClientRegistry = typeof globalThis & {
   [BILLING_CLIENTS]?: WeakMap<AuthOwlClient, BillingClient>;
 };
@@ -20,7 +26,14 @@ export function createBillingClient(core: AuthOwlClient): BillingClient {
   const clients = (clientRegistry[BILLING_CLIENTS] ??= new WeakMap());
   const existing = clients.get(core);
   if (existing) return existing;
-  const client = createBillingStore(core);
+  const entitlements = createEntitlementClient(core);
+  const commerce = createCommerceClient({
+    extension: clientExtension(core),
+    policy: BILLING_SDK_POLICY,
+    requestError,
+    normalizeError: normalizeBillingError,
+  });
+  const client: BillingClient = Object.freeze({ ...entitlements, ...commerce });
   clients.set(core, client);
   return client;
 }
@@ -28,13 +41,27 @@ export function createBillingClient(core: AuthOwlClient): BillingClient {
 export {
   BILLING_SDK_POLICY,
   BillingRequestError,
-  type BillingClient,
+  normalizeBillingError,
   type BillingSnapshot,
+  type EntitlementClient,
   type FeatureParams,
 } from './store';
 export type {
+  CatalogSnapshot,
+  CheckoutParams,
+  CommerceClient,
+  PortalParams,
+} from './commerce';
+export type {
+  BillingSubscription,
   BillingReason,
+  CheckoutResult,
   EntitlementCheck,
   EntitlementStatus,
   EntitlementView,
+  PortalResult,
+  PricingCatalog,
+  PricingFeature,
+  PricingPrice,
+  PricingProduct,
 } from './wire';

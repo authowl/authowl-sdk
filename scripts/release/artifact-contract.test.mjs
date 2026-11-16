@@ -341,6 +341,7 @@ function sourceDependencies(name) {
     name === '@authowl/react'
     || name === '@authowl/next'
     || name === '@authowl/react-native'
+    || name === '@authowl/billing'
   ) {
     return { '@authowl/core': 'workspace:*' };
   }
@@ -390,10 +391,10 @@ function assertPrivateOrListed() {
 }
 
 function assertReleasePackagePin() {
-  assert.equal(RELEASE_PACKAGES.length, 8, 'S12 must keep exactly eight release packages');
+  assert.equal(RELEASE_PACKAGES.length, 9, 'S13 must keep exactly nine release packages');
   assert.equal(
-    RELEASE_PACKAGES.some((entry) => entry.name === '@authowl/billing'),
-    false,
-    'S12 must keep @authowl/billing outside RELEASE_PACKAGES',
+    RELEASE_PACKAGES.at(-1)?.name,
+    '@authowl/billing',
+    'S13 must keep @authowl/billing present and last in RELEASE_PACKAGES',
   );
 }

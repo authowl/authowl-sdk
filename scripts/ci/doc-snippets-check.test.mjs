@@ -30,7 +30,11 @@ import { requireFeature } from '@authowl/billing/server';
 void requireFeature({ feature: 'reports' });
 export const view = <Protect feature="reports">Reports</Protect>;
 \`\`\``;
-const passingBlocks = [rootBlock, reactBlock, serverBlock, jsxBlock];
+const commerceBlock = `\`\`\`ts test="commerce-types"
+import type { PricingTableProps } from '@authowl/billing/react/commerce';
+export const currency: PricingTableProps['currency'] = 'EGP';
+\`\`\``;
+const passingBlocks = [rootBlock, reactBlock, serverBlock, jsxBlock, commerceBlock];
 
 function run(name, source) {
   const readme = path.join(temporary, `${name}.md`);
@@ -44,7 +48,7 @@ function run(name, source) {
 try {
   const passing = run('passing', passingBlocks.join('\n\n'));
   assert.equal(passing.status, 0, passing.stderr || passing.stdout);
-  assert.match(passing.stdout, /doc-snippets: 4 blocks, 3 entries, OK/);
+  assert.match(passing.stdout, /doc-snippets: 5 blocks, 4 entries, OK/);
 
   const broken = run('broken', [
     ...passingBlocks,
@@ -81,7 +85,7 @@ try {
   assert.equal(untagged.status, 1);
   assert.match(`${untagged.stdout}${untagged.stderr}`, /every code block is tested/);
 
-  const missing = run('missing-server', [rootBlock, reactBlock,
+  const missing = run('missing-server', [rootBlock, reactBlock, commerceBlock,
     '```tsx test="react-view"\nimport { Protect } from \'@authowl/billing/react\';\nexport const view = <Protect feature="reports">Reports</Protect>;\n```',
   ].join('\n\n'));
   assert.equal(missing.status, 1);

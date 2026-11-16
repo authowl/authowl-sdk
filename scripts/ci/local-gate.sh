@@ -581,6 +581,8 @@ prepare_consumer_workspace() {
         pnpm pack --pack-destination /consumer/tgz >/dev/null)
       (cd packages/tokens &&
         pnpm pack --pack-destination /consumer/tgz >/dev/null)
+      (cd packages/billing &&
+        pnpm pack --pack-destination /consumer/tgz >/dev/null)
     '
 }
 

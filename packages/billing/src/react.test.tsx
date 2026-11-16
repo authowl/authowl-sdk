@@ -12,7 +12,7 @@ import {
   useBillingClient,
   useEntitlements,
   type UseEntitlementsResult,
-} from './react';
+} from './react-commerce';
 import {
   ALLOWED_LIST,
   deferred,
@@ -183,7 +183,8 @@ describe('billing React entry', () => {
     }
     const view = render(<Probe />);
     expect(results.at(-1)).toMatchObject({
-      entitlements: [], isLoading: true, isStale: false, reason: null, error: null,
+      entitlements: [], subscription: null, canManage: false,
+      isLoading: true, isStale: false, reason: null, error: null,
     });
     await settleReact();
 
@@ -191,7 +192,14 @@ describe('billing React entry', () => {
     const ready = results.at(-1)!;
     expect(clients.at(-1)).toBe(client);
     expect(ready.entitlements).toBe(client.getSnapshot().entitlements);
-    expect(ready).toMatchObject({ isLoading: false, isStale: false, reason: 'ok', error: null });
+    expect(ready).toMatchObject({
+      subscription: null,
+      canManage: true,
+      isLoading: false,
+      isStale: false,
+      reason: 'ok',
+      error: null,
+    });
     expect(ready.has({ feature: 'reports' })).toBe(true);
     expect(ready.refresh).toBe(client.refresh);
     expect(ready.check).toBe(client.check);

@@ -7,6 +7,7 @@ import {
 import {
   decodeEntitlementCheck,
   decodeEntitlementList,
+  type BillingSubscription,
   type EntitlementCheck,
   type EntitlementStatus,
   type EntitlementView,
@@ -17,6 +18,22 @@ export const BILLING_SDK_POLICY = Object.freeze({
   refreshIntervalMs: 45_000,
   requestTimeoutMs: 10_000,
   maxResponseBytes: 128 * 1_024,
+  catalogStaleAfterMs: 300_000,
+  catalogMaxResponseBytes: 256 * 1_024,
+  checkoutTimeoutMs: 40_000,
+  portalTimeoutMs: 10_000,
+  checkoutPendingRetries: 3,
+  returnPollScheduleMs: Object.freeze([
+    1_000,
+    2_000,
+    2_000,
+    3_000,
+    5_000,
+    5_000,
+    5_000,
+    7_000,
+  ] as const),
+  returnMarkerTtlMs: 45 * 60_000,
   backoffMs: Object.freeze([2_000, 10_000, 30_000, 60_000] as const),
 });
 
@@ -25,6 +42,8 @@ export type BillingSnapshot = Readonly<{
   stale: boolean;
   reason: EntitlementStatus | null;
   entitlements: readonly EntitlementView[];
+  subscription: BillingSubscription | null;
+  canManage: boolean;
   receivedAt: number | null;
   error: BillingRequestError | null;
 }>;
@@ -59,9 +78,15 @@ export class BillingRequestError extends Error {
   }
 }
 
+export function normalizeBillingError(error: unknown): BillingRequestError {
+  return error instanceof BillingRequestError
+    ? error
+    : new BillingRequestError({ status: null });
+}
+
 export type FeatureParams = Readonly<{ feature: string }>;
 
-export type BillingClient = Readonly<{
+export type EntitlementClient = Readonly<{
   has(params: FeatureParams): boolean;
   getSnapshot(): BillingSnapshot;
   getServerSnapshot(): BillingSnapshot;
@@ -75,6 +100,8 @@ const EMPTY = Object.freeze({
   stale: false,
   reason: null,
   entitlements: EMPTY_ENTITLEMENTS,
+  subscription: null,
+  canManage: false,
   receivedAt: null,
   error: null,
 });
@@ -92,7 +119,7 @@ type QueuedRefresh = {
   reject: (error: unknown) => void;
 };
 
-export function createBillingStore(core: AuthOwlClient): BillingClient {
+export function createBillingStore(core: AuthOwlClient): EntitlementClient {
   const extension = clientExtension(core);
   const listeners = new Set<() => void>();
   let current = SIGNED_OUT_SNAPSHOT;
@@ -220,6 +247,8 @@ export function createBillingStore(core: AuthOwlClient): BillingClient {
         stale: false,
         reason: result.data.status,
         entitlements: result.data.entitlements,
+        subscription: result.data.subscription,
+        canManage: result.data.canManage,
         receivedAt: Date.now(),
         error: null,
       }));
@@ -351,8 +380,7 @@ export function createBillingStore(core: AuthOwlClient): BillingClient {
       if (!result.ok) throw requestError(result);
       return result.data;
     } catch (error) {
-      if (error instanceof BillingRequestError) throw error;
-      throw new BillingRequestError({ status: null });
+      throw normalizeBillingError(error);
     }
   }
 
@@ -402,7 +430,7 @@ function errorSnapshot(error: BillingRequestError): BillingSnapshot {
   return snapshot({ ...EMPTY, status: 'error', error });
 }
 
-function requestError(result: Extract<ProjectJsonResult<unknown>, { ok: false }>): BillingRequestError {
+export function requestError(result: Extract<ProjectJsonResult<unknown>, { ok: false }>): BillingRequestError {
   return new BillingRequestError({
     status: result.status,
     code: result.code,

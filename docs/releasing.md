@@ -1,10 +1,10 @@
 # Publishing the AuthOwl SDKs
 
-This repository ships thirteen things to five different places:
+This repository ships fourteen things to five different places:
 
 | SDK | Package | Ships to | Released by |
 | --- | --- | --- | --- |
-| `packages/*` (8) | `@authowl/core`, `@authowl/react`, `@authowl/next`, `@authowl/convex`, `@authowl/react-native`, `@authowl/expo`, `authowl`, `@authowl/tokens` | npm | `deploy.yml` |
+| `packages/*` (9) | `@authowl/core`, `@authowl/react`, `@authowl/next`, `@authowl/convex`, `@authowl/react-native`, `@authowl/expo`, `authowl`, `@authowl/tokens`, `@authowl/billing` | npm | `deploy.yml` |
 | `sdks/python` | `authowl` | PyPI | `deploy.yml` |
 | `sdks/rust` | `authowl` | crates.io | `deploy.yml` |
 | `sdks/flutter` | `authowl` | pub.dev | `publish-flutter.yml`, started by a tag |
@@ -54,7 +54,7 @@ workflow). It refuses to run from any other ref. Inputs:
 | Input | Default | Meaning |
 | --- | --- | --- |
 | `dry_run` | `true` | Build, verify and dry-run everything, publish nothing |
-| `npm` | `true` | Publish `packages/*`; skipped when all eight versions exist |
+| `npm` | `true` | Publish `packages/*`; skipped when all nine versions exist |
 | `python` | `true` | Publish `sdks/python` |
 | `rust` | `true` | Publish `sdks/rust` |
 | `flutter` | `true` | Push the tag that publishes `sdks/flutter` |
@@ -117,7 +117,7 @@ Each registry has to be told, once, to trust this repository and workflow.
 
 | Registry | Where | Configure |
 | --- | --- | --- |
-| npm | npmjs.com → each of the 8 packages → Settings → Trusted publisher | repository `authowl/authowl-sdk`, workflow `deploy.yml` |
+| npm | npmjs.com → each of the 9 packages → Settings → Trusted publisher | repository `authowl/authowl-sdk`, workflow `deploy.yml` |
 | PyPI | pypi.org → Publishing → add a GitHub publisher | project `authowl`, repository `authowl/authowl-sdk`, workflow `deploy.yml` |
 | crates.io | crates.io → `authowl` → Settings → Trusted Publishing | repository `authowl/authowl-sdk`, workflow `deploy.yml` |
 | pub.dev | pub.dev → `authowl` → Admin → Automated publishing | repository `authowl/authowl-sdk`, tag pattern `sdks/flutter-v{{version}}` |
@@ -125,11 +125,12 @@ Each registry has to be told, once, to trust this repository and workflow.
 Two of these need the package to exist before a trusted publisher can be
 attached to it:
 
-- **npm** — seven of the eight packages are published, so configure them now.
-  `@authowl/tokens` is new: publish its *first* version from a laptop (see
+- **npm:** seven of the nine packages are published, so configure them now.
+  `@authowl/tokens` and `@authowl/billing` are new: publish each *first* version from a laptop (see
   [Publishing npm from a laptop](#publishing-npm-from-a-laptop)), then attach
-  the trusted publisher. Until then a hosted npm deploy stops at it. It is last
-  in the publication order, so every other package is already out when it does.
+  the trusted publisher. Until then a hosted npm deploy stops at either one.
+  Billing is last in the publication order, so every other package is already
+  out when it does.
 - **crates.io** — the `authowl` crate does not exist yet. Its *first* version
   has to be published from a laptop with `cargo publish`; after that, configure
   trusted publishing and let the workflow take over.
@@ -137,10 +138,8 @@ attached to it:
   published, so the `authowl` project can be created by the first workflow run.
 - **pub.dev** already serves `authowl`, so configure it now.
 
-`@authowl/billing` is private and outside the release list until its first
-release. That release removes the flag, adds it last to `RELEASE_PACKAGES` and
-the gate's pack list, and publishes its first version from a laptop like
-`@authowl/tokens`.
+The first `@authowl/billing` version is published from a laptop like
+`@authowl/tokens`. Attach its trusted publisher after that first publish.
 
 ## Publishing npm from a laptop
 
@@ -168,7 +167,7 @@ cleanup succeeds. A manifest records package order, version, byte length,
 SHA-256 and npm SHA-512 integrity. Exact-commit evidence is written under
 `.authowl-ci/results/`. The publication order is `@authowl/core`,
 `@authowl/react`, `@authowl/next`, `@authowl/convex`, `@authowl/react-native`,
-`@authowl/expo`, `authowl`, `@authowl/tokens`.
+`@authowl/expo`, `authowl`, `@authowl/tokens`, `@authowl/billing`.
 
 npm may request a one-time password. The command checks the registry before each
 release and verifies npm's published SHA-512 integrity afterward. If the process
