@@ -4,9 +4,11 @@ import {
   type ProjectJsonResult,
   type SessionState,
 } from '@authowl/core';
+import { createCommerceClient, type CommerceClient } from './commerce';
 import {
   decodeEntitlementCheck,
   decodeEntitlementList,
+  type BillingSubscription,
   type EntitlementCheck,
   type EntitlementStatus,
   type EntitlementView,
@@ -17,6 +19,22 @@ export const BILLING_SDK_POLICY = Object.freeze({
   refreshIntervalMs: 45_000,
   requestTimeoutMs: 10_000,
   maxResponseBytes: 128 * 1_024,
+  catalogStaleAfterMs: 300_000,
+  catalogMaxResponseBytes: 256 * 1_024,
+  checkoutTimeoutMs: 40_000,
+  portalTimeoutMs: 10_000,
+  checkoutPendingRetries: 3,
+  returnPollScheduleMs: Object.freeze([
+    1_000,
+    2_000,
+    2_000,
+    3_000,
+    5_000,
+    5_000,
+    5_000,
+    7_000,
+  ] as const),
+  returnMarkerTtlMs: 45 * 60_000,
   backoffMs: Object.freeze([2_000, 10_000, 30_000, 60_000] as const),
 });
 
@@ -25,6 +43,8 @@ export type BillingSnapshot = Readonly<{
   stale: boolean;
   reason: EntitlementStatus | null;
   entitlements: readonly EntitlementView[];
+  subscription: BillingSubscription | null;
+  canManage: boolean;
   receivedAt: number | null;
   error: BillingRequestError | null;
 }>;
@@ -68,13 +88,15 @@ export type BillingClient = Readonly<{
   subscribe(listener: () => void): () => void;
   refresh(): Promise<void>;
   check(params: FeatureParams): Promise<EntitlementCheck>;
-}>;
+}> & CommerceClient;
 
 const EMPTY_ENTITLEMENTS = Object.freeze([]) as readonly EntitlementView[];
 const EMPTY = Object.freeze({
   stale: false,
   reason: null,
   entitlements: EMPTY_ENTITLEMENTS,
+  subscription: null,
+  canManage: false,
   receivedAt: null,
   error: null,
 });
@@ -94,6 +116,16 @@ type QueuedRefresh = {
 
 export function createBillingStore(core: AuthOwlClient): BillingClient {
   const extension = clientExtension(core);
+  const commerce = createCommerceClient({
+    extension,
+    policy: BILLING_SDK_POLICY,
+    requestError,
+    normalizeError(error) {
+      return error instanceof BillingRequestError
+        ? error
+        : new BillingRequestError({ status: null });
+    },
+  });
   const listeners = new Set<() => void>();
   let current = SIGNED_OUT_SNAPSHOT;
   let identity: string | null = null;
@@ -220,6 +252,8 @@ export function createBillingStore(core: AuthOwlClient): BillingClient {
         stale: false,
         reason: result.data.status,
         entitlements: result.data.entitlements,
+        subscription: result.data.subscription,
+        canManage: result.data.canManage,
         receivedAt: Date.now(),
         error: null,
       }));
@@ -357,6 +391,7 @@ export function createBillingStore(core: AuthOwlClient): BillingClient {
   }
 
   return Object.freeze({
+    ...commerce,
     has,
     getSnapshot: () => current,
     getServerSnapshot: () => SIGNED_OUT_SNAPSHOT,

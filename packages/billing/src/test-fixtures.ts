@@ -27,12 +27,16 @@ export const ALLOWED_LIST = {
   entitlements: [
     { feature: 'reports', kind: 'boolean', allowed: true, balance: null },
   ],
+  subscription: null,
+  canManage: true,
 };
 export const BASELINE: BillingSnapshot = {
   status: 'ready',
   stale: false,
   reason: 'ok',
   entitlements: ALLOWED_LIST.entitlements,
+  subscription: ALLOWED_LIST.subscription,
+  canManage: ALLOWED_LIST.canManage,
   receivedAt: NOW,
   error: null,
 };

@@ -1,6 +1,5 @@
 {
   "name": "@authowl/billing",
-  "private": true,
   "version": "0.0.0",
   "description": "Feature entitlements for apps that bill through AuthOwl's Billing module: has(), check() and fail-closed snapshots.",
   "license": "MIT",
@@ -21,7 +20,9 @@
     "subscriptions"
   ],
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/styles.css"
+  ],
   "exports": {
     ".": {
       "import": {
@@ -52,7 +53,8 @@
         "types": "./dist/server.d.cts",
         "default": "./dist/server.cjs"
       }
-    }
+    },
+    "./styles.css": "./dist/styles.css"
   },
   "files": [
     "dist",

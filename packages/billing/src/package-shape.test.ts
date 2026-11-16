@@ -9,7 +9,8 @@ type Manifest = {
   dependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
   peerDependenciesMeta?: Record<string, { optional?: boolean }>;
-  exports?: Record<string, {
+  sideEffects?: string[];
+  exports?: Record<string, string | {
     import?: { types?: string; default?: string };
     require?: { types?: string; default?: string };
   }>;
@@ -39,9 +40,8 @@ function compare(left: readonly number[], right: readonly number[]): number {
 describe('billing package shape', () => {
   const billing = manifest(`${packageRoot}/package.json`);
 
-  it('keeps the S12 release hold', () => {
-    // S13 removes this flag in the same change that adds billing to RELEASE_PACKAGES and the gate's pack list.
-    expect(billing.private).toBe(true);
+  it('is public for the S13 first release', () => {
+    expect(billing.private).toBeUndefined();
   });
 
   it('depends only on the workspace core package', () => {
@@ -65,14 +65,22 @@ describe('billing package shape', () => {
     expect(billing.peerDependencies?.react).toBe('>=18');
   });
 
-  it('exports exactly the root, React, and server entries with import and require types', () => {
-    expect(Object.keys(billing.exports ?? {})).toEqual(['.', './react', './server']);
+  it('exports exactly the root, React, server and stylesheet entries', () => {
+    expect(Object.keys(billing.exports ?? {})).toEqual([
+      '.',
+      './react',
+      './server',
+      './styles.css',
+    ]);
     for (const name of ['.', './react', './server']) {
       const entry = billing.exports?.[name];
+      if (typeof entry === 'string') throw new TypeError(`${name} must be conditional`);
       expect(Object.keys(entry ?? {}), name).toEqual(['import', 'require']);
       expect(Object.keys(entry?.import ?? {}), `${name} import`).toEqual(['types', 'default']);
       expect(Object.keys(entry?.require ?? {}), `${name} require`).toEqual(['types', 'default']);
     }
+    expect(billing.exports?.['./styles.css']).toBe('./dist/styles.css');
+    expect(billing.sideEffects).toEqual(['./dist/styles.css']);
   });
 
   it('keeps every framework peer optional', () => {

@@ -17,6 +17,8 @@ export function useBillingClient(): BillingClient {
 
 export type UseEntitlementsResult = Readonly<{
   entitlements: readonly EntitlementView[];
+  subscription: BillingSnapshot['subscription'];
+  canManage: boolean;
   has(params: FeatureParams): boolean;
   isLoading: boolean;
   isStale: boolean;
@@ -42,6 +44,8 @@ export function useEntitlements(): UseEntitlementsResult {
   const isStale = snapshot.status === 'ready' && !isFreshSnapshot(snapshot, Date.now());
   return React.useMemo(() => ({
     entitlements: snapshot.entitlements,
+    subscription: snapshot.subscription,
+    canManage: snapshot.canManage,
     has: (params: FeatureParams) => mounted
       && hasEntitlement(snapshot, params.feature, Date.now()),
     isLoading: !mounted || snapshot.status === 'loading',

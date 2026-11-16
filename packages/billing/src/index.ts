@@ -6,7 +6,7 @@ import {
 
 // Keep one cache when multiple copies load in one realm. Bump the key whenever
 // BillingClient gains or changes a member.
-const BILLING_CLIENTS = Symbol.for('authowl.billing.clients.v1');
+const BILLING_CLIENTS = Symbol.for('authowl.billing.clients.v2');
 type ClientRegistry = typeof globalThis & {
   [BILLING_CLIENTS]?: WeakMap<AuthOwlClient, BillingClient>;
 };
@@ -33,8 +33,21 @@ export {
   type FeatureParams,
 } from './store';
 export type {
+  CatalogSnapshot,
+  CheckoutParams,
+  CommerceClient,
+  PortalParams,
+} from './commerce';
+export type {
+  BillingSubscription,
   BillingReason,
+  CheckoutResult,
   EntitlementCheck,
   EntitlementStatus,
   EntitlementView,
+  PortalResult,
+  PricingCatalog,
+  PricingFeature,
+  PricingPrice,
+  PricingProduct,
 } from './wire';
