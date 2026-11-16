@@ -71,6 +71,7 @@ describe('billing wire decoders', () => {
     ['provider', { ...CATALOG, providers: { USD: 'Stripe Inc.' } }],
     ['price kind', { ...CATALOG, products: [{ ...PRODUCT, prices: [{ ...PRICE, kind: 'usage' }] }] }],
     ['interval', { ...CATALOG, products: [{ ...PRODUCT, prices: [{ ...PRICE, interval: 'quarter' }] }] }],
+    ['currency exponent', { ...CATALOG, products: [{ ...PRODUCT, prices: [{ ...PRICE, exponent: 5 }] }] }],
     ['feature kind', { ...CATALOG, products: [{ ...PRODUCT, features: [{ ...FEATURE, kind: 'future' }] }] }],
   ])('rejects an unknown %s', (_name, value) => {
     expect(() => decodePricingCatalog(value)).toThrow('Invalid billing response.');

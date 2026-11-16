@@ -4,7 +4,7 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     react: 'src/react-base.tsx',
-    'react-commerce': 'src/react.tsx',
+    'react-commerce': 'src/react-commerce.tsx',
     server: 'src/server.ts',
   },
   format: ['esm', 'cjs'],

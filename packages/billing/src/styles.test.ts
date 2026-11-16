@@ -42,9 +42,12 @@ function variableReads(css: string): VariableRead[] {
 }
 
 describe('billing stylesheet token contract', () => {
-  it('gives every non-default variable an explicit fallback', () => {
+  it('gives every non-default variable an explicit fallback', async () => {
     const billingCss = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
-    const tokenCss = readFileSync(new URL('../../tokens/dist/tokens.css', import.meta.url), 'utf8');
+    const tokenModule = await import(new URL('../../tokens/src/css.ts', import.meta.url).href) as {
+      tokensCss(): string;
+    };
+    const tokenCss = tokenModule.tokensCss();
     const authCss = readFileSync(new URL('../../auth-react/src/styles.css', import.meta.url), 'utf8');
     const defaults = new Set([
       ...defaultDefinitions(tokenCss),

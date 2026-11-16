@@ -16,7 +16,7 @@ const FEATURE_KINDS = ['boolean', 'metered'] as const;
 const CATALOG_STATUSES = ['ok', 'not_connected'] as const;
 const MAX_PRODUCTS = 50;
 const MAX_FEATURES = 30;
-const MAX_CURRENCIES = 50;
+const MAX_CURRENCIES = 1_000;
 
 export type BillingReason = typeof BILLING_REASONS[number];
 export type EntitlementStatus = typeof ENTITLEMENT_STATUSES[number];
@@ -255,7 +255,7 @@ function decodePrice(value: unknown): PricingPrice {
   return Object.freeze({
     currency: currency(row.currency),
     amount: nonnegativeInteger(row.amount),
-    exponent: nonnegativeInteger(row.exponent),
+    exponent: boundedNonnegativeInteger(row.exponent, 4),
     interval: oneOf(row.interval, INTERVALS),
     intervalCount: positiveInteger(row.intervalCount),
     kind: oneOf(row.kind, PRICE_KINDS),
@@ -344,6 +344,12 @@ function nullableNumber(value: unknown): number | null {
 function nonnegativeInteger(value: unknown): number {
   if (!Number.isSafeInteger(value) || (value as number) < 0) invalid();
   return value as number;
+}
+
+function boundedNonnegativeInteger(value: unknown, maximum: number): number {
+  const result = nonnegativeInteger(value);
+  if (result > maximum) invalid();
+  return result;
 }
 
 function nullableNonnegativeInteger(value: unknown): number | null {

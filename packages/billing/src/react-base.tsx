@@ -19,8 +19,13 @@ export type UseEntitlementsResult = Readonly<{
   check(params: FeatureParams): Promise<EntitlementCheck>;
 }>;
 
+/** Return the cached entitlement client used by the lightweight React entry. */
+export function useBillingClient() {
+  return createEntitlementClient(useAuthClient());
+}
+
 export function useEntitlements(): UseEntitlementsResult {
-  const client = createEntitlementClient(useAuthClient());
+  const client = useBillingClient();
   const snapshot = React.useSyncExternalStore(
     client.subscribe,
     client.getSnapshot,

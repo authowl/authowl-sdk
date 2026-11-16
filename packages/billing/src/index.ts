@@ -3,7 +3,7 @@ import { createCommerceClient, type CommerceClient } from './commerce';
 import { createEntitlementClient } from './entitlement-client';
 import {
   BILLING_SDK_POLICY,
-  BillingRequestError,
+  normalizeBillingError,
   requestError,
   type EntitlementClient,
 } from './store';
@@ -31,11 +31,7 @@ export function createBillingClient(core: AuthOwlClient): BillingClient {
     extension: clientExtension(core),
     policy: BILLING_SDK_POLICY,
     requestError,
-    normalizeError(error) {
-      return error instanceof BillingRequestError
-        ? error
-        : new BillingRequestError({ status: null });
-    },
+    normalizeError: normalizeBillingError,
   });
   const client: BillingClient = Object.freeze({ ...entitlements, ...commerce });
   clients.set(core, client);
@@ -45,6 +41,7 @@ export function createBillingClient(core: AuthOwlClient): BillingClient {
 export {
   BILLING_SDK_POLICY,
   BillingRequestError,
+  normalizeBillingError,
   type BillingSnapshot,
   type EntitlementClient,
   type FeatureParams,

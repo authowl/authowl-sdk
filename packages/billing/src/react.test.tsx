@@ -12,7 +12,7 @@ import {
   useBillingClient,
   useEntitlements,
   type UseEntitlementsResult,
-} from './react';
+} from './react-commerce';
 import {
   ALLOWED_LIST,
   deferred,

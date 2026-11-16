@@ -1,6 +1,6 @@
 # @authowl/billing
 
-Feature entitlements for applications that bill through AuthOwl.
+Pricing, checkout, customer portal components and feature entitlements for AuthOwl Billing.
 
 ## Install
 
@@ -24,16 +24,22 @@ const core = createAuthOwlClient(resolveConfig({
 }));
 const billing = createBillingClient(core);
 
-const catalog = await billing.products();
-const firstProduct = catalog.products[0];
-if (firstProduct && catalog.defaultCurrency) {
-  await billing.checkout({
+export async function beginCheckout() {
+  const catalog = await billing.products();
+  const firstProduct = catalog.products[0];
+  if (!firstProduct || !catalog.defaultCurrency) return;
+  const result = await billing.checkout({
     productId: firstProduct.id,
     currency: catalog.defaultCurrency,
     returnPath: '/account',
   });
+  if (result.status === 'redirect') window.location.assign(result.url);
 }
-await billing.portal({ returnPath: '/account' });
+
+export async function openBillingPortal() {
+  const result = await billing.portal({ returnPath: '/account' });
+  if (result.status === 'redirect') window.location.assign(result.url);
+}
 
 const unsubscribe = billing.subscribe(() => {
   const reportsAllowed = billing.has({ feature: 'reports' });
@@ -125,6 +131,13 @@ without a refetch or fallback flash.
 The pricing table and checkout button send the customer to a secure payment
 provider page to pay. The customer portal is hosted by Billow. The disclosure
 stays available to assistive technology when the compact button form is used.
+Create checkout and portal sessions only from a customer click. Their provider
+URLs are short-lived secrets and should be used immediately for navigation.
+The page origin must be listed in the AuthOwl environment's allowed origins,
+and production origins must use HTTPS, or the request returns
+`BILLING_ORIGIN_REQUIRED`. When using a standalone `CheckoutButton`, keep
+`useCheckoutReturn()` or a `PricingTable` mounted on the return page so the SDK
+can confirm and display the resulting subscription state.
 
 ## Next server
 

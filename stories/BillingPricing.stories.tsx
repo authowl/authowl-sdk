@@ -42,7 +42,7 @@ export const ThreeProducts: Story = {
   play: async ({ canvasElement, globals }) => {
     await expectStoryMatrix(canvasElement);
     await expectCards(canvasElement, 3);
-    expect(canvasElement.querySelector('.ao-pricing-card-highlighted #ao-plan-growth'))
+    expect(canvasElement.querySelector('.ao-pricing-card-highlighted [id$="-growth"]'))
       .toHaveTextContent('Growth');
     if (globals.locale === 'ar') {
       const text = canvasElement.querySelector('.ao-pricing-amount')?.textContent ?? '';
@@ -54,11 +54,14 @@ export const ThreeProducts: Story = {
 
 export const FiveProducts: Story = {
   parameters: { authowl: { pricing: 'five', billing: 'allowed' } },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, globals }) => {
     await expectStoryMatrix(canvasElement);
     await expectCards(canvasElement, 5);
     expect(await within(canvasElement).findByRole('heading', { name: 'Enterprise' }, REAL_WAIT))
       .toBeVisible();
+    const allowance = globals.locale === 'ar' ? 'Seats: 100 شهريًا' : 'Seats: 100 per month';
+    expect(await within(canvasElement).findByText(allowance, {}, REAL_WAIT)).toBeVisible();
+    if (globals.locale === 'ar') expect(allowance).not.toMatch(/[٠-٩۰-۹]/);
   },
 };
 
@@ -115,7 +118,7 @@ export const CurrentPlan: Story = {
     await expectStoryMatrix(canvasElement);
     await expectCards(canvasElement, 3);
     await waitFor(() => {
-      expect(canvasElement.querySelector('[aria-labelledby="ao-plan-growth"] .ao-pricing-badge'))
+      expect(canvasElement.querySelector('[aria-labelledby$="-growth"] .ao-pricing-badge'))
         .not.toBeNull();
       expect(canvasElement.querySelectorAll('.ao-portal-link')).toHaveLength(3);
     }, REAL_WAIT);
@@ -133,10 +136,15 @@ export const SignedOut: Story = {
 };
 
 function ReturnTable() {
-  sessionStorage.setItem('authowl.billing.checkout.v1', JSON.stringify({
-    productId: 'growth', currency: 'EGP', userId: 'user-preview', startedAt: Date.now(),
-  }));
-  return frame(<PricingTable />);
+  const [ready, setReady] = React.useState(false);
+  React.useEffect(() => {
+    sessionStorage.setItem('authowl.billing.checkout.v1', JSON.stringify({
+      productId: 'growth', currency: 'EGP', userId: 'user-preview', startedAt: Date.now(),
+    }));
+    setReady(true);
+    return () => sessionStorage.removeItem('authowl.billing.checkout.v1');
+  }, []);
+  return ready ? frame(<PricingTable />) : null;
 }
 
 export const ReturnConfirming: Story = {

@@ -1,22 +1,12 @@
 import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { CheckoutButton, CustomerPortalLink, usePricing } from '@authowl/billing/react/commerce';
+import { CustomerPortalLink, PricingTable } from '@authowl/billing/react/commerce';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { expectStoryMatrix } from './matrix';
 import { card } from './surface';
 
 function ButtonDemo() {
-  const pricing = usePricing();
-  const price = pricing.products[0]?.prices[0];
-  const locale = document.documentElement.dir === 'rtl' ? 'ar-EG-u-nu-latn' : 'en-US';
-  const formatted = price ? new Intl.NumberFormat(locale, {
-    style: 'currency', currency: price.currency, currencyDisplay: 'code',
-  }).format(price.amount / 10 ** price.exponent) : '';
-  return <section style={card}>
-    <h2>Starter</h2>
-    <p data-story-price><bdi>{formatted}</bdi></p>
-    <CheckoutButton productId="starter" />
-  </section>;
+  return <section style={card}><PricingTable productIds={['starter']} /></section>;
 }
 
 function PortalDemo() {
@@ -51,9 +41,9 @@ export const ButtonIdle: Story = {
       REAL_WAIT,
     );
     expect(button).toBeEnabled();
-    expect(canvasElement.querySelector('[data-story-price]')?.textContent).not.toBe('');
+    expect(canvasElement.querySelector('.ao-pricing-amount')?.textContent).not.toBe('');
     if (globals.locale === 'ar') {
-      const text = canvasElement.querySelector('[data-story-price]')?.textContent ?? '';
+      const text = canvasElement.querySelector('.ao-pricing-amount')?.textContent ?? '';
       expect(text).not.toMatch(/[٠-٩۰-۹]/);
       expect(text).toMatch(/[0-9]/);
     }

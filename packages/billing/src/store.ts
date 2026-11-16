@@ -78,6 +78,12 @@ export class BillingRequestError extends Error {
   }
 }
 
+export function normalizeBillingError(error: unknown): BillingRequestError {
+  return error instanceof BillingRequestError
+    ? error
+    : new BillingRequestError({ status: null });
+}
+
 export type FeatureParams = Readonly<{ feature: string }>;
 
 export type EntitlementClient = Readonly<{
@@ -374,8 +380,7 @@ export function createBillingStore(core: AuthOwlClient): EntitlementClient {
       if (!result.ok) throw requestError(result);
       return result.data;
     } catch (error) {
-      if (error instanceof BillingRequestError) throw error;
-      throw new BillingRequestError({ status: null });
+      throw normalizeBillingError(error);
     }
   }
 

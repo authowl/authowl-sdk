@@ -156,7 +156,7 @@ export function createCommerceClient(dependencies: CommerceDependencies): Commer
       if (retry >= policy.checkoutPendingRetries) {
         return Object.freeze({ status: 'pending' });
       }
-      await wait(result.data.retryAfterSeconds! * 1000);
+      await wait(Math.min(result.data.retryAfterSeconds! * 1000, 30_000));
     }
   }
 

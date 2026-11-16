@@ -1,7 +1,7 @@
 {
   "name": "@authowl/billing",
   "version": "0.0.0",
-  "description": "Feature entitlements for apps that bill through AuthOwl's Billing module: has(), check() and fail-closed snapshots.",
+  "description": "Entitlements, pricing, checkout and customer portal components for AuthOwl Billing.",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -72,7 +72,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup --config tsup.config.ts && node scripts/build-styles.mjs && node ../../scripts/gen-notices.mjs src/index.ts src/react-base.tsx src/react.tsx src/server.ts",
+    "build": "tsup --config tsup.config.ts && node scripts/build-styles.mjs && node ../../scripts/gen-notices.mjs src/index.ts src/react-base.tsx src/react-commerce.tsx src/server.ts",
     "dev": "tsup --config tsup.config.ts --watch",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "node ../../scripts/release/direct-publish-guard.mjs",
