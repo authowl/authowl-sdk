@@ -1,3 +1,4 @@
+import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { CheckoutButton, CustomerPortalLink, usePricing } from '@authowl/billing/react/commerce';
 import { expect, userEvent, waitFor, within } from 'storybook/test';

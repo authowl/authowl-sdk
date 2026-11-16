@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { PricingTable } from '@authowl/billing/react/commerce';
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { expect, within } from 'storybook/test';
 import { expectStoryMatrix } from './matrix';
 
