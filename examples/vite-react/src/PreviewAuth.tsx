@@ -1,10 +1,17 @@
 import React from 'react';
 import { AuthOwlProvider } from '@authowl/react';
+import {
+  checkoutRedirect,
+  portalRedirect,
+  pricingCatalog,
+  type PreviewCommerce,
+  type PreviewPricing,
+} from './preview-billing-fixtures';
+
+export type { PreviewCommerce, PreviewPricing } from './preview-billing-fixtures';
 
 export type PreviewSignInMethod = 'password' | 'email_otp' | 'magic_link' | 'passkey' | 'phone_otp' | 'sso';
 export type PreviewBilling = 'loading' | 'denied' | 'allowed' | 'subscribed';
-export type PreviewPricing = 'one' | 'three' | 'five' | 'mixed' | 'loading' | 'empty' | 'error';
-export type PreviewCommerce = 'loading' | 'error' | 'redirect';
 
 const PREVIEW_PK = 'pk_live_11111111-1111-1111-1111-111111111111_abcdefghij0123456789';
 
@@ -93,59 +100,7 @@ const privacy = {
   }],
 };
 
-const pricingProducts = [
-  {
-    id: 'starter', name: 'Starter',
-    prices: [
-      { currency: 'EGP', amount: 19000, exponent: 2, interval: 'month', intervalCount: 1, kind: 'fixed_recurring', hasUsage: false },
-      { currency: 'USD', amount: 900, exponent: 2, interval: 'month', intervalCount: 1, kind: 'fixed_recurring', hasUsage: false },
-    ],
-    features: [{ feature: 'projects', name: 'Projects', kind: 'metered', allowance: 3, resetInterval: null }],
-  },
-  {
-    id: 'growth', name: 'Growth',
-    prices: [
-      { currency: 'EGP', amount: 49000, exponent: 2, interval: 'month', intervalCount: 1, kind: 'fixed_recurring', hasUsage: true },
-      { currency: 'USD', amount: 1900, exponent: 2, interval: 'month', intervalCount: 1, kind: 'fixed_recurring', hasUsage: true },
-    ],
-    features: [
-      { feature: 'projects', name: 'Projects', kind: 'metered', allowance: 25, resetInterval: null },
-      { feature: 'analytics', name: 'Analytics', kind: 'boolean', allowance: null, resetInterval: null },
-    ],
-  },
-  {
-    id: 'scale', name: 'Scale',
-    prices: [
-      { currency: 'EGP', amount: 99000, exponent: 2, interval: 'month', intervalCount: 1, kind: 'fixed_recurring', hasUsage: false },
-      { currency: 'USD', amount: 3900, exponent: 2, interval: 'month', intervalCount: 1, kind: 'fixed_recurring', hasUsage: false },
-    ],
-    features: [{ feature: 'projects', name: 'Projects', kind: 'metered', allowance: null, resetInterval: 'month' }],
-  },
-  {
-    id: 'business', name: 'Business',
-    prices: [{ currency: 'EGP', amount: 149000, exponent: 2, interval: 'month', intervalCount: 1, kind: 'fixed_recurring', hasUsage: false }],
-    features: [{ feature: 'support', name: 'Priority support', kind: 'boolean', allowance: null, resetInterval: null }],
-  },
-  {
-    id: 'enterprise', name: 'Enterprise',
-    prices: [{ currency: 'EGP', amount: 249000, exponent: 2, interval: 'month', intervalCount: 1, kind: 'fixed_recurring', hasUsage: false }],
-    features: [{ feature: 'seats', name: 'Seats', kind: 'metered', allowance: 100, resetInterval: 'month' }],
-  },
-] as const;
-
-function pricingCatalog(fixture: Exclude<PreviewPricing, 'loading' | 'error'>) {
-  const count = fixture === 'one' ? 1 : fixture === 'three' || fixture === 'mixed' ? 3 : fixture === 'empty' ? 0 : 5;
-  const products = pricingProducts.slice(0, count).map((product, index) => fixture === 'mixed' && index === 2
-    ? { ...product, prices: product.prices.filter((price) => price.currency !== 'USD') }
-    : product);
-  return {
-    status: 'ok', environment: 'sandbox', customerType: 'organization',
-    defaultCurrency: 'EGP', currencies: ['EGP', 'USD'],
-    providers: { EGP: 'paymob', USD: 'stripe' }, products,
-  };
-}
-
-function createPreviewFetch({
+export function createPreviewFetch({
   signedIn, consentRequired, primaryColor, configUnavailable, privacyEnabled,
   passkeyRelyingPartyId, signInMethod, mfaEnrollment, wrongPassword, invalidCode, codePending, billing,
   pricing, checkout, portal,
@@ -297,29 +252,8 @@ function createPreviewFetch({
             productId: 'growth', status: 'active', currentPeriodEnd: '2026-08-14T08:00:00.000Z', cancelAtPeriodEnd: false,
           } : null,
           canManage: true,
-      });
-    }
-    if (pricing && path.endsWith('/billing/products')) {
-      if (pricing === 'loading') return new Promise<Response>(() => {});
-      if (pricing === 'error') return Response.json({ code: 'PREVIEW_FAILURE' }, { status: 500 });
-      return Response.json(pricingCatalog(pricing));
-    }
-    if (checkout && path.endsWith('/billing/checkout')) {
-      if (checkout === 'loading') return new Promise<Response>(() => {});
-      if (checkout === 'error') return Response.json({ code: 'PREVIEW_FAILURE' }, { status: 500 });
-      return Response.json({
-        status: 'redirect', url: 'https://payments.preview.test/session',
-        productId: 'starter', currency: 'EGP', expiresAt: '2026-07-14T09:00:00.000Z',
-      });
-    }
-    if (portal && path.endsWith('/billing/portal')) {
-      if (portal === 'loading') return new Promise<Response>(() => {});
-      if (portal === 'error') return Response.json({ code: 'PREVIEW_FAILURE' }, { status: 500 });
-      return Response.json({
-        status: 'redirect', url: 'https://portal.preview.test/session',
-        expiresAt: '2026-07-14T09:00:00.000Z',
-      });
-    }
+        });
+      }
       return Response.json(billing === 'allowed'
         ? {
             feature: 'reports', allowed: true, kind: 'boolean', balance: null,
@@ -329,6 +263,21 @@ function createPreviewFetch({
             feature: 'reports', allowed: false, kind: null, balance: null,
             reason: 'not_granted', source: 'snapshot', subject,
           });
+    }
+    if (pricing && path.endsWith('/billing/products')) {
+      if (pricing === 'loading') return new Promise<Response>(() => {});
+      if (pricing === 'error') return Response.json({ code: 'PREVIEW_FAILURE' }, { status: 500 });
+      return Response.json(pricingCatalog(pricing));
+    }
+    if (checkout && path.endsWith('/billing/checkout')) {
+      if (checkout === 'loading') return new Promise<Response>(() => {});
+      if (checkout === 'error') return Response.json({ code: 'PREVIEW_FAILURE' }, { status: 500 });
+      return Response.json(checkoutRedirect());
+    }
+    if (portal && path.endsWith('/billing/portal')) {
+      if (portal === 'loading') return new Promise<Response>(() => {});
+      if (portal === 'error') return Response.json({ code: 'PREVIEW_FAILURE' }, { status: 500 });
+      return Response.json(portalRedirect());
     }
     if (path.endsWith('/organization/list')) return Response.json(organizations);
     if (path.endsWith('/organization/get-full-organization')) {
