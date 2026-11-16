@@ -574,7 +574,7 @@ export function PricingTable(props: PricingTableProps): React.JSX.Element | null
         else action = <CheckoutButton productId={product.id} currency={pricing.currency ?? undefined}
           returnPath={props.returnPath} disclosure="visually-hidden" appearance={props.appearance}
           onComplete={props.onCheckoutComplete}>{cta?.label}</CheckoutButton>;
-        return <article role="listitem" key={product.id} aria-labelledby={`ao-plan-${product.id}`}
+        return <div role="listitem" key={product.id} aria-labelledby={`ao-plan-${product.id}`}
           className={`${shared('card')} ${billingSlot('pricing-card', props.appearance)}${highlighted ? ` ${billingSlot('pricing-card-highlighted', props.appearance)}` : ''}`}>
           {highlighted ? <span className={`${shared('badge')} ${billingSlot('pricing-badge', props.appearance)}`}>{props.highlightLabel ?? t('pricing.highlight')}</span> : null}
           {current ? <span className={`${shared('badge')} ${billingSlot('pricing-badge', props.appearance)}`}>{t('pricing.currentPlan')}</span> : null}
@@ -589,7 +589,7 @@ export function PricingTable(props: PricingTableProps): React.JSX.Element | null
           <div className={billingSlot('pricing-cta', props.appearance)}>{action}</div>
           <CheckoutDisclosure provider={pricing.provider} appearance={props.appearance} />
           <p className={`${shared('muted')} ${billingSlot('pricing-note', props.appearance)}`}>{t('pricing.taxNote')}</p>
-        </article>;
+        </div>;
       })}
     </div> : null}
   </section>;
